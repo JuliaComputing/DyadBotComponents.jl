@@ -32,7 +32,7 @@ end
 @component function LQGFlatDyadBot2(; name)
     systems = @named begin
         plant = FlatDyadBot()
-        L = Add4(K = ones(1, 4))
+        L = Add4(K = 1e-10*ones(1, 4))
     end
 
     eqs = [
@@ -66,8 +66,12 @@ lqg_spec = JSC.LQGAnalysisSpec(;
     r1_diag = [1.0],          # Disturbance noise covariance
     r2_diag = [0.001, 0.001],     # Measurement noise covariance (x, theta)
     wl = 1e-2,
-    wu = 1e3,
+    wu = 314,
     num_frequencies = 200,
+    integrator_indices = [1],
+    integrator_r1_diag = [0.1],
+    # disc = "zoh",
+    # Ts = 0.01,
 )
 
 # Run the LQG analysis
@@ -86,58 +90,33 @@ display(observer_gain)
 
 ##
 
-# cm = complete(plant)
-ssys = mtkcompile(plant)
-op = [
-    ssys.L.K => -lqg_asol.L / lqg_asol.P_reduced.C
-]
-
-
-prob = ODEProblem(ssys, op, (0, 1))
-sol = solve(prob, Rodas5P())
-plot(sol, ylims=(-5, 5)); hline!([π], l=(:dash, :black), primary=false)
-
-
-##
-
 get_Cfffb(; name) = System(ss(lqg_asol.Cfffb); name)
 get_Cff(; name) = System(ss(lqg_asol.Cff); name)
 get_Cfb(; name) = System(ss(lqg_asol.Cfb); name)
 
 @component function LQGFlatDyadBot4(; name)
+    pars = @parameters begin
+        step_time = 5
+        step_height = 0.15
+    end
     systems = @named begin
-        plantfffb = FlatDyadBot()
-        C = get_Cfffb()
         plant = FlatDyadBot()
-        Cff = get_Cff()
-        Cfb = get_Cfb()
-        add = Blocks.Add(k1=1, k2=-1)
+        C = get_Cfffb()
     end
 
     eqs = [
-        C.input.u[1] ~ ifelse(t>5, 0.15, 0) # rx
+        C.input.u[1] ~ ifelse(t>step_time, step_height, 0) # rx
         C.input.u[2] ~ 0 # rxd
         C.input.u[3] ~ 0 # rtheta
         C.input.u[4] ~ 0 # rthetad
-        C.input.u[5] ~ plantfffb.x_output.u # x
-        C.input.u[6] ~ plantfffb.theta_output.u-pi # theta
-        connect(C.output, :ufffb, plantfffb.control_input)
-
-        Cff.input.u[1] ~ ifelse(t>5, 0.15, 0) # rx
-        Cff.input.u[2] ~ 0 # rxd
-        Cff.input.u[3] ~ 0 # rtheta
-        Cff.input.u[4] ~ 0 # rthetad
-        Cfb.input.u[1] ~ plant.x_output.u # x
-        Cfb.input.u[2] ~ plant.theta_output.u-pi # theta
-        connect(Cff.output, add.input1)
-        connect(Cfb.output, add.input2)
-        connect(add.output, :u, plant.control_input)
+        C.input.u[5] ~ plant.x_output.u # x
+        C.input.u[6] ~ plant.theta_output.u-pi # theta
+        connect(C.output, :u, plant.control_input)
     ]
     guesses = [
-        plantfffb.theta_ddot => 0,
-        plant.theta_ddot => 0
+        plant.theta_ddot => 0,
     ]
-    System(eqs, t, [], []; systems, name, guesses)
+    System(eqs, t, [], pars; systems, name, guesses)
 end
 
 @named lqg_cl = LQGFlatDyadBot4()
@@ -145,11 +124,8 @@ end
 ssys = mtkcompile(lqg_cl)
 
 op = [
-    # collect(ssys.C.x) .=> nothing
-    # ssys.C.output.u => 0
-    # D(ssys.C.output.u) => 0
     ssys.plant.theta => deg2rad(160)
-    ssys.plantfffb.theta => deg2rad(160)
+    ssys.plant.theta => deg2rad(160)
 ]
 
 prob = ODEProblem(ssys, op, (0, 20))
@@ -158,26 +134,31 @@ plot(sol, idxs=[
     ssys.plant.theta
     ssys.plant.x
     ssys.plant.tau
-    ssys.plantfffb.theta
-    ssys.plantfffb.x
-    ssys.plantfffb.tau
-]); hline!([π 0.3], l=(:dash, :black), primary=false, ylims=(-1, 4))
+]); hline!([π prob.ps[ssys.step_height]], l=(:dash, :black), primary=false, ylims=(-1, 4))
 
 
 ##
 
-LT = lqg_asol.Cfb*system_mapping(lqg_asol.P_ext)
+# LT = lqg_asol.Cfb*system_mapping(lqg_asol.P_ext)
 
-plot(diskmargin(LT))
+# ##
+# L2 = get_named_looptransfer(lqg_cl, [lqg_cl.u])
+# L2 = -minreal(L2, 1e-8)
 
-##
-L2 = get_named_looptransfer(lqg_cl, [lqg_cl.u])
-L2 = -L2#minreal(L2, 1e-12)
-
-bodeplot([LT, L2]) # why not identical?
+# S2 = get_named_sensitivity(lqg_cl, [lqg_cl.u])
 
 
-dmi2 = diskmargin(L2)
-plot!(dmi2)
+# dmi = diskmargin(LT, offset=0)
+# dmi2 = diskmargin(L2, offset=0) # offset due to hard to cancel pole/zero pair in origin
 
-# TODO: test the Cff and Cfb separate contorllers, they do not appear to agree with Cfffb at all
+# plot(dmi)
+# plot!(dmi2)
+
+# bodeplot([LT, L2], adjust_phase_start=false) # why not identical?
+
+# ##
+# P_ext = system_mapping(lqg_asol.P_ext)
+# @named model = FlatDyadBot()
+# cm = complete(model)
+# P2 = named_ss(cm, [cm.control_input.u], [cm.x, cm.theta], op=Dict(cm.control_input.u => 0), allow_input_derivatives=true)
+# bodeplot([P_ext, P2], adjust_phase_start=false)
