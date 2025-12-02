@@ -1,5 +1,4 @@
 include("planar_flat.jl")  # Get FlatDyadBot
-
 using DyadControlSystems
 import DyadControlSystems as JSC
 using LinearAlgebra
@@ -56,11 +55,12 @@ end
 # - 2 controlled outputs: same as measurements (regulate both)
 # - 1 control input: torque (tau)
 lqg_spec = JSC.LQGAnalysisSpec(;
-    name = :SegwayLQG,
+    name = :DyadBotLQG,
     model = plant,
     measurement = ["y_x", "y_theta"],           # What we measure
     controlled_output = ["y_x", "y_xd", "y_theta", "y_thetad"],     # What we want to control
     control_input = ["u"],                       # Control input
+    loop_openings = ["u"],
     q1_diag = [10.0, 0.1, 1, 0.1],     # Penalty on controlled outputs (x, theta)
     q2_diag = [0.0001],          # Penalty on control input (tau)
     r1_diag = [1.0],          # Disturbance noise covariance
@@ -139,22 +139,24 @@ plot(sol, idxs=[
 
 ##
 
-# LT = lqg_asol.Cfb*system_mapping(lqg_asol.P_ext)
+Lo = system_mapping(lqg_asol.P_ext)*lqg_asol.Cfb
+Li = lqg_asol.Cfb*system_mapping(lqg_asol.P_ext)
 
 # ##
-# L2 = get_named_looptransfer(lqg_cl, [lqg_cl.u])
-# L2 = -minreal(L2, 1e-8)
+L2 = get_named_looptransfer(lqg_cl, [lqg_cl.u])
+L2 = -minreal(L2, 1e-8)
 
-# S2 = get_named_sensitivity(lqg_cl, [lqg_cl.u])
+S2 = get_named_sensitivity(lqg_cl, [lqg_cl.u])
 
 
-# dmi = diskmargin(LT, offset=0)
-# dmi2 = diskmargin(L2, offset=0) # offset due to hard to cancel pole/zero pair in origin
 
-# plot(dmi)
-# plot!(dmi2)
+dmi = diskmargin(Li, offset=0)
+dmi2 = diskmargin(L2, offset=0) # offset due to hard to cancel pole/zero pair in origin
 
-# bodeplot([LT, L2], adjust_phase_start=false) # why not identical?
+plot(dmi)
+plot!(dmi2)
+
+bodeplot([Li, L2], adjust_phase_start=false) # Verify equal
 
 # ##
 # P_ext = system_mapping(lqg_asol.P_ext)
