@@ -19,8 +19,8 @@ State is `[angle, gyro_bias]`.
 mutable struct DiscreteKalmanFilter
     x::SVector{2, Float32}              # State [angle, bias]
     P::SMatrix{2, 2, Float32, 4}        # Covariance
-    Q::SMatrix{2, 2, Float32, 4}        # Process noise covariance
-    R::SMatrix{1, 1, Float32, 1}        # Measurement noise covariance
+    const Q::SMatrix{2, 2, Float32, 4}        # Process noise covariance
+    const R::SMatrix{1, 1, Float32, 1}        # Measurement noise covariance
 end
 
 """
@@ -45,7 +45,7 @@ Prediction step: propagate state and covariance using gyro measurement `u` as in
     x = A * x + B * u
     P = A * P * A' + Q
 """
-function predict!(kf::DiscreteKalmanFilter, u::Float32)
+@inline @fastmath function predict!(kf::DiscreteKalmanFilter, u::Float32)
     kf.x = Ad * kf.x + Bd * u
     kf.P = Ad * kf.P * Ad' + kf.Q
     nothing
@@ -61,7 +61,7 @@ Update step: correct state and covariance using accelerometer angle measurement 
     x = x + K * (y - C * x)
     P = (I - K * C) * P
 """
-function correct!(kf::DiscreteKalmanFilter, y::Float32)
+@inline @fastmath function correct!(kf::DiscreteKalmanFilter, y::Float32)
     # Innovation covariance (1×1 matrix)
     S = Cd * kf.P * Cd' + kf.R
 
