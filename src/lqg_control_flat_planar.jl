@@ -85,14 +85,8 @@ margin_plot = JSC.artifacts(lqg_asol, :MarginPlot)
 controller_gain = lqg_asol.L
 observer_gain = lqg_asol.K
 
-display(controller_gain)
-display(observer_gain)
 
 ##
-
-get_Cfffb(; name) = System(ss(lqg_asol.Cfffb); name)
-get_Cff(; name) = System(ss(lqg_asol.Cff); name)
-get_Cfb(; name) = System(ss(lqg_asol.Cfb); name)
 
 @component function LQGFlatDyadBot4(; name)
     pars = @parameters begin
@@ -101,7 +95,7 @@ get_Cfb(; name) = System(ss(lqg_asol.Cfb); name)
     end
     systems = @named begin
         plant = FlatDyadBot()
-        C = get_Cfffb()
+        C = DyadControlSystems.get_Cfffb(lqg_asol)
     end
 
     eqs = [
@@ -110,7 +104,7 @@ get_Cfb(; name) = System(ss(lqg_asol.Cfb); name)
         C.input.u[3] ~ 0 # rtheta
         C.input.u[4] ~ 0 # rthetad
         C.input.u[5] ~ plant.x_output.u # x
-        C.input.u[6] ~ plant.theta_output.u-pi # theta
+        C.input.u[6] ~ plant.theta_output.u # theta (operating-point adjustment is already taken care of in C)
         connect(C.output, :u, plant.control_input)
     ]
     guesses = [
@@ -139,6 +133,9 @@ plot(sol, idxs=[
 
 ##
 
+rhp_pole, _ = findmax(real, poles(lqg_asol.P))
+# fundamental limitation due to RHP pole ω_gc > 2p = 2*
+
 Lo = system_mapping(lqg_asol.P_ext)*lqg_asol.Cfb
 Li = lqg_asol.Cfb*system_mapping(lqg_asol.P_ext)
 
@@ -156,7 +153,8 @@ dmi2 = diskmargin(L2, offset=0) # offset due to hard to cancel pole/zero pair in
 plot(dmi)
 plot!(dmi2)
 
-bodeplot([Li, L2], adjust_phase_start=false) # Verify equal
+marginplot([Li, L2], adjust_phase_start=false) # Verify equal
+vline!([2*rhp_pole], l=(:dash, :black), label="Fundamental limitation")
 
 # ##
 # P_ext = system_mapping(lqg_asol.P_ext)
