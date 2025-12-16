@@ -1,7 +1,5 @@
 include("planar_flat.jl")  # Get FlatDyadBot
-using DyadControlSystems
-import DyadControlSystems as JSC
-using LinearAlgebra
+
 
 # Create the plant directly - no wrapper component needed
 

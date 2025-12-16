@@ -5,6 +5,10 @@ import ModelingToolkitStandardLibrary.Blocks
 using OrdinaryDiffEq
 using DyadControlSystems, ControlSystemsBase, ControlSystemsMTK
 using Plots
+import DyadControlSystems as JSC
+using LinearAlgebra
+
+
 Plots.default(size=(1200,1200))
 connect = ModelingToolkit.connect
 

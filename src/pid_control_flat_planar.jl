@@ -1,3 +1,26 @@
+# cd(joinpath(@__DIR__, ".."))
+# using Pkg
+# Pkg.activate(".")
+include("planar_flat.jl")  # Get FlatDyadBot
+
+# @named plant = FlatDyadBot()
+# plant = complete(plant)
+# inputs = [plant.control_input.u]
+# outputs = [plant.theta_output.u]
+
+
+# P0 = named_ss(plant, inputs, outputs; op = Dict([inputs .=> 0; plant.b_trans=>0; plant.b_rot=>0; plant.x => big(0.0)]), allow_input_derivatives=true)
+
+# Pt = named_ss(plant, inputs, outputs; op = Dict([inputs .=> 0; plant.b_trans=>1; plant.b_rot=>0; plant.x => big(0.0)]), allow_input_derivatives=true)
+
+# Pr = named_ss(plant, inputs, outputs; op = Dict([inputs .=> 0; plant.b_trans=>0; plant.b_rot=>1; plant.x => big(0.0)]), allow_input_derivatives=true)
+
+# Ptr = named_ss(plant, inputs, outputs; op = Dict([inputs .=> 0; plant.b_trans=>1; plant.b_rot=>1; plant.x => big(0.0)]), allow_input_derivatives=true)
+
+# Ps = [P0, Pt, Pr, Ptr]
+
+# nyquistplot(8 .* Ps)
+
 @component function AngleControlledFlatDyadBot(; name)
     pars = @parameters begin
         theta_ref = deg2rad(180)  # Reference angle (upright)
@@ -5,7 +28,7 @@
 
     systems = @named begin
         plant = FlatDyadBot()
-        controller = Blocks.LimPID(k=15.6, Ti=12.2, Td=0.16, Nd=25, u_max=7)
+        controller = Blocks.LimPID(k=15.6, Ti=Inf, Td=0.16, Nd=25, u_max=7)
         ref = Blocks.Constant(k=theta_ref)
     end
 
@@ -56,6 +79,7 @@ spec = JSC.PIDAutotuningAnalysisSpec(;
     Mks = 400.0,         # Control sensitivity constraint
     wl = 1e-2,           # Lower frequency bound
     wu = 1e3,            # Upper frequency bound
+    ki_ub = 0.0,         # Tune PD controller
     num_frequencies = 200,
     soft = true,
 )
@@ -83,9 +107,9 @@ display(optimized_params)
     systems = @named begin
         plant = FlatDyadBot()
         # Inner loop: angle controller
-        inner_controller = Blocks.LimPID(k=15.6, Ti=12.2, Td=0.16, Nd=25, u_max=7)
+        inner_controller = Blocks.LimPID(k=15.6, Ti=Inf, Td=0.16, Nd=25, u_max=7)
         # Outer loop: velocity controller
-        outer_controller = Blocks.LimPID(k=0.54, Ti=2.1, Td=0, Nd=600, wd=1, wp=0.5)
+        outer_controller = Blocks.LimPID(k=0.54, Ti=2.48, Td=0, Nd=600, wd=1, wp=0.5)
         neg_gain = Blocks.Gain(k=1)
         ref = Blocks.Step(height=x_ref, start_time=5)
         # Add pi offset to inner loop reference
@@ -183,7 +207,8 @@ w = exp10.(LinRange(-1, 3, 1000))
 Msi2, ws2 = hinfnorm2(Si2)
 bodeplot(Si2, w, plotphase=false); hline!([Msi2], l=(:dash, :black), label="\$M_S = \$$(round(Msi2, digits=2))")
 
-Li2 = inv(Si2) - 1 |> minreal
+Li2 = minreal(inv(Si2) - 1, 1e-12)
+Li2 = convert(StateSpace{Continuous, Float64}, Li2)
 nyquistplot(Li2)
 marginplot(Li2, w, adjust_phase_start=true)
 
