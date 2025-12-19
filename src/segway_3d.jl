@@ -7,22 +7,31 @@ using OrdinaryDiffEq
 
 @component function DyadBot3D(; name)
     pars = @parameters begin
-        wheel_radius = 0.25
-        body_mass = 10.0
-        body_height = 0.8
+        wheel_radius = 0.04
+        body_mass = 0.1
+        body_height = 0.1
+        body_width = 0.13
+        body_depth = 0.07
     end
 
     systems = @named begin
         world = World()
         wheels = RollingWheelSet(
             radius = wheel_radius,
-            m_wheel = 1.0,
-            I_axis = 0.1,
-            I_long = 0.1,
-            track = 0.5,        # distance between wheels
+            m_wheel = 0.05, # mass of one wheel
+            I_axis = 5e-5,  # moment of inertia of one wheel around the rotation axis
+            I_long = 1e-5,
+            track = body_width,   # distance between wheels
         )
-        body_offset = FixedTranslation(r = [0, body_height/2, 0])  # raise body above wheel axis
-        body = BodyShape(m = body_mass, r = [0.1, body_height, 0.1])  # thin tall body
+        body = BodyShape(
+            m = body_mass,
+            I_22 = 0.01*0.03^2, # Inertia around vertical axis, a very rough approximation
+            I_11 = 0.01*0.05^2, # Total guesses
+            I_33 = 0.01*0.05^2, 
+            r = [0.0, body_height, 0.0], # Vector from `frame_a` to `frame_b` (head) resolved in `frame_a`
+            height = body_depth, # we use the word "height" for the length of r
+            width = body_width,
+        )  
     end
 
     eqs = [
