@@ -1,6 +1,8 @@
 module DyadBotComponents
 
 include("DiscreteKalmanFilter.jl")
+include("planar_flat.jl")
+include("cascase_planar_flat.jl")
 
 # include("planar_multibody.jl")
 # include("segway_3d.jl")
