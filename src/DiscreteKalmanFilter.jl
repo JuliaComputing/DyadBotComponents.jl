@@ -111,7 +111,7 @@ const GYRO_OFFSET = 128.1f0
 const GYRO_SCALE = 131.0f0
 
 """
-    angle, gyro_x, gyro_z = compute_angles(kf, ax, ay, az, gx, gy, gz)
+    angle, gyro_x, gyro_z = compute_angles(ax, ay, az, gx, gy, gz)
 
 Apply calibration to raw IMU readings and compute
 - `angle`: Tilt angle from accelerometer (radians)
@@ -122,7 +122,7 @@ Applies calibration to gyro readings and computes angle from accelerometer.
 
 Use with Kalman filter like this:
 ```julia
-angle, gyro_x, gyro_z = compute_angles(kf, ax, ay, az, gx, gy, gz)
+angle, gyro_x, gyro_z = compute_angles(ax, ay, az, gx, gy, gz)
 update!(kf, gyro_x, angle)
 ```
 That is, the gyro x reading is used as control input, and the angle computed from accelerometer as measurement.
@@ -133,7 +133,7 @@ That is, the gyro x reading is used as control input, and the angle computed fro
 - `ax, ay, az`: Raw accelerometer readings (int16)
 - `gx, gy, gz`: Raw gyroscope readings (int16)
 """
-function compute_angles(kf::IMUKalmanFilter, ax::Integer, ay::Integer, az::Integer,
+function compute_angles(ax::Integer, ay::Integer, az::Integer,
                        gx::Integer, gy::Integer, gz::Integer)
     # Calculate angle from accelerometer (radians to degrees)
     angle = atan(Float32(ay), Float32(az)) * (180.0f0 / pi)

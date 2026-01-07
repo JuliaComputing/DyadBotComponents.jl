@@ -150,7 +150,7 @@ function compute_pwm!(ctrl::BalanceController,
     ctrl.encoder_right_pulse += ctrl.pwm_right < 0 ? -encoder_count_right : encoder_count_right
 
     # Get calibrated angles from Kalman filter
-    accel_angle, gyro_x, gyro_z = compute_angles(ctrl.kf, ax, ay, az, gx, gy, gz)
+    accel_angle, gyro_x, gyro_z = compute_angles(ax, ay, az, gx, gy, gz)
 
     # Update Kalman filter
     update!(ctrl.kf, gyro_x, accel_angle)
