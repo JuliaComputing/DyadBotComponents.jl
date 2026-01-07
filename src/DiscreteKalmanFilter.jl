@@ -136,7 +136,7 @@ That is, the gyro x reading is used as control input, and the angle computed fro
 function compute_angles(kf::IMUKalmanFilter, ax::Integer, ay::Integer, az::Integer,
                        gx::Integer, gy::Integer, gz::Integer)
     # Calculate angle from accelerometer (radians to degrees)
-    angle = atan(ay, az) * (180.0f0 / pi)
+    angle = atan(Float32(ay), Float32(az)) * (180.0f0 / pi)
 
     # Apply gyro calibration offset and scale
     gyro_x = (gx - GYRO_OFFSET) / GYRO_SCALE
