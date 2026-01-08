@@ -51,11 +51,11 @@ using WGLMakie
 
     kpo = SLInput(0.54; label="outer P")
     kio = SLInput(2.48; label="outer i")
-    kdo = SLInput(0.0; label="outer i")
+    kdo = SLInput(0.0; label="outer d")
 
     kpi = SLInput(15.6; label="inner P")
-    kii = SLInput(1e6; label="inner i") #TODO: put to Inf
-    kdi = SLInput(0.16; label="inner i")
+    kii = SLInput(1e12; label="inner i") #TODO: put to Inf
+    kdi = SLInput(0.16; label="inner d")
 
 
     f = Figure()
@@ -69,15 +69,15 @@ using WGLMakie
 
 end
 
-left1(app::AppState, x) = app.v_ref[] = -1
-left2(app::AppState, x) = app.v_ref[] = -2
-left3(app::AppState, x) = app.v_ref[] = -3
+left1(app::AppState, x) = app.v_ref[] = -0.5
+left2(app::AppState, x) = app.v_ref[] = -1.0
+left3(app::AppState, x) = app.v_ref[] = -1.5
 
 pause(app::AppState, x) = app.v_ref[] = 0
 
-right1(app::AppState, x) = app.v_ref[] = +1
-right2(app::AppState, x) = app.v_ref[] = +2
-right3(app::AppState, x) = app.v_ref[] = +3
+right1(app::AppState, x) = app.v_ref[] = +0.5
+right2(app::AppState, x) = app.v_ref[] = +1.0
+right3(app::AppState, x) = app.v_ref[] = +1.5
 
 function stop(app::AppState, x)
 
@@ -212,6 +212,7 @@ function get_body(session, app::AppState)
     DOM.body(
 
         DOM.div(
+            DOM.h1("DyadBot App"),
             app.R,
             app.L,
             DOM.hr(), #---------------    

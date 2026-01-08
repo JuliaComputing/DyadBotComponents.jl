@@ -19,7 +19,7 @@ end
         inner_controller = Blocks.LimPID()
         # Outer loop: velocity controller
         outer_controller = Blocks.LimPID()
-        neg_gain = Blocks.Gain(k=1)
+        # neg_gain = Blocks.Gain(k=1)
         # ref = Blocks.Step(height=x_ref, start_time=5)
         # ref = Blocks.Square(;  smooth = true)
         # Add pi offset to inner loop reference
@@ -31,8 +31,7 @@ end
         # Outer loop: velocity reference -> angle reference
         # connect(ref.output, :r2, outer_controller.reference)
         outer_controller.reference.u ~ v_ref
-        connect(plant.x_output, neg_gain.input)
-        connect(neg_gain.output, :y2, outer_controller.measurement)
+        connect(plant.x_dot_output, :y2, outer_controller.measurement)
 
         # Add pi to outer controller output for inner loop reference
         connect(outer_controller.ctr_output, :u2, add_pi.input1)
