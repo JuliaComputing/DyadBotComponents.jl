@@ -20,7 +20,7 @@ jobs:
       - name: Run todo script
         run: |
           julia -e 'using Pkg; Pkg.update(); Pkg.Apps.add("JuliaC");'
-          ~/.julia/bin/juliac -trim=unsafe-warn --output-exe ctrl --project deploy --bundle ctrl-bundle deploy/src/main.jl
+          ~/.julia/bin/juliac --trim=unsafe-warn --output-exe ctrl --project deploy --bundle ctrl-bundle deploy/src/main.jl
       - name: Create bundle archive
         run: zip -r ctrl-bundle.zip ctrl-bundle
       - name: Upload artifact
