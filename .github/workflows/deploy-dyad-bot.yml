@@ -9,7 +9,7 @@ on:
 
 jobs:
   todo:
-    name: Run todo script
+    name: Build dyad-bot
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,7 +17,7 @@ jobs:
         with:
           version: '1.12'
       - uses: julia-actions/cache@v2
-      - name: Run todo script
+      - name: Build dyad-bot
         run: |
           julia -e 'using Pkg; Pkg.update(); Pkg.Apps.add("JuliaC");'
           ~/.julia/bin/juliac --trim=unsafe-warn --output-exe ctrl --project deploy --bundle ctrl-bundle deploy/src/main.jl
