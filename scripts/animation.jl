@@ -64,11 +64,11 @@ function animate(;framerate = 30, filename="dyadbot.mp4")
         x = sol(t; idxs=bot.plant.x)
         theta = sol(t; idxs=bot.plant.theta)
 
-        # x = wheel*r*π
+        # x = wheel*r
         
         translate!(base_transform, x)
         rotate!(body_transform, -theta + π)
-        rotate!(spoke_transform, -x/(r*π)) 
+        rotate!(spoke_transform, -x/r) 
     end
 
 end
