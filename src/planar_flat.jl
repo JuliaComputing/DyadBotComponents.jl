@@ -2,6 +2,7 @@ using ModelingToolkit
 import ModelingToolkit: t_nounits as t, D_nounits as D
 # import ModelingToolkitStandardLibrary.Mechanical.Rotational 
 import ModelingToolkitStandardLibrary.Blocks 
+import ModelingToolkitParameters: Params
 # using OrdinaryDiffEq
 # using DyadControlSystems, ControlSystemsBase, ControlSystemsMTK
 # # using Plots
@@ -19,6 +20,20 @@ import ModelingToolkitStandardLibrary.Blocks
 # ==============================================================================
 ## FlatDyadBot - Equation-based planar segway model
 # ==============================================================================
+
+Base.@kwdef mutable struct FlatDyadBotParams <: Params
+    # parameters
+    M::Real = 1.0
+    m::Real = 0.1
+    R::Real = 0.1
+    L::Real = 0.5
+    Ic::Real = 0.1
+    Iw::Real = 0.01
+    g::Real = 9.81
+    b_trans::Real = 1.0
+    b_rot::Real = 1.0
+end
+
 
 @component function FlatDyadBot(; name)
     pars = @parameters begin
