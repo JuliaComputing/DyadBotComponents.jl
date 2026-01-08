@@ -1,0 +1,30 @@
+name: Deploy Dyad Bot
+
+on:
+  push:
+    branches:
+      - main
+      - bc/build-dyad-bot
+  pull_request:
+
+jobs:
+  todo:
+    name: Run todo script
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.12'
+      - uses: julia-actions/cache@v2
+      - name: Run todo script
+        run: |
+          julia -e 'using Pkg; Pkg.Apps.add("JuliaC");'
+          ~/.julia/bin/juliac -trim=unsafe-warn --output-exe ctrl --project deploy --bundle ctrl-bundle deploy/src/main.jl
+      - name: Create bundle archive
+        run: zip -r ctrl-bundle.zip ctrl-bundle
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctrl-bundle
+          path: ctrl-bundle.zip
