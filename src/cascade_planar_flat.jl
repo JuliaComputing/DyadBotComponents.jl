@@ -1,3 +1,4 @@
+using  ModelingToolkitParameters
 
 Base.@kwdef mutable struct CascadeControlledFlatDyadBotParams <: Params
     # systems
@@ -10,15 +11,15 @@ end
 # Cascade control: outer velocity loop + inner angle loop
 @component function CascadeControlledFlatDyadBot(; name)
     vars = @variables begin
-        v_ref(t), [input=true]
+        x_ref(t), [input=true]
     end
 
     systems = @named begin
         plant = FlatDyadBot()
         # Inner loop: angle controller
-        inner_controller = Blocks.LimPID()
+        inner_controller = Blocks.LimPID(k=15.6, Ti=Inf, Td=0.16, Nd=25, u_max=7)
         # Outer loop: velocity controller
-        outer_controller = Blocks.LimPID()
+        outer_controller = Blocks.LimPID(k=0.54, Ti=2.48, Td=0, Nd=600, wd=1, wp=0.5)
         # neg_gain = Blocks.Gain(k=1)
         # ref = Blocks.Step(height=x_ref, start_time=5)
         # ref = Blocks.Square(;  smooth = true)
@@ -30,8 +31,8 @@ end
     eqs = [
         # Outer loop: velocity reference -> angle reference
         # connect(ref.output, :r2, outer_controller.reference)
-        outer_controller.reference.u ~ v_ref
-        connect(plant.x_dot_output, :y2, outer_controller.measurement)
+        outer_controller.reference.u ~ x_ref
+        connect(plant.x_output, :y2, outer_controller.measurement)
 
         # Add pi to outer controller output for inner loop reference
         connect(outer_controller.ctr_output, :u2, add_pi.input1)
