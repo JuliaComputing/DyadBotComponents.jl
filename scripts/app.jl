@@ -254,49 +254,61 @@ function get_head()
     )
 end
 
-function get_footer(app::AppState)
-    DOM.div(
-        sl_tag(app.footer_time; pill=true, primary=true),
-        class="footer"
-    )
-end
-
 function get_body(session, app::AppState)
     DOM.body(
 
-
-        DOM.h1("DyadBot App"),
         DOM.div(
-            sl_card(DOM.div(DOM.h3("Bot Parameters"); slot="header"), DOM.div(app.R, app.L)), 
-            sl_card(
-                DOM.div(DOM.h3("Controller Parameters"); slot="header"), 
-                
-                DOM.table(
-                    DOM.tr(
-                        DOM.td("-"), DOM.td("P"), DOM.td("I"), DOM.td("D")
-                    ),
-                    DOM.tr(
-                        DOM.td("outer"), DOM.td(app.kpo), DOM.td(app.kio), DOM.td(app.kdo)
-                    ),
-                    DOM.tr(
-                        DOM.td("inner"), DOM.td(app.kpi), DOM.td(app.kii), DOM.td(app.kdi)
-                    )
-                )
-                
-            )
+            DOM.h1("DyadBot App"); 
+            class="top-banner"
         ),
-        
-        DOM.div(app.run, app.stop),
-        DOM.hr(), #---------------
-        DOM.div(app.left3, app.left2, app.left1, app.pause, app.right1, app.right2, app.right3),
-        DOM.hr(), #---------------
-        app.f,
 
-        
+        DOM.div(
+            DOM.div(
 
-        # footer --------------------------------------------
-        get_footer(app)
-        
+                DOM.div(
+                    sl_card(
+                        DOM.div("Bot Parameters"; slot="header"), 
+                        DOM.div(app.R, app.L)
+                    ), 
+                    sl_card(
+                        DOM.div("Controller Parameters"; slot="header"), 
+                        
+                        DOM.table(
+                            DOM.tr(
+                                DOM.td("-"), DOM.td("P"), DOM.td("I"), DOM.td("D")
+                            ),
+                            DOM.tr(
+                                DOM.td("outer"), DOM.td(app.kpo), DOM.td(app.kio), DOM.td(app.kdo)
+                            ),
+                            DOM.tr(
+                                DOM.td("inner"), DOM.td(app.kpi), DOM.td(app.kii), DOM.td(app.kdi)
+                            )
+                        )
+                        
+                    )
+                    ;class="row-1"
+                ),
+                DOM.div(
+                    sl_card(
+                        DOM.div("Control"; slot="header"), 
+                        DOM.div(app.run, app.stop, app.left3, app.left2, app.left1, app.pause, app.right1, app.right2, app.right3),
+                    )
+                    ;class="row-2"
+                ),
+                DOM.div(
+                    app.f
+                    ;class="row-3"
+                )
+
+                ;class="content-container"
+            )
+            ;class="content"
+        ),
+
+        DOM.div(
+            sl_tag(app.footer_time; pill=true, primary=true),
+            ;class="bottom-footer"
+        ),       
 
     )
 end
