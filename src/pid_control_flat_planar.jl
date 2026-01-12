@@ -9,6 +9,7 @@ using DyadControlSystems, ControlSystemsBase, ControlSystemsMTK
 using Plots
 import DyadControlSystems as JSC
 using LinearAlgebra
+connect = ModelingToolkit.connect
 
 # @named plant = FlatDyadBot()
 # plant = complete(plant)
