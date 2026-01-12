@@ -3,6 +3,13 @@
 # Pkg.activate(".")
 include("planar_flat.jl")  # Get FlatDyadBot
 
+
+using OrdinaryDiffEq
+using DyadControlSystems, ControlSystemsBase, ControlSystemsMTK
+using Plots
+import DyadControlSystems as JSC
+using LinearAlgebra
+
 # @named plant = FlatDyadBot()
 # plant = complete(plant)
 # inputs = [plant.control_input.u]
