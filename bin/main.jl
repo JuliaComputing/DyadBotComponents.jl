@@ -173,7 +173,145 @@ plot(integrator.sol; idxs=bot.plant.x)
 # --------------------------------------------------------------
 # APP
 # --------------------------------------------------------------
-const STYLE_CSS = read(joinpath(@__DIR__, "style.css"), String)
+const STYLE_CSS = """
+    * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    }
+
+    body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    table td {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    /* Top Banner */
+    .top-banner {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    }
+
+    .top-banner h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    }
+
+    /* Content Area (scrollable) */
+    .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem;
+    background: #f5f5f5;
+    }
+
+    /* Content Layout */
+    .content-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    height: 100%;
+    }
+
+    /* Row 1: Two cards side by side */
+    .row-1 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    }
+
+    .row-1 sl-card {
+    height: 100%;
+    }
+
+    /* Row 2: 3 spots */
+    .row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+    }
+
+    .row-2 sl-card {
+    height: 100%;
+    }
+
+    .row-3 {
+    display: flex;
+    }
+
+    .row-3 sl-card {
+    flex: 1;
+    }
+
+    /* Row 4: Fill remaining space */
+    .row-4 {
+    flex: 1;
+    background: white;
+    border: 2px #ccc;
+    border-radius: 8px;
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-size: 1.2rem;
+    }
+
+    /* Bottom Footer */
+    .bottom-footer {
+    background: #2c3e50;
+    color: white;
+    padding: 1rem 2rem;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    }
+
+    .bottom-footer p {
+    margin: 0;
+    }
+
+    /* Card content styling */
+    sl-card::part(body) {
+    padding: 1.5rem;
+    }
+
+    sl-card::part(header) {
+    font-weight: 600;
+    font-size: 1.1rem;
+    }
+
+    sl-button,
+    sl-select {
+    margin: 2px;
+    }
+
+    /* input[type="file"]::file-selector-button {
+        font-family: var(--sl-font-sans);
+        font-size: var(--sl-button-font-size-medium);
+        padding: var(--sl-spacing-small) var(--sl-spacing-medium);
+        background-color: var(--sl-color-primary-600);
+        color: var(--sl-color-neutral-0);
+        border: none;
+        border-radius: var(--sl-border-radius-medium);
+        cursor: pointer;
+        font-weight: var(--sl-font-weight-semibold);
+        margin-right: var(--sl-spacing-small);
+    }
+
+    input[type="file"]::file-selector-button:hover {
+        background-color: var(--sl-color-primary-500);
+    } */
+"""
 
 @kwdef struct AppState
     integrator = Ref{SciMLBase.DEIntegrator}()
