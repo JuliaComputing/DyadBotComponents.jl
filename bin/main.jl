@@ -357,10 +357,10 @@ const STYLE_CSS = """
 
 
     f1 = Figure()
-    ax1 = Axis(f1[1,1])
+    ax1 = Axis(f1[1,1], xlabel="x [m]", ylabel="y [m]")
 
     f2 = Figure()
-    ax2 = Axis(f2[1,1])
+    ax2 = Axis(f2[1,1], xlabel="rolling time [s]", ylabel="x [m]")
 
     bot_params = Ref(DyadBotComponents.CascadeControlledFlatDyadBotParams())
 
@@ -410,10 +410,9 @@ function fileinput(app::AppState, x)
 end
 
 
-function build_fig!(app::AppState)
+function build_fig1!(app::AppState)
 
     empty!(app.ax1)
-    empty!(app.ax2)
 
     r = app.bot_params[].plant.R #wheel radius
     y1 = r
@@ -441,17 +440,15 @@ function build_fig!(app::AppState)
 
     # set point
     vlines!(app.ax1, app.x_ref.value)
+  
+end
 
-
-
-
+function build_fig2!(app::AppState)
     time = 0:0.1:(app.N-1)*(0.1)
 
     lines!(app.ax2, time, app.past_position; label="position")
     lines!(app.ax2, time, app.past_target; label="target")
     axislegend(app.ax2)
-
-  
 end
 
 parameter_control_map(app::AppState) = [
@@ -519,7 +516,7 @@ function run(app::AppState, x)
 
     control_to_params(app) #updates app.bot_params
     
-    build_fig!(app)
+    build_fig1!(app)
 
     # Update Model Parameters
     # -- precompiled constants: prob, bot_setters, sys
@@ -596,6 +593,9 @@ end
 
 function initialize()
     app = AppState()
+
+    build_fig1!(app)
+    build_fig2!(app)
 
     #sync controls to the parameters
     params_to_control(app)
@@ -731,29 +731,3 @@ Bonito.HTTPServer.start(server)
 # exit when the script is done.  This makes sure that the app is only closed
 # if (a) the server closes, or (b) the app itself times out and is killed externally.
 wait(server)
-
-#=
-using DyadControlSystems
-import DyadControlSystems as JSC
-
-spec = JSC.PIDAutotuningAnalysisSpec(;
-    name = :CascadeTuning,
-    model = bot,
-    measurement = "y",
-    control_input = "u",
-    step_input = "u",
-    step_output = "y",
-    Ts = 0.01,           # Sample time
-    duration = 25.0,      # Simulation duration
-    Ms = 1.5,            # Sensitivity peak constraint
-    Mt = 1.5,            # Complementary sensitivity peak constraint
-    Mks = 400.0,         # Control sensitivity constraint
-    wl = 1e-2,           # Lower frequency bound
-    wu = 1e3,            # Upper frequency bound
-    ki_ub = 0.0,         # Tune PD controller
-    num_frequencies = 200,
-    soft = true,
-)
-
-DyadControlSystems.launch_pid_autotuning_designer(spec)
-=#
