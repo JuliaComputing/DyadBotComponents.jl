@@ -26,7 +26,7 @@ Bonito = "4.2.0"
 ControlSystemsMTK = "2.5.0"
 Makie = "0.24.8"
 ModelingToolkitInputs = "0.2.0"
-ModelingToolkitParameters = "0.3.0"
+ModelingToolkitParameters = "0.4.0"
 ModelingToolkitStandardLibrary = "2.25.0"
 Plots = "1.41.2"
 SciMLBase = "2.132.0"
@@ -39,3 +39,6 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Test"]
+
+[sources]
+ModelingToolkitParameters = {url = "https://github.com/bradcarman/ModelingToolkitParameters.jl.git", rev = "main"}

@@ -12,6 +12,11 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+table td {
+      text-align: center;
+      vertical-align: middle;
+  }
+
 /* Top Banner */
 .top-banner {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -53,20 +58,30 @@ body {
   height: 100%;
 }
 
-/* Row 2: One card full width */
+/* Row 2: 3 spots */
 .row-2 {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1.5rem;
 }
 
 .row-2 sl-card {
+  height: 100%;
+}
+
+.row-3 {
+  display: flex;
+}
+
+.row-3 sl-card {
   flex: 1;
 }
 
-/* Row 3: Fill remaining space */
-.row-3 {
+/* Row 4: Fill remaining space */
+.row-4 {
   flex: 1;
   background: white;
-  border: 2px dashed #ccc;
+  border: 2px #ccc;
   border-radius: 8px;
   padding: 2rem;
   display: flex;
@@ -103,3 +118,20 @@ sl-button,
 sl-select {
   margin: 2px;
 }
+
+  /* input[type="file"]::file-selector-button {
+      font-family: var(--sl-font-sans);
+      font-size: var(--sl-button-font-size-medium);
+      padding: var(--sl-spacing-small) var(--sl-spacing-medium);
+      background-color: var(--sl-color-primary-600);
+      color: var(--sl-color-neutral-0);
+      border: none;
+      border-radius: var(--sl-border-radius-medium);
+      cursor: pointer;
+      font-weight: var(--sl-font-weight-semibold);
+      margin-right: var(--sl-spacing-small);
+  }
+
+  input[type="file"]::file-selector-button:hover {
+      background-color: var(--sl-color-primary-500);
+  } */

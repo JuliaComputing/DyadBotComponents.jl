@@ -3,8 +3,8 @@ using  ModelingToolkitParameters
 Base.@kwdef mutable struct CascadeControlledFlatDyadBotParams <: Params
     # systems
     plant::FlatDyadBotParams = FlatDyadBotParams()
-    inner_controller::LimPIDParams = LimPIDParams(k=15.6, Ti=Inf, Td=0.16, Nd=25, u_max=7)
-    outer_controller::LimPIDParams = LimPIDParams(k=0.54, Ti=2.48, Td=0, Nd=600, wd=1, wp=0.5)
+    inner_controller::ControllerParams = ControllerParams(kp=0.5, ki=6.0, kd=0.0)
+    outer_controller::ControllerParams = ControllerParams(kp=0.1, ki=1.0, kd=0)
 end
 
 
@@ -17,9 +17,9 @@ end
     systems = @named begin
         plant = FlatDyadBot()
         # Inner loop: angle controller
-        inner_controller = Blocks.LimPID(k=15.6, Ti=Inf, Td=0.16, Nd=25, u_max=7)
+        inner_controller = Controller() #LimPID(k=15.6, Ti=Inf, Td=0.16, Nd=25, u_max=7)
         # Outer loop: velocity controller
-        outer_controller = Blocks.LimPID(k=0.54, Ti=2.48, Td=0, Nd=600, wd=1, wp=0.5)
+        outer_controller = Controller() #LimPID(k=0.54, Ti=2.48, Td=0, Nd=600, wd=1, wp=0.5)
         # neg_gain = Blocks.Gain(k=1)
         # ref = Blocks.Step(height=x_ref, start_time=5)
         # ref = Blocks.Square(;  smooth = true)

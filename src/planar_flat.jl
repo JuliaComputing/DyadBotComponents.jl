@@ -44,8 +44,8 @@ end
         Ic = 0.1,    [description="Body moment of inertia"]
         Iw = 0.01,   [description="Wheel moment of inertia"]
         g = 9.81,    [description="Gravity"]
-        b_trans = 1.0,     [description="Translational Damping coefficient"]
-        b_rot = 1.0,     [description="Rotational Damping coefficient"]
+        b_trans = 10.0,     [description="Translational Damping coefficient"]
+        b_rot = 10.0,     [description="Rotational Damping coefficient"]
     end
 
     systems = @named begin
