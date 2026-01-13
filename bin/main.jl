@@ -68,20 +68,6 @@ function Bonito.jsrender(session::Session, x::FileDownload)
     return Bonito.jsrender(session, dom)
 end
 
-# download = FileDownload("")
-# app = App() do session
-#     DOM.html(
-#         DOM.head(
-#             get_shoelace()...
-#         ),
-#         DOM.body(
-#             DOM.h1("Hello World"),
-#             download
-#         )
-#     )
-# end
-# download.value[]="Hello World"
-
 struct FileInput
     value::Observable{String}
     click::Observable{Bool} 

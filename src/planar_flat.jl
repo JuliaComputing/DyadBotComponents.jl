@@ -32,20 +32,22 @@ Base.@kwdef mutable struct FlatDyadBotParams <: Params
     g::Real = 9.81
     b_trans::Real = 10.0
     b_rot::Real = 10.0
+    theta_init::Real = π
 end
 
 
 @component function FlatDyadBot(; name)
     pars = @parameters begin
-        M = 1.0,     [description="Body mass"]
-        m = 0.1,     [description="Wheel mass"]
-        R = 0.1,     [description="Wheel radius"]
-        L = 0.5,     [description="Distance from wheel axis to body center of mass"]
-        Ic = 0.1,    [description="Body moment of inertia"]
-        Iw = 0.01,   [description="Wheel moment of inertia"]
-        g = 9.81,    [description="Gravity"]
-        b_trans = 10.0,     [description="Translational Damping coefficient"]
-        b_rot = 10.0,     [description="Rotational Damping coefficient"]
+        M,     [description="Body mass"]
+        m,     [description="Wheel mass"]
+        R,     [description="Wheel radius"]
+        L,     [description="Distance from wheel axis to body center of mass"]
+        Ic,    [description="Body moment of inertia"]
+        Iw,   [description="Wheel moment of inertia"]
+        g,    [description="Gravity"]
+        b_trans,     [description="Translational Damping coefficient"]
+        b_rot,     [description="Rotational Damping coefficient"]
+        theta_init, [description="Initial Rotation Angle"]
     end
 
     systems = @named begin
@@ -58,7 +60,7 @@ end
 
     vars = @variables begin
         x(t) = 0.0,          [description="Horizontal position"]
-        theta(t) = deg2rad(180),      [description="Body angle (from vertical down)"]
+        theta(t) = theta_init,      [description="Body angle (from vertical down)"]
         x_dot(t) = 0.0,      [description="Horizontal velocity"]
         theta_dot(t) = 0.0,  [description="Angular velocity"]
         x_ddot(t),           [description="Horizontal acceleration"]

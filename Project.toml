@@ -8,6 +8,7 @@ Bonito = "824d6782-a2ef-11e9-3a09-e5662e0c26f8"
 ControlSystemsBase = "aaaaaaaa-a6ca-5380-bf3e-84a91bcd477e"
 ControlSystemsMTK = "687d7614-c7e5-45fc-bfc3-9ee385575c88"
 DyadControlSystems = "6f9e59d0-2838-4fee-9bce-c163a6c9592b"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 ModelingToolkitInputs = "9c47c465-b61a-4984-aca2-8d7e8f154266"
@@ -21,9 +22,13 @@ ShoelaceWidgets = "1dc53738-a592-4c0c-95ab-f92b84dc4c89"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 
+[sources]
+ModelingToolkitParameters = {rev = "main", url = "https://github.com/bradcarman/ModelingToolkitParameters.jl.git"}
+
 [compat]
 Bonito = "4.2.0"
 ControlSystemsMTK = "2.5.0"
+GLMakie = "0.13.8"
 Makie = "0.24.8"
 ModelingToolkitInputs = "0.2.0"
 ModelingToolkitParameters = "0.4.0"
@@ -39,6 +44,3 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Test"]
-
-[sources]
-ModelingToolkitParameters = {url = "https://github.com/bradcarman/ModelingToolkitParameters.jl.git", rev = "main"}
