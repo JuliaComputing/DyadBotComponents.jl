@@ -60,7 +60,7 @@ sys = mtkcompile(sys)
 prob = ODEProblem(sys, sys.bot => bot_params, (0, 1))
 sol = solve(prob)
 
-plot(sol; idxs=sys.plant.plant.theta)
+plot(sol; idxs=sys.bot.plant.theta)
 
 
 # Next Step - Solve Outer Loop ..........
