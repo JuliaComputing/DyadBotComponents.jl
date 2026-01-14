@@ -33,6 +33,7 @@ Base.@kwdef mutable struct FlatDyadBotParams <: Params
     b_trans::Real = 1.0
     b_rot::Real = 1.0
     theta_init::Real = π
+    x_init::Real = 0
 end
 
 
@@ -48,6 +49,7 @@ end
         b_trans,     [description="Translational Damping coefficient"]
         b_rot,     [description="Rotational Damping coefficient"]
         theta_init, [description="Initial Rotation Angle"]
+        x_init, [description="Initial Position"]
     end
 
     systems = @named begin
@@ -59,7 +61,7 @@ end
     end
 
     vars = @variables begin
-        x(t) = 0.0,          [description="Horizontal position"]
+        x(t) = x_init,          [description="Horizontal position"]
         theta(t) = theta_init,      [description="Body angle (from vertical down)"]
         x_dot(t) = 0.0,      [description="Horizontal velocity"]
         theta_dot(t) = 0.0,  [description="Angular velocity"]

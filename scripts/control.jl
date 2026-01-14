@@ -13,7 +13,7 @@ bot_params = DyadBotComponents.CascadeControlledFlatDyadBotParams()
 @component function CascadeControlledFlatDyadBotInput(; name, bot_params)
     systems = @named begin
         bot = DyadBotComponents.CascadeControlledFlatDyadBot()
-        position = Blocks.Constant(k=0)
+        position = Blocks.Constant(k=0.0) #NOTE: setting to 0.1 causes ERROR: ArgumentError: invalid argument #4 to LAPACK call
     end
     eqs = [
         ModelingToolkit.connect(bot.ref, position.output)
@@ -96,3 +96,22 @@ spec = JSC.PIDAutotuningAnalysisSpec(;
 )
 
 asol = JSC.run_analysis(spec)
+
+arts = DyadControlSystems.artifacts(asol, :OptimizedParameters)
+
+bot_params.outer_controller.k = arts[1, :Kp_standard]
+bot_params.outer_controller.Ti = arts[1, :Ti_standard]
+bot_params.outer_controller.Td = arts[1, :Td_standard]
+bot_params.outer_controller.N = 1 # arts[1, :Nd] #NOTE: avoid NaN
+
+# Simulate Off Position Robot
+bot_params.plant.x_init = 0.1
+
+ssys = mtkcompile(sys)
+prob = ODEProblem(ssys, ssys.bot => bot_params, (0, 10))
+sol = solve(prob; abstol=1e-5, reltol=1e-5)
+
+using Plots
+p1=plot(sol; idxs=ssys.bot.plant.theta); hline!([pi])
+p2=plot(sol; idxs=ssys.bot.plant.x)
+plot([p1, p2]; layout=(2,1))

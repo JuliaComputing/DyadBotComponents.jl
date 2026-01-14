@@ -42,9 +42,12 @@ PID controller
     e ~ reference.u - y
     ctr_output.u ~ u
     D(x) ~ e / Ti
-    Tf*D(yf) + yf ~ D(e)
+
+    Tf*D(yf) + yf ~ -D(y) # D(e) # ERROR: ArgumentError: Differential(t)(bot₊d_u2(t)) is present in the system but bot₊d_u2(t) is not an unknown.
     u ~ k*(e + x + Td*yf)
 
+    # Tf*D(yf) + yf ~ e
+    # u ~ k*(e + x + Td*D(yf))
   ]
   return System(eqs, t, vars, params; systems, name)
 end
