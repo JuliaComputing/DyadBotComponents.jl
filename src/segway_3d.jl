@@ -1,60 +1,11 @@
+# using Pkg
+# Pkg.activate(joinpath(@__DIR__, ".."))
 using ModelingToolkit
 using Multibody
 import ModelingToolkit: t_nounits as t, D_nounits as D
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
-using OrdinaryDiffEq
 
 # A 3D model of a segway using RollingWheelSet (does not allow tilting of body)
-
-# @component function DyadBot3D(; name)
-#     pars = @parameters begin
-#         wheel_radius = 0.04
-#         body_mass = 0.1
-#         body_height = 0.1
-#         body_width = 0.13
-#         body_depth = 0.07
-#     end
-
-#     systems = @named begin
-#         world = World()
-#         wheels = RollingWheelSet(
-#             radius = wheel_radius,
-#             m_wheel = 0.05, # mass of one wheel
-#             I_axis = 5e-5,  # moment of inertia of one wheel around the rotation axis
-#             I_long = 1e-5,
-#             track = body_width,   # distance between wheels
-#         )
-#         body = BodyShape(
-#             m = body_mass,
-#             I_22 = 0.01*0.03^2, # Inertia around vertical axis, a very rough approximation
-#             I_11 = 0.01*0.05^2, # Total guesses
-#             I_33 = 0.01*0.05^2, 
-#             r = [0.0, body_height, 0.0], # Vector from `frame_a` to `frame_b` (head) resolved in `frame_a`
-#             height = body_depth, # we use the word "height" for the length of r
-#             width = body_width,
-#         )  
-#     end
-
-#     eqs = [
-#         connect(wheels.frame_middle, body_offset.frame_a)
-#         connect(body_offset.frame_b, body.frame_a)
-#     ]
-
-#     System(eqs, t, [], pars; systems, name)
-# end
-
-
-# @named model = DyadBot3D()
-# model = complete(model)
-
-# ssys = structural_simplify(multibody(model))
-
-# prob = ODEProblem(ssys, [], (0.0, 5.0))
-
-# sol = solve(prob, Rodas5P())
-
-# ##
-# import GLMakie
 
 
 ##
@@ -66,9 +17,9 @@ using OrdinaryDiffEq
 # ==============================================================================
 
 @component function DyadBot3DWheels(; name)
-    body_height = 0.1#, [description = "Height of body above wheel axle"]
-    track = 0.13#, [description = "Distance between wheels"]
     pars = @parameters begin
+        track = 0.13#, [description = "Distance between wheels"]
+        body_height = 0.1#, [description = "Height of body above wheel axle"]
         wheel_radius = 0.04
         body_mass = 0.1
         wheel_mass = 0.05
@@ -82,6 +33,8 @@ using OrdinaryDiffEq
 
         # Two individual rolling wheels (allows tilting)
         wheel_left = SlippingWheel(
+            angles = nothing,
+            der_angles = nothing,
             radius = wheel_radius,
             m = wheel_mass,
             I_axis = wheel_I_axis,
@@ -89,6 +42,8 @@ using OrdinaryDiffEq
             state = false,
         )
         wheel_right = SlippingWheel(
+            angles = nothing,
+            der_angles = nothing,
             radius = wheel_radius,
             m = wheel_mass,
             I_axis = wheel_I_axis,
@@ -98,8 +53,8 @@ using OrdinaryDiffEq
         )
 
         # Revolute joints for wheel spin
-        revolute_left = Revolute(n = [0, 0, 1], axisflange = true, phi0=0, w0=0)
-        revolute_right = Revolute(n = [0, 0, 1], axisflange = true, phi0=0, w0=0)
+        revolute_left = Revolute(n = [0, 0, 1], axisflange = true, phi0=nothing, w0=nothing)
+        revolute_right = Revolute(n = [0, 0, 1], axisflange = true, phi0=nothing, w0=nothing)
 
         # Axis connecting wheels
         rod_left = FixedTranslation(r = [0, 0, track/2])
@@ -151,20 +106,35 @@ end
 ##
 
 @named model_wheels = DyadBot3DWheels()
-model_wheels = complete(model_wheels)
 
-linsys = (; allow_symbolic = false, inline_linear_sccs = true, analytical_linear_scc_limit = 5, reassemble_alg = StructuralTransformations.DefaultReassembleAlgorithm(; inline_linear_sccs = true, analytical_linear_scc_limit = 5))
-ssys = structural_simplify(multibody(model_wheels); linsys...)
+ssys = multibody(model_wheels)
 
 
 x0 = [
     # collect(ssys.axis_body.Q̂) .=> [1, 0, 0, 0];
 ]
 
-guesses = unknowns(ssys) .=> 0.0
+guesses = Dict([
+    unknowns(ssys) .=> 0.0;
+    # (ssys.wheel_right.wheeljoint.vContact_0)[3]  => 0.0
+    # (ssys.wheel_left.wheeljoint.vContact_0)[1]  => 0.0
+    # (ssys.axis_body.a_0)[2]  => 0.0
+    # D(D((ssys.wheel_right.wheeljoint.angles)[3]))  => 0.0
+    # (ssys.wheel_left.wheeljoint.e_axis_0)[2]  => 0.0
+    # (ssys.wheel_left.wheeljoint.e_axis_0)[1]  => 0.0
+    # D(D((ssys.wheel_left.wheeljoint.delta_0)[3]))  => 0.0
+    # D((ssys.wheel_left.wheeljoint.delta_0)[3])  => 0.0
+    # (ssys.wheel_left.body.a_0)[3]  => 0.0
+    # D(D((ssys.wheel_right.wheeljoint.angles)[2]))  => 0.0
+    # D((ssys.wheel_right.wheeljoint.delta_0)[1])  => 0.0
+    # D(D((ssys.wheel_right.wheeljoint.delta_0)[3]))  => 0.0
+])
 
-prob = ODEProblem(ssys, x0, (0.0, 5.0); guesses)
+initsys_mtkcompile_kwargs = (allow_symbolic=true, )
 
+prob = ODEProblem(ssys, x0, (0.0, 5.0); guesses, missing_guess_value = MissingGuessValue.Constant(0.0001));
+
+using OrdinaryDiffEq
 sol_wheels = solve(prob, Rodas5P())
 
 ##
