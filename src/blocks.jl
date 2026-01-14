@@ -4,21 +4,25 @@ using ModelingToolkit
 
 @kwdef mutable struct ControllerParams <: Params
   #set_point::Float64 = 0
-  kp::Float64 = 1.0
-  ki::Float64 = 0.1
-  kd::Float64 = 0.0
+  k::Float64 = 1.0
+  Ti::Float64 = 10.0
+  Td::Float64 = 1e-6
+  N::Float64 = 10.0
 end
 
 """
-  Controller\\_(set\\_point=0, kp=1, ki=0.1, kd=0, initial\\_output=0, output\\_limit=0)
+  Controller\\_(set\\_point=0, k, Ti, Td, initial\\_output=0, output\\_limit=0)
 
-PI controller
+PID controller
+
+``k(1 + 1/(T_i s) + T_d s)``
 """
 @component function Controller(; name)
   params = @parameters begin
-    kp
-    ki
-    kd
+    k
+    Ti
+    Td
+    N
   end
   systems = @named begin
     measurement = Blocks.RealInput()
@@ -26,22 +30,20 @@ PI controller
     reference = Blocks.RealInput()
   end
   vars = @variables begin
-    x(t), [guess=0]
-    dx(t), [guess=0]
-    ddx(t), [guess=0]
-    y(t)=0
-    dy(t), [guess=0]
+    e(t), [guess=0]
+    x(t)=0, [guess=0]
+    y(t), [guess=0]
+    yf(t)=0, [guess=0]
+    u(t), [guess=0]
   end
+  Tf = Td/N
   eqs = [
-
-    x ~ reference.u - measurement.u
-    ctr_output.u ~ y
-
-    D(y) ~ dy
-    D(measurement.u) ~ dx # Using measurement.u here because ERROR: ArgumentError: Differential(t)(Differential(t)(Differential(t)(x_ref(t)))) is present in the system but x_ref(t) is not an unknown.
-    D(dx) ~ ddx
-
-    dy ~ kp*(dx + ki*x + kd*ddx)
+    y ~ measurement.u
+    e ~ reference.u - y
+    ctr_output.u ~ u
+    D(x) ~ e / Ti
+    Tf*D(yf) + yf ~ e
+    u ~ k*(e + x - Td*yf)
 
   ]
   return System(eqs, t, vars, params; systems, name)
