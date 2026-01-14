@@ -10,7 +10,7 @@ using ModelingToolkitParameters
 # get parameter defaults
 bot_params = DyadBotComponents.CascadeControlledFlatDyadBotParams()
 
-@component function CascadeControlledFlatDyadBotInput(; name)
+@component function CascadeControlledFlatDyadBotInput(; name, bot_params)
     systems = @named begin
         bot = DyadBotComponents.CascadeControlledFlatDyadBot()
         position = Blocks.Constant(k=0)
@@ -22,7 +22,7 @@ bot_params = DyadBotComponents.CascadeControlledFlatDyadBotParams()
     System(eqs, t, [], []; systems, name, defaults)
 end
 
-@named sys = CascadeControlledFlatDyadBotInput()
+@named sys = CascadeControlledFlatDyadBotInput(; bot_params)
 spec = JSC.PIDAutotuningAnalysisSpec(;
     name = :sys,
     model = sys,
@@ -50,62 +50,49 @@ asol = JSC.run_analysis(spec)
 arts = DyadControlSystems.artifacts(asol, :OptimizedParameters)
 
 # update parameters from auto-tune
-# bot_params.inner_controller.k = 15.6#arts[1, :Kp_standard]
-# bot_params.inner_controller.Ti = 1e4#arts[1, :Ti_standard]
-# bot_params.inner_controller.Td = 0.16# arts[1, :Td_standard]
+bot_params.inner_controller.k = arts[1, :Kp_standard]
+bot_params.inner_controller.Ti = arts[1, :Ti_standard]
+bot_params.inner_controller.Td = arts[1, :Td_standard]
+bot_params.inner_controller.N = arts[1, :Nd]
 
-# bot_params.inner_controller.k = arts[1, :Kp_standard]
-# bot_params.inner_controller.Ti = arts[1, :Ti_standard]
-# bot_params.inner_controller.Td = arts[1, :Td_standard]
-
-# bot_params.outer_controller.k = 0
-# bot_params.outer_controller.Ti = 1e3
-# bot_params.outer_controller.Td = 0
+bot_params.outer_controller.k = 0
+bot_params.outer_controller.Ti = 1e3
+bot_params.outer_controller.Td = 1
 
 # Simulate Tilted Robot
-bot_params.plant.theta_init = deg2rad(170)
+bot_params.plant.theta_init = deg2rad(190)
 ssys = mtkcompile(sys)
 
-x0 = [
-    ssys.bot.plant.theta_init => deg2rad(190)
-    ssys.bot.inner_controller.k => arts[1, :Kp_standard]
-    ssys.bot.inner_controller.Ti => arts[1, :Ti_standard]
-    ssys.bot.inner_controller.Td => arts[1, :Td_standard]
-    ssys.bot.inner_controller.N => arts[1, :Nd]
-    # ssys.bot.inner_controller.k => 15.6
-    # ssys.bot.inner_controller.Ti => 1e4
-    # ssys.bot.inner_controller.Td => 0.16
-    ssys.bot.outer_controller.k => 0
-    ssys.bot.outer_controller.Ti => 1e3
-    ssys.bot.outer_controller.Td => 1
-]
 
-# prob = ODEProblem(ssys, ssys.bot => bot_params, (0, 0.1))
-prob = ODEProblem(ssys, x0, (0, 10))
+
+prob = ODEProblem(ssys, ssys.bot => bot_params, (0, 10))
 sol = solve(prob; abstol=1e-5, reltol=1e-5)
 
 using Plots
 plot(sol; idxs=ssys.bot.plant.theta); hline!([pi])
 
 
-# Next Step - Solve Outer Loop ..........
-# @named bot = DyadBotComponents.CascadeControlledFlatDyadBot()
+# Implement Tuned Defaults
+@named sys2 = CascadeControlledFlatDyadBotInput(; bot_params)
 
-# spec = JSC.PIDAutotuningAnalysisSpec(;
-#     name = :bot,
-#     model = bot,
-#     measurement = "y2",
-#     control_input = "u2",
-#     step_input = "u2",
-#     step_output = "y2",
-#     Ts = 0.01,           # Sample time
-#     duration = 25.0,      # Simulation duration
-#     Ms = 1.5,            # Sensitivity peak constraint
-#     Mt = 1.5,            # Complementary sensitivity peak constraint
-#     Mks = 400.0,         # Control sensitivity constraint
-#     wl = 1e-2,           # Lower frequency bound
-#     wu = 1e3,            # Upper frequency bound
-#     kd_ub = 0.0,         # Tune PI controller
-#     num_frequencies = 200,
-#     soft = true
-# )
+# Next Step - Solve Outer Loop ..........
+spec = JSC.PIDAutotuningAnalysisSpec(;
+    name = :sys2,
+    model = sys2,
+    measurement = "bot.y2",
+    control_input = "bot.u2",
+    step_input = "bot.u2",
+    step_output = "bot.y2",
+    Ts = 0.01,           # Sample time
+    duration = 5.0,      # Simulation duration
+    Ms = 1.5,            # Sensitivity peak constraint
+    Mt = 1.5,            # Complementary sensitivity peak constraint
+    Mks = 400.0,         # Control sensitivity constraint
+    wl = 1e-2,           # Lower frequency bound
+    wu = 1e3,            # Upper frequency bound
+    kd_ub = 0.0,         # Tune PI controller
+    num_frequencies = 200,
+    soft = true
+)
+
+asol = JSC.run_analysis(spec)
