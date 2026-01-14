@@ -42,8 +42,8 @@ PID controller
     e ~ reference.u - y
     ctr_output.u ~ u
     D(x) ~ e / Ti
-    Tf*D(yf) + yf ~ e
-    u ~ k*(e + x - Td*yf)
+    Tf*D(yf) + yf ~ D(e)
+    u ~ k*(e + x + Td*yf)
 
   ]
   return System(eqs, t, vars, params; systems, name)

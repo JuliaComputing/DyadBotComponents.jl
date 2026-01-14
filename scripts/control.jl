@@ -82,7 +82,7 @@ x0 = [
 
 # prob = ODEProblem(ssys, ssys.bot => bot_params, (0, 0.1))
 prob = ODEProblem(ssys, x0, (0, 10))
-sol = solve(prob; abstol=1e-4, reltol=1e-4, dtmax=0.001)
+sol = solve(prob; abstol=1e-5, reltol=1e-5)
 
 using Plots
 plot(sol; idxs=ssys.bot.plant.theta); hline!([pi])
