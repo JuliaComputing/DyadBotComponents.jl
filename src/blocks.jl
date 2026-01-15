@@ -41,13 +41,14 @@ PID controller
     y ~ measurement.u
     e ~ reference.u - y
     ctr_output.u ~ u
-    D(x) ~ e / Ti
 
-    Tf*D(yf) + yf ~ -D(y) # D(e) # ERROR: ArgumentError: Differential(t)(bot₊d_u2(t)) is present in the system but bot₊d_u2(t) is not an unknown.
+    D(x) ~ e / Ti
+    
     u ~ k*(e + x + Td*yf)
 
-    # Tf*D(yf) + yf ~ e
-    # u ~ k*(e + x + Td*D(yf))
+    # Tf*D(yf) + yf ~ -D(y) # D(e) # ERROR: ArgumentError: Differential(t)(bot₊d_u2(t)) is present in the system but bot₊d_u2(t) is not an unknown.
+    D(yf) ~ ifelse(Td>0, (-yf - D(y))*N/Td, 0) #using ifelse to avoid Td=0 instability
+
   ]
   return System(eqs, t, vars, params; systems, name)
 end

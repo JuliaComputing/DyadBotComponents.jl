@@ -136,7 +136,7 @@ end
 # --------------------------------------------------------------
 @named bot = DyadBotComponents.CascadeControlledFlatDyadBot()
 bot_ns = ModelingToolkit.toggle_namespacing(bot, false)
-inputs = [bot_ns.x_ref]
+inputs = [bot_ns.ref.u]
 sys = mtkcompile(bot; inputs)
 sys, input_functions = ModelingToolkitInputs.build_input_functions(sys, inputs)
 bot_params = DyadBotComponents.CascadeControlledFlatDyadBotParams()
@@ -302,9 +302,9 @@ const STYLE_CSS = """
 @kwdef struct AppState
     integrator = Ref{SciMLBase.DEIntegrator}()
 
-    x_ref = SLInput(0.5; label="target position [m]")
+    x_ref = SLInput(0.2; label="target position [m]")
     cycle_time = SLInput(5.0; label="cycle time [s]")
-    cycle_amplitude = SLInput(0.5; label="cycle amplitude [m]")
+    cycle_amplitude = SLInput(0.2; label="cycle amplitude [m]")
     cycle = SLCheckbox("enable cycle"; checked=true)
 
     run = SLButton("Run")
@@ -334,11 +334,12 @@ const STYLE_CSS = """
     kpo = SLInput(0.0)
     kio = SLInput(0.0)
     kdo = SLInput(0.0)
+    kno = SLInput(0.0)
 
     kpi = SLInput(0.0)
     kii = SLInput(0.0) #TODO: put to Inf
     kdi = SLInput(0.0)
-
+    kni = SLInput(0.0)
 
 
 
@@ -442,12 +443,15 @@ parameter_control_map(app::AppState) = [
     (:plant, :L) => app.L
     (:plant, :b_rot) => app.b_rot
     (:plant, :b_trans) => app.b_trans
-    (:outer_controller, :kp) => app.kpo
-    (:outer_controller, :ki) => app.kio
-    (:outer_controller, :kd) => app.kdo
-    (:inner_controller, :kp) => app.kpi
-    (:inner_controller, :ki) => app.kii
-    (:inner_controller, :kd) => app.kdi
+    (:outer_controller, :k) => app.kpo
+    (:outer_controller, :Ti) => app.kio
+    (:outer_controller, :Td) => app.kdo
+    (:outer_controller, :N) => app.kno
+
+    (:inner_controller, :k) => app.kpi
+    (:inner_controller, :Ti) => app.kii
+    (:inner_controller, :Td) => app.kdi
+    (:inner_controller, :N) => app.kni
     
 ]
 
@@ -478,7 +482,7 @@ end
 
 function params_to_control(app::AppState)
     for (path, control) in parameter_control_map(app)
-        control.value[] = getproperty(app.bot_params[], path)
+        control.value[] = round(getproperty(app.bot_params[], path); digits=2)
     end
 end
 
@@ -528,7 +532,7 @@ function run(app::AppState, x)
                 cycle_current = 0
             end
         end
-        set_input!(input_functions, app.integrator[], sys.x_ref, app.x_ref.value[])
+        set_input!(input_functions, app.integrator[], sys.ref.u, app.x_ref.value[])
 
         # step
         step!(app.integrator[], 0.1, true)
@@ -548,7 +552,7 @@ function run(app::AppState, x)
         
         # real time pause
         compute_time = Base.time() - t0
-        sleep_time = max(step_size - compute_time, 0)*0.95 
+        sleep_time = max(step_size - compute_time, 0)
         sleep(sleep_time)
     end
 
@@ -622,13 +626,13 @@ function get_body(session, app::AppState)
                         
                         DOM.table(
                             DOM.tr(
-                                DOM.td(""), DOM.td("P"), DOM.td("I"), DOM.td("D")
+                                DOM.td(""), DOM.td("k"), DOM.td("Ti"), DOM.td("Td"), DOM.td("N")
                             ),
                             DOM.tr(
-                                DOM.td("outer"), DOM.td(app.kpo), DOM.td(app.kio), DOM.td(app.kdo)
+                                DOM.td("outer"), DOM.td(app.kpo), DOM.td(app.kio), DOM.td(app.kdo), DOM.td(app.kno)
                             ),
                             DOM.tr(
-                                DOM.td("inner"), DOM.td(app.kpi), DOM.td(app.kii), DOM.td(app.kdi)
+                                DOM.td("inner"), DOM.td(app.kpi), DOM.td(app.kii), DOM.td(app.kdi), DOM.td(app.kni)
                             )
                         )
                         

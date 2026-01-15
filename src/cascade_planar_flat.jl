@@ -3,8 +3,8 @@ using  ModelingToolkitParameters
 Base.@kwdef mutable struct CascadeControlledFlatDyadBotParams <: Params
     # systems
     plant::FlatDyadBotParams = FlatDyadBotParams()
-    inner_controller::ControllerParams = ControllerParams(k=15.6, Ti=1e6, Td=0.14)
-    outer_controller::ControllerParams = ControllerParams(k=0.0, Ti=1e6, Td=1e-6)
+    inner_controller::ControllerParams = ControllerParams(k=10, Ti=1e6, Td=0.125, N=50)
+    outer_controller::ControllerParams = ControllerParams(k=0.5, Ti=1.0, Td=0.0, N=NaN)
 end
 
 

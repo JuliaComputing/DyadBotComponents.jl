@@ -1,0 +1,24 @@
+[plant]
+theta_init = 3.141592653589793
+b_trans = 0.5
+Ic = 0.1
+b_rot = 0.5
+R = 0.1
+M = 1.0
+g = 9.81
+Iw = 0.01
+m = 0.1
+x_init = 0
+L = 0.5
+
+[outer_controller]
+N = nan
+Ti = 1.0
+k = 0.5
+Td = 0.0
+
+[inner_controller]
+N = 50.0
+Ti = 1.0e6
+k = 10.0
+Td = 0.125

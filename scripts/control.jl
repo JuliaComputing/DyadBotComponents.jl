@@ -5,7 +5,12 @@ using ModelingToolkit
 using ModelingToolkit: t_nounits as t
 import DyadControlSystems as JSC
 using ModelingToolkitParameters
+using OrdinaryDiffEq
 # using WGLMakie
+
+# ------------------------------------------------------------------------------
+# Setup a connected bot for control tunning
+# ------------------------------------------------------------------------------
 
 # get parameter defaults
 bot_params = DyadBotComponents.CascadeControlledFlatDyadBotParams()
@@ -21,8 +26,12 @@ bot_params = DyadBotComponents.CascadeControlledFlatDyadBotParams()
     defaults=bot=>bot_params
     System(eqs, t, [], []; systems, name, defaults)
 end
-
 @named sys = CascadeControlledFlatDyadBotInput(; bot_params)
+
+
+# ------------------------------------------------------------------------------
+# Tune the inner loop first (note: outerloop is disconnected with loop_openings)
+# ------------------------------------------------------------------------------
 spec = JSC.PIDAutotuningAnalysisSpec(;
     name = :sys,
     model = sys,
@@ -49,31 +58,34 @@ asol = JSC.run_analysis(spec)
 
 arts = DyadControlSystems.artifacts(asol, :OptimizedParameters)
 
-# update parameters from auto-tune
+# ------------------------------------------------------------------------------
+# Update Parameters from the AutoTuning...
+# ------------------------------------------------------------------------------
 bot_params.inner_controller.k = arts[1, :Kp_standard]
 bot_params.inner_controller.Ti = arts[1, :Ti_standard]
 bot_params.inner_controller.Td = arts[1, :Td_standard]
 bot_params.inner_controller.N = arts[1, :Nd]
 
+# turn off the outer loop
 bot_params.outer_controller.k = 0
 bot_params.outer_controller.Ti = 1e3
 bot_params.outer_controller.Td = 1
 
 # Simulate Tilted Robot
-bot_params.plant.theta_init = deg2rad(190)
+bot_params.plant.theta_init = deg2rad(190) #tilt the robot by 10deg
 ssys = mtkcompile(sys)
-
-
 
 prob = ODEProblem(ssys, ssys.bot => bot_params, (0, 10))
 sol = solve(prob; abstol=1e-5, reltol=1e-5)
 
 using Plots
-plot(sol; idxs=ssys.bot.plant.theta); hline!([pi])
+Plots.plot(sol; idxs=ssys.bot.plant.theta); hline!([pi])
 
-
+# ------------------------------------------------------------------------------
+# Tune the outerloop
+# ------------------------------------------------------------------------------
 # Implement Tuned Defaults
-@named sys2 = CascadeControlledFlatDyadBotInput(; bot_params)
+@named sys2 = CascadeControlledFlatDyadBotInput(; bot_params) #<-- note how easy to add updated parameters
 
 # Next Step - Solve Outer Loop ..........
 spec = JSC.PIDAutotuningAnalysisSpec(;
@@ -99,10 +111,13 @@ asol = JSC.run_analysis(spec)
 
 arts = DyadControlSystems.artifacts(asol, :OptimizedParameters)
 
+# ------------------------------------------------------------------------------
+# Update Parameters from the AutoTuning...
+# ------------------------------------------------------------------------------
 bot_params.outer_controller.k = arts[1, :Kp_standard]
 bot_params.outer_controller.Ti = arts[1, :Ti_standard]
 bot_params.outer_controller.Td = arts[1, :Td_standard]
-bot_params.outer_controller.N = 1 # arts[1, :Nd] #NOTE: avoid NaN
+bot_params.outer_controller.N = arts[1, :Nd] 
 
 # Simulate Off Position Robot
 bot_params.plant.x_init = 0.1
@@ -112,6 +127,32 @@ prob = ODEProblem(ssys, ssys.bot => bot_params, (0, 10))
 sol = solve(prob; abstol=1e-5, reltol=1e-5)
 
 using Plots
-p1=plot(sol; idxs=ssys.bot.plant.theta); hline!([pi])
-p2=plot(sol; idxs=ssys.bot.plant.x)
-plot([p1, p2]; layout=(2,1))
+p1=Plots.plot(sol; idxs=ssys.bot.plant.theta); hline!([pi])
+p2=Plots.plot(sol; idxs=ssys.bot.plant.x)
+Plots.plot(p1, p2; layout=(2,1))
+
+# ------------------------------------------------------------------------------
+# Save Parameters to file!
+# ------------------------------------------------------------------------------
+file = joinpath(@__DIR__, "tuned_parameters.toml")
+ModelingToolkitParameters.save_parameters(bot_params, file)
+
+# check defaults
+bot_params = DyadBotComponents.CascadeControlledFlatDyadBotParams()
+file = joinpath(@__DIR__, "default_parameters.toml")
+ModelingToolkitParameters.save_parameters(bot_params, file)
+
+# ---------------------------------------------------
+# Make a comparison (tuned vs. default)
+# ---------------------------------------------------
+# bot_params = ModelingToolkitParameters.load_parameters(file, DyadBotComponents.CascadeControlledFlatDyadBotParams)
+bot_params.plant.x_init = 0.1
+bot_params.plant.theta_init = deg2rad(190)
+@mtkcompile sys = CascadeControlledFlatDyadBotInput(; bot_params)
+prob = ODEProblem(sys, [], (0, 10));
+sol_d = solve(prob);
+p1=Plots.plot(sol_d; idxs=ssys.bot.plant.theta); hline!([pi]);
+Plots.plot!(sol; idxs=ssys.bot.plant.theta)
+p2=Plots.plot(sol_d; idxs=ssys.bot.plant.x);
+Plots.plot!(sol; idxs=ssys.bot.plant.x)
+Plots.plot(p1, p2; layout=(2,1))

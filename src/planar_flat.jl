@@ -30,9 +30,9 @@ Base.@kwdef mutable struct FlatDyadBotParams <: Params
     Ic::Real = 0.1
     Iw::Real = 0.01
     g::Real = 9.81
-    b_trans::Real = 1.0
-    b_rot::Real = 1.0
-    theta_init::Real = π
+    b_trans::Real = 0.5
+    b_rot::Real = 0.5
+    theta_init::Real = deg2rad(180)
     x_init::Real = 0
 end
 
