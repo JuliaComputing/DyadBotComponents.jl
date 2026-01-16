@@ -103,12 +103,12 @@ spec = JSC.PIDAutotuningAnalysisSpec(;
     step_output = "bot.y2",
     Ts = 0.01,           # Sample time
     duration = 10.0,     # Simulation duration
-    Ms = 2.0,            # Sensitivity peak constraint
-    Mt = 2.0,            # Complementary sensitivity peak constraint
+    Ms = 1.7,            # Sensitivity peak constraint
+    Mt = 1.2,            # Complementary sensitivity peak constraint
     Mks = 100.0,         # Control sensitivity constraint
     wl = 1e-2,           # Lower frequency bound
     wu = 1e3,            # Upper frequency bound
-    # kd_ub = 0.0,         # Tune PI controller
+    kd_ub = 0.0,         # Tune PI controller
     num_frequencies = 200,
     soft = true
 )
