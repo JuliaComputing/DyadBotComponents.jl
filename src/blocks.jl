@@ -34,6 +34,7 @@ PID controller
     x(t)=0, [guess=0]
     y(t), [guess=0]
     yf(t)=0, [guess=0]
+    dyf(t), [guess=0]
     u(t), [guess=0]
   end
   Tf = Td/N
@@ -43,11 +44,11 @@ PID controller
     ctr_output.u ~ u
 
     D(x) ~ e / Ti
-    
-    u ~ k*(e + x + Td*yf)
+    D(yf) ~ dyf
+    u ~ k*(e + x + Td*dyf)
 
     # Tf*D(yf) + yf ~ -D(y) # D(e) # ERROR: ArgumentError: Differential(t)(bot₊d_u2(t)) is present in the system but bot₊d_u2(t) is not an unknown.
-    D(yf) ~ ifelse(Td>0, (-yf - D(y))*N/Td, 0) #using ifelse to avoid Td=0 instability
+    dyf ~ ifelse(Td>0, (-yf + e)*N/Td, 0) #using ifelse to avoid Td=0 instability
 
   ]
   return System(eqs, t, vars, params; systems, name)

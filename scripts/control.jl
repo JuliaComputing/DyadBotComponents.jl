@@ -6,6 +6,7 @@ using ModelingToolkit: t_nounits as t
 import DyadControlSystems as JSC
 using ModelingToolkitParameters
 using OrdinaryDiffEq
+using Plots
 # using WGLMakie
 
 # ------------------------------------------------------------------------------
@@ -18,10 +19,13 @@ bot_params = DyadBotComponents.CascadeControlledFlatDyadBotParams()
 @component function CascadeControlledFlatDyadBotInput(; name, bot_params)
     systems = @named begin
         bot = DyadBotComponents.CascadeControlledFlatDyadBot()
-        position = Blocks.Constant(k=0.0) #NOTE: setting to 0.1 causes ERROR: ArgumentError: invalid argument #4 to LAPACK call
+        position = Blocks.Step(start_time=10, height=0.1, smooth=false)
+        slew = Blocks.FirstOrder(T=0.1)
+        # position = Blocks.Constant(k=0.0)
     end
     eqs = [
-        ModelingToolkit.connect(bot.ref, position.output)
+        ModelingToolkit.connect(position.output, slew.input)
+        ModelingToolkit.connect(slew.output, bot.ref)
     ]
     defaults=bot=>bot_params
     System(eqs, t, [], []; systems, name, defaults)
@@ -41,19 +45,21 @@ spec = JSC.PIDAutotuningAnalysisSpec(;
     step_output = "bot.y",
     Ts = 0.01,           # Sample time
     duration = 5.0,      # Simulation duration
-    Ms = 1.5,            # Sensitivity peak constraint
-    Mt = 1.5,            # Complementary sensitivity peak constraint
+    Ms = 2.0,            # Sensitivity peak constraint
+    Mt = 2.0,            # Complementary sensitivity peak constraint
     Mks = 500.0,         # Control sensitivity constraint
     wl = 1e-2,           # Lower frequency bound
     wu = 1e3,            # Upper frequency bound
     ki_ub = 0.0,         # Tune PD controller
     num_frequencies = 200,
+    filter_order=1,
     soft = true,
+    scale = false,
     loop_openings = ["bot.y2", "bot.u2"]
 )
 
 asol = JSC.run_analysis(spec)
-
+Plots.plot(asol.sol)
 # DyadControlSystems.launch_pid_autotuning_designer(spec)
 
 arts = DyadControlSystems.artifacts(asol, :OptimizedParameters)
@@ -69,16 +75,16 @@ bot_params.inner_controller.N = arts[1, :Nd]
 # turn off the outer loop
 bot_params.outer_controller.k = 0
 bot_params.outer_controller.Ti = 1e3
-bot_params.outer_controller.Td = 1
+bot_params.outer_controller.Td = 0
 
 # Simulate Tilted Robot
-bot_params.plant.theta_init = deg2rad(190) #tilt the robot by 10deg
+bot_params_angle_sim = deepcopy(bot_params)
+bot_params_angle_sim.plant.theta_init = deg2rad(190) #tilt the robot by 10deg
 ssys = mtkcompile(sys)
 
-prob = ODEProblem(ssys, ssys.bot => bot_params, (0, 10))
+prob = ODEProblem(ssys, ssys.bot => bot_params_angle_sim, (0, 10))
 sol = solve(prob; abstol=1e-5, reltol=1e-5)
 
-using Plots
 Plots.plot(sol; idxs=ssys.bot.plant.theta); hline!([pi])
 
 # ------------------------------------------------------------------------------
@@ -96,18 +102,19 @@ spec = JSC.PIDAutotuningAnalysisSpec(;
     step_input = "bot.u2",
     step_output = "bot.y2",
     Ts = 0.01,           # Sample time
-    duration = 5.0,      # Simulation duration
-    Ms = 1.5,            # Sensitivity peak constraint
-    Mt = 1.5,            # Complementary sensitivity peak constraint
-    Mks = 400.0,         # Control sensitivity constraint
+    duration = 10.0,     # Simulation duration
+    Ms = 2.0,            # Sensitivity peak constraint
+    Mt = 2.0,            # Complementary sensitivity peak constraint
+    Mks = 100.0,         # Control sensitivity constraint
     wl = 1e-2,           # Lower frequency bound
     wu = 1e3,            # Upper frequency bound
-    kd_ub = 0.0,         # Tune PI controller
+    # kd_ub = 0.0,         # Tune PI controller
     num_frequencies = 200,
     soft = true
 )
 
 asol = JSC.run_analysis(spec)
+Plots.plot(asol.sol)
 
 arts = DyadControlSystems.artifacts(asol, :OptimizedParameters)
 
@@ -123,10 +130,9 @@ bot_params.outer_controller.N = arts[1, :Nd]
 bot_params.plant.x_init = 0.1
 
 ssys = mtkcompile(sys)
-prob = ODEProblem(ssys, ssys.bot => bot_params, (0, 10))
+prob = ODEProblem(ssys, ssys.bot => bot_params, (0, 20))
 sol = solve(prob; abstol=1e-5, reltol=1e-5)
 
-using Plots
 p1=Plots.plot(sol; idxs=ssys.bot.plant.theta); hline!([pi])
 p2=Plots.plot(sol; idxs=ssys.bot.plant.x)
 Plots.plot(p1, p2; layout=(2,1))
