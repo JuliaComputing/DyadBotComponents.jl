@@ -3,6 +3,12 @@
 # Pkg.activate(".")
 include("planar_flat.jl")  # Get FlatDyadBot
 
+using OrdinaryDiffEq
+using DyadControlSystems, ControlSystemsBase, ControlSystemsMTK
+using Plots
+import DyadControlSystems as JSC
+# using LinearAlgebra
+
 # @named plant = FlatDyadBot()
 # plant = complete(plant)
 # inputs = [plant.control_input.u]
@@ -28,7 +34,7 @@ include("planar_flat.jl")  # Get FlatDyadBot
 
     systems = @named begin
         plant = FlatDyadBot()
-        controller = Blocks.LimPID(k=15.6, Ti=Inf, Td=0.16, Nd=25, u_max=7)
+        controller = Blocks.LimPID(k=9.83, Ti=Inf, Td=0.243, Nd=111, u_max=7)
         ref = Blocks.Constant(k=theta_ref)
     end
 
@@ -45,16 +51,20 @@ end
 model = complete(flat_model)
 ssys = structural_simplify(model)
 
-x0 = [
+x0 = Dict([
+    ssys.plant => FlatDyadBotParams();
     ssys.plant.theta => deg2rad(160)
-]
+])
 
 prob = ODEProblem(ssys, x0, (0.0, 5.0))
 sol = solve(prob, Rodas5P())
 plot(sol, idxs=[ssys.plant.theta, ssys.plant.x, ssys.plant.tau]); hline!([π], l=(:dash, :black), primary=false)
 
 ##
-S = get_named_sensitivity(flat_model, flat_model.y)
+op = Dict(
+    ssys.plant => FlatDyadBotParams()
+)
+S = get_named_sensitivity(flat_model, flat_model.y; op)
 Ms, ws = hinfnorm2(S)
 bodeplot(S, title="\$S(s)\$ angle controlled", plotphase=false, legend=:bottomright)
 hline!([Ms], l=(:dash, :black), label="\$M_S = \$$(round(Ms, digits=2))")
@@ -74,9 +84,9 @@ spec = JSC.PIDAutotuningAnalysisSpec(;
     step_output = "y",
     Ts = 0.01,           # Sample time
     duration = 25.0,      # Simulation duration
-    Ms = 1.5,            # Sensitivity peak constraint
-    Mt = 1.5,            # Complementary sensitivity peak constraint
-    Mks = 400.0,         # Control sensitivity constraint
+    Ms = 2.0,            # Sensitivity peak constraint
+    Mt = 2.0,            # Complementary sensitivity peak constraint
+    Mks = 1000.0,         # Control sensitivity constraint
     wl = 1e-2,           # Lower frequency bound
     wu = 1e3,            # Upper frequency bound
     ki_ub = 0.0,         # Tune PD controller
@@ -107,7 +117,7 @@ display(optimized_params)
     systems = @named begin
         plant = FlatDyadBot()
         # Inner loop: angle controller
-        inner_controller = Blocks.LimPID(k=15.6, Ti=Inf, Td=0.16, Nd=25, u_max=7)
+        inner_controller = Blocks.LimPID(k=9.83, Ti=Inf, Td=0.243, Nd=111, u_max=7)
         # Outer loop: velocity controller
         outer_controller = Blocks.LimPID(k=0.54, Ti=2.48, Td=0, Nd=600, wd=1, wp=0.5)
         neg_gain = Blocks.Gain(k=1)
@@ -142,6 +152,10 @@ cascade_ssys = structural_simplify(cascade_model)
 
 x0 = [
     cascade_ssys.plant.theta => deg2rad(170)
+    cascade_ssys.inner_controller.k => optimized_params[1, :Kp_standard]
+    cascade_ssys.inner_controller.Ti => optimized_params[1, :Ti_standard]
+    cascade_ssys.inner_controller.Td => optimized_params[1, :Td_standard]
+    cascade_ssys.inner_controller.Nd => optimized_params[1, :Nd]
 ]
 
 cascade_prob = ODEProblem(cascade_ssys, x0, (0.0, 20.0), dtmax=0.01)
@@ -153,6 +167,8 @@ plot(cascade_sol, idxs=[cascade_ssys.plant.theta, cascade_ssys.plant.x_dot, casc
 ##
 # PID Autotuning for outer velocity loop
 @named cascade_tuning_model = CascadeControlledFlatDyadBot()
+cm = complete(cascade_tuning_model)
+cascade_ssys = structural_simplify(cm)
 
 cascade_spec = JSC.PIDAutotuningAnalysisSpec(;
     name = :CascadeVelocityTuning,
@@ -165,7 +181,7 @@ cascade_spec = JSC.PIDAutotuningAnalysisSpec(;
     Ts = 0.01,
     duration = 20.0,
     Ms = 1.4,
-    Mt = 1.9,
+    Mt = 1.4,
     Mks = 100.0,
     wl = 1e-2,
     wu = 1e3,
@@ -183,6 +199,8 @@ cascade_asol = JSC.run_analysis(cascade_spec)
 
 plot(cascade_asol.sol)
 
+##
+
 cascade_Splot = JSC.artifacts(cascade_asol, :SensitivityFunctions)
 # cascade_response_plot = JSC.artifacts(cascade_asol, :OptimizedResponse)
 cascade_nyquist_plot = JSC.artifacts(cascade_asol, :NyquistPlot)
@@ -190,8 +208,14 @@ cascade_optimized_params = JSC.artifacts(cascade_asol, :OptimizedParameters)
 
 display(cascade_optimized_params)
 
-##
 
+cascade_prob = ODEProblem(cascade_ssys, x0, (0.0, 20.0), dtmax=0.01)
+cascade_sol = solve(cascade_prob, Rodas5P())
+plot(cascade_sol, idxs=[cascade_ssys.plant.theta, cascade_ssys.plant.x_dot, cascade_ssys.plant.x, cascade_ssys.outer_controller.ctr_output.u, cascade_ssys.plant.tau]); hline!([π 0.15], l=(:dash, :black), primary=false, ylims=(-1, 3.5), size=(800,1600), legend=:right)
+
+
+##
+using LinearAlgebra
 S2 = get_named_sensitivity(cascade_tuning_model, [cascade_tuning_model.y, cascade_tuning_model.y2])
 Ms2, ws2 = hinfnorm2(S2)
 sigmaplot(S2); hline!([Ms2], l=(:dash, :black), label="\$M_S = \$$(round(Ms2, digits=2))")
@@ -220,3 +244,151 @@ plot(dmi2)
 
 dmi22 = diskmargin(Li22)
 plot(dmi22)
+
+## Derive feedforward filter from reference to inner loop torque and angle reference.
+# - Linearize closed-loop system from reference to inner loop torque and angle reference
+# - Derive feedforward filter using desired reference model and https://andreasvarga.github.io/DescriptorSystems.jl/dev/model_matching.html#DescriptorSystems.grasol
+
+op = Dict([
+    cm.plant => FlatDyadBotParams();
+    cm.inner_controller.k  => optimized_params[1, :Kp_standard];
+    cm.inner_controller.Ti => optimized_params[1, :Ti_standard];
+    cm.inner_controller.Td => optimized_params[1, :Td_standard];
+    cm.inner_controller.Nd => optimized_params[1, :Nd];
+    cm.outer_controller.k  => cascade_optimized_params[1, :Kp_standard];
+    cm.outer_controller.Ti => cascade_optimized_params[1, :Ti_standard];
+])
+
+
+# Pcl = named_ss(cascade_tuning_model, [cascade_tuning_model.u, cascade_tuning_model.u2, cascade_tuning_model.r2], [cascade_tuning_model.y, cascade_tuning_model.y2]; op, allow_input_derivatives=true)
+
+
+##
+loop_openings = [cascade_tuning_model.y, cascade_tuning_model.y2]
+Pat = named_ss(cascade_tuning_model, [cascade_tuning_model.u], [cascade_tuning_model.y]; op, allow_input_derivatives=true, loop_openings)
+Ppt = named_ss(cascade_tuning_model, [cascade_tuning_model.u], [cascade_tuning_model.y2]; op, allow_input_derivatives=true, loop_openings)
+
+Pat = minreal(Pat, 1e-8)
+Ppt = minreal(Ppt, 1e-8)
+
+function nmp(P)
+    # Extract non-minimum phase part
+    rh, lh = ds.giofac(dss(P))
+    -ss(rh)
+
+    # z = maximum(real, tzeros(P))
+    # -tf([1, -z], [1, z])
+end
+##
+T0 = ss(tf([1], [0.2, 1]))
+Tr = T0^3*tf(1, [0.5, 1]) * nmp(Ppt)
+bodeplot([Ppt, Tr], legend=:bottom, plotphase=false, legendfontsize=8)
+
+##
+import DyadControlSystems.RobustAndOptimalControl.DescriptorSystems as ds
+
+Rtau = Ppt \ Tr
+
+
+function stabilize(Rtau0)
+    Rs, Rus = stab_unstab(Rtau0)
+    Rus.A .*= -1
+    Rus.B .*= -1
+    Rs+Rus
+end
+
+
+Rang = minreal(Pat*Rtau, 1e-8)
+@assert isstable(Rang)
+
+
+
+bodeplot([Ppt, Ppt*Rtau, Pat*Rtau], legend=:bottom, plotphase=false, legendfontsize=8)
+
+plot(step(Rtau*0.1, 10), title="Feedforward filter step response")
+
+
+##
+
+
+@component function FilteredCascadeControlledFlatDyadBot(; name)
+    pars = @parameters begin
+        x_ref = 0.15  # Reference velocity
+    end
+
+    systems = @named begin
+        plant = FlatDyadBot()
+        # Inner loop: angle controller
+        inner_controller = Blocks.LimPID(k=9.83, Ti=Inf, Td=0.243, Nd=111, u_max=25)
+        # Outer loop: velocity controller
+        outer_controller = Blocks.LimPID(k=0.54, Ti=2.48, Td=0, Nd=600, wd=1, wp=1, u_max = deg2rad(20))
+        neg_gain = Blocks.Gain(k=1)
+        ref = Blocks.Step(height=x_ref, start_time=5)
+        # Add pi offset to inner loop reference
+        pi_offset = Blocks.Constant(k=pi)
+        add_pi = Blocks.Add3(k1=1, k2=1, k3=1)
+        torque_input = Blocks.Add()
+
+        RT = Blocks.StateSpace(; Rtau.A, Rtau.B, Rtau.C, Rtau.D)
+        RA = Blocks.StateSpace(; Rang.A, Rang.B, Rang.C, Rang.D)
+        # F = Blocks.StateSpace(; Tr.A, Tr.B, Tr.C, Tr.D)
+        F = Blocks.Gain(k=1) # This is required in order to palce the analysis point in the correct place
+        TR = Blocks.StateSpace(; Tr.A, Tr.B, Tr.C, Tr.D)
+    end
+
+    eqs = [
+        # Outer loop: velocity reference -> angle reference
+        connect(ref.output, :r2, F.input)
+        connect(F.output, RT.input, TR.input, RA.input)
+        connect(TR.output, outer_controller.reference)
+        connect(RT.output, torque_input.input2)
+        connect(RA.output, add_pi.input3)
+
+        connect(plant.x_output, neg_gain.input)
+        connect(neg_gain.output, :y2, outer_controller.measurement)
+
+        # Add pi to outer controller output for inner loop reference
+        connect(outer_controller.ctr_output, :u2, add_pi.input1)
+        connect(pi_offset.output, add_pi.input2)
+
+        # Inner loop: angle reference -> torque
+        connect(add_pi.output, inner_controller.reference)
+        connect(plant.theta_output, :y, inner_controller.measurement)
+        connect(inner_controller.ctr_output, :u, torque_input.input1)
+        connect(torque_input.output, :u, plant.control_input)
+    ]
+
+    System(eqs, t, [], pars; systems, name)
+end
+
+@named filtered_model = FilteredCascadeControlledFlatDyadBot()
+filtered_ssys = structural_simplify(filtered_model)
+
+Pcl_angle = named_ss(filtered_model, [filtered_model.r2], [filtered_model.y]; op, allow_input_derivatives=true)
+Pcl_pos = named_ss(filtered_model, [filtered_model.r2], [filtered_model.y2]; op, allow_input_derivatives=true)
+
+Pcl_angle = minreal(Pcl_angle)
+Pcl_pos = minreal(Pcl_pos)
+
+w = exp10.(LinRange(-2.5, 1.5, 2000))
+bodeplot([Pcl_angle, Pcl_pos, Tr], w, legend=:bottom, plotphase=false, legendfontsize=8, hz=true, label=["Gar" "Gpr" "Tr"])
+##
+
+
+x0 = [
+    filtered_ssys.plant.theta => deg2rad(170)
+    filtered_ssys.plant => FlatDyadBotParams();
+    filtered_ssys.inner_controller.k  => optimized_params[1, :Kp_standard];
+    filtered_ssys.inner_controller.Ti => optimized_params[1, :Ti_standard];
+    filtered_ssys.inner_controller.Td => optimized_params[1, :Td_standard];
+    filtered_ssys.inner_controller.Nd => optimized_params[1, :Nd];
+    filtered_ssys.outer_controller.k  => cascade_optimized_params[1, :Kp_standard];
+    filtered_ssys.outer_controller.Ti => cascade_optimized_params[1, :Ti_standard];
+]
+
+
+filtered_prob = ODEProblem(filtered_ssys, x0, (0.0, 20.0), dtmax=0.01)
+filtered_sol = solve(filtered_prob, Rodas5P())
+plot(filtered_sol, idxs=[filtered_ssys.plant.theta, filtered_ssys.plant.x_dot, filtered_ssys.plant.x, filtered_ssys.outer_controller.ctr_output.u, filtered_ssys.plant.tau, filtered_ssys.F.output.u]); hline!([π 0.15], l=(:dash, :black), primary=false, ylims=(-1, 3.5), size=(800,1600), legend=:right)
+
+

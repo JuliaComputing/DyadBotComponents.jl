@@ -39,17 +39,17 @@ end
 
 @component function FlatDyadBot(; name)
     pars = @parameters begin
-        M,     [description="Body mass"]
-        m,     [description="Wheel mass"]
-        R,     [description="Wheel radius"]
-        L,     [description="Distance from wheel axis to body center of mass"]
-        Ic,    [description="Body moment of inertia"]
-        Iw,   [description="Wheel moment of inertia"]
-        g,    [description="Gravity"]
-        b_trans,     [description="Translational Damping coefficient"]
-        b_rot,     [description="Rotational Damping coefficient"]
-        theta_init, [description="Initial Rotation Angle"]
-        x_init, [description="Initial Position"]
+        M=1.0,     [description="Body mass"]
+        m=0.1,     [description="Wheel mass"]
+        R=0.1,     [description="Wheel radius"]
+        L=0.5,     [description="Distance from wheel axis to body center of mass"]
+        Ic=0.1,    [description="Body moment of inertia"]
+        Iw=0.01,   [description="Wheel moment of inertia"]
+        g=9.81,    [description="Gravity"]
+        b_trans=0.5,     [description="Translational Damping coefficient"]
+        b_rot=0.1,     [description="Rotational Damping coefficient"]
+        theta_init=pi, [description="Initial Rotation Angle"]
+        x_init=0, [description="Initial Position"]
     end
 
     systems = @named begin
