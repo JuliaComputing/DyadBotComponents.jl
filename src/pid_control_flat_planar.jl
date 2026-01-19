@@ -281,13 +281,13 @@ function nmp(P)
 end
 ##
 T0 = ss(tf([1], [0.2, 1]))
-Tr = T0^3*tf(1, [0.5, 1]) * nmp(Ppt)
+Tr = T0^3*tf(1, [0.5, 1]) * nmp(Ppt) # Make sure NMP zero is present in the reference model
 bodeplot([Ppt, Tr], legend=:bottom, plotphase=false, legendfontsize=8)
 
 ##
 import DyadControlSystems.RobustAndOptimalControl.DescriptorSystems as ds
 
-Rtau = Ppt \ Tr
+Rtau = Ppt \ Tr # Filter from reference to torque
 
 
 function stabilize(Rtau0)
@@ -298,7 +298,7 @@ function stabilize(Rtau0)
 end
 
 
-Rang = minreal(Pat*Rtau, 1e-8)
+Rang = minreal(Pat*Rtau, 1e-8) # Filter from reference to angle reference. The minreal here cancels the unstable pole
 @assert isstable(Rang)
 
 
