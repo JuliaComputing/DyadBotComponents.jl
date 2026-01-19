@@ -281,7 +281,7 @@ function nmp(P)
 end
 ##
 T0 = ss(tf([1], [0.2, 1]))
-Tr = T0^3*tf(1, [0.5, 1]) * nmp(Ppt) # Make sure NMP zero is present in the reference model
+Tr = T0^4 * nmp(Ppt) # Make sure NMP zero is present in the reference model
 bodeplot([Ppt, Tr], legend=:bottom, plotphase=false, legendfontsize=8)
 
 ##
