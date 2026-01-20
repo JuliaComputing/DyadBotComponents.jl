@@ -7,6 +7,7 @@ using OrdinaryDiffEq
 using DyadControlSystems, ControlSystemsBase, ControlSystemsMTK
 using Plots
 import DyadControlSystems as JSC
+connect = ModelingToolkit.connect
 # using LinearAlgebra
 
 # @named plant = FlatDyadBot()
@@ -265,47 +266,103 @@ op = Dict([
 
 ##
 loop_openings = [cascade_tuning_model.y, cascade_tuning_model.y2]
-Pat = named_ss(cascade_tuning_model, [cascade_tuning_model.u], [cascade_tuning_model.y]; op, allow_input_derivatives=true, loop_openings)
-Ppt = named_ss(cascade_tuning_model, [cascade_tuning_model.u], [cascade_tuning_model.y2]; op, allow_input_derivatives=true, loop_openings)
 
-Pat = minreal(Pat, 1e-8)
-Ppt = minreal(Ppt, 1e-8)
-
-function nmp(P)
-    # Extract non-minimum phase part
-    rh, lh = ds.giofac(dss(P))
-    -ss(rh)
-
-    # z = maximum(real, tzeros(P))
-    # -tf([1, -z], [1, z])
-end
-##
 T0 = ss(tf([1], [0.2, 1]))
-Tr = T0^4 * nmp(Ppt) # Make sure NMP zero is present in the reference model
-bodeplot([Ppt, Tr], legend=:bottom, plotphase=false, legendfontsize=8)
+Tr = T0^4 #* nmp(Ppt) # Make sure NMP zero is present in the reference model
 
-##
 import DyadControlSystems.RobustAndOptimalControl.DescriptorSystems as ds
 
-Rtau = Ppt \ Tr # Filter from reference to torque
+"""
+    FeedforwardGenerator(model;
+        Tr,
+        measurement,
+        controlled_output,
+        control_input,
+        loop_openings,
+        t = 0.0,
+        op = Dict(),
+    )
+
+Return a named StateSpace object from ControlSystems that implements a feedforward reference generator such that the closed-loop system from reference to controlled output approximates the reference model `Tr`.
+
+The input to this system is the reference for the controlled outputs, the outputs are, in order
+- The generated references for all measured outputs in `measurement`
+- The feedforward control signal, one for each `control_input`.
+
+The outputs are named according to which measurement or control input they correspond to. The input is named identically to the inputs to `Tr` (default `u` if `Tr` has unnamed inputs).
+
+## Arguments
+- `model`: A ModelingToolkit system model.
+- `Tr`: The desired reference model as a `ControlSystems.StateSpace` object. This reference model should be square and have as many inputs and outputs as there are controlled outputs.
+- `measurement`: A vector of analysis points corresponding to the measurement outputs for which references should be generated.
+- `controlled_output`: A vector of symbols or analysis points corresponding to the controlled outputs for which references are provided externally.
+- `control_input`: A vector of symbols or analysis points corresponding to the control inputs for which feedforward signals should be generated.
+- `loop_openings`: A vector of symbols or analysis points corresponding to connections that are opened when deriving the feedforward generator. The `measurement` analysis points are included automatically.
+- `t`: Time point at which to linearize the model (default: 0.0).
+- `op`: Operating point dictionary (default: empty Dict).
+
+## Details
+The plant model is first linearized in the provided operating opint. During the derivation of the feedforward generator, the transfer function between the control signal and the controlled output is inverted. If this transfer function has non-minimum phase zeros, a check is performed to ensure that the reference model `Tr` contains the same non-minimum phase zeros. If not, these are added automatically to `Tr` to ensure that the reference generator is stable.
+
+## Usage
+Construct a ModelingToolkit system from the returned feedforward generator `R` as follows:
+```
+import ModelingToolkitStandardLibrary.Blocks
+Blocks.StateSpace(ssdata(R)...)
+```
+"""
+function FeedforwardGenerator(model;
+    Tr,
+    measurement,
+    controlled_output,
+    control_input,
+    loop_openings = [],
+    ref_inputs = [],
+    t = 0.0,
+    op = Dict(),
+)
+    loop_openings = unique([loop_openings; measurement])
+    inputs = [control_input; ref_inputs]
+    kwargs = (; t, op, loop_openings, allow_input_derivatives=true)
+    Puz = named_ss(model, inputs, controlled_output; kwargs...) # This is to be inverted
+    Puy = named_ss(model, inputs, measurement; kwargs...) # This is for internal reference generation
+
+    Puz = minreal(Puz, 1e-8)
+    Puy = minreal(Puy, 1e-8)
+
+    # Check plant for NMP zeros
+    z = tzeros(Puz)
+    znmp = filter(z->real(z) > 0, tzeros(Puz))
+    if !isempty(znmp)
+        # Check reference model for NMP zeros
+        Tznmp = filter(z->real(z) > 0, tzeros(Tr))
+        tol = maximum(abs, znmp)
+        @info "Found non-minimum phase zeros in plant: $znmp, in reference model: $Tznmp"
+        if !all(z->ControlSystemsBase.count_eigval_multiplicity(Tznmp, z, tol)[1]>=1, znmp)
+            @warn("Reference model is missing NMP zeros from plant, adding them automatically.")
+            rh, lh = ds.giofac(dss(Puz))
+            Tr = -ss(rh)*Tr
+        end
+    end
 
 
-function stabilize(Rtau0)
-    Rs, Rus = stab_unstab(Rtau0)
-    Rus.A .*= -1
-    Rus.B .*= -1
-    Rs+Rus
+    Rur = minreal(Puz \ Tr, 1e-8)
+    ControlSystemsBase.isunstable(Rur) && error("Inverse model is not stable")
+    Ryr = Puy * Rur
+    
+    # Add Rur outputs as outputs to Ryr
+    Ryur = add_output(Ryr, [zeros(Rur.ny, Puy.nx) Rur.C], Rur.D)
+    Ryur = minreal(Ryur, 1e-8)
+    ControlSystemsBase.isunstable(Ryur) && error("Reference generation filter is not stable")
+    Ryur = named_ss(ss(Ryur), u=Symbol.(input_names(Tr)), y=Symbol.([output_names(Puy); input_names(Puz)]))
 end
 
-
-Rang = minreal(Pat*Rtau, 1e-8) # Filter from reference to angle reference. The minreal here cancels the unstable pole
-@assert isstable(Rang)
-
-
-
-bodeplot([Ppt, Ppt*Rtau, Pat*Rtau], legend=:bottom, plotphase=false, legendfontsize=8)
-
-plot(step(Rtau*0.1, 10), title="Feedforward filter step response")
+Ryur = FeedforwardGenerator(cascade_tuning_model; # requires master branch
+    Tr,
+    measurement = [cascade_tuning_model.y, cascade_tuning_model.y2],
+    controlled_output = [cascade_tuning_model.y2],
+    control_input = [cascade_tuning_model.u],
+)
 
 
 ##
@@ -318,34 +375,29 @@ plot(step(Rtau*0.1, 10), title="Feedforward filter step response")
 
     systems = @named begin
         plant = FlatDyadBot()
-        # Inner loop: angle controller
-        inner_controller = Blocks.LimPID(k=9.83, Ti=Inf, Td=0.243, Nd=111, u_max=25)
-        # Outer loop: velocity controller
-        outer_controller = Blocks.LimPID(k=0.54, Ti=2.48, Td=0, Nd=600, wd=1, wp=1, u_max = deg2rad(20))
-        neg_gain = Blocks.Gain(k=1)
+        inner_controller = Blocks.LimPID(k=9.83, Ti=Inf, Td=0.243, Nd=111)#, u_max=25)
+        outer_controller = Blocks.LimPID(k=0.54, Ti=2.48, Td=0, Nd=600, wd=1, wp=1)#, u_max = deg2rad(20))
         ref = Blocks.Step(height=x_ref, start_time=5)
         # Add pi offset to inner loop reference
         pi_offset = Blocks.Constant(k=pi)
         add_pi = Blocks.Add3(k1=1, k2=1, k3=1)
         torque_input = Blocks.Add()
 
-        RT = Blocks.StateSpace(; Rtau.A, Rtau.B, Rtau.C, Rtau.D)
-        RA = Blocks.StateSpace(; Rang.A, Rang.B, Rang.C, Rang.D)
-        # F = Blocks.StateSpace(; Tr.A, Tr.B, Tr.C, Tr.D)
-        F = Blocks.Gain(k=1) # This is required in order to palce the analysis point in the correct place
-        TR = Blocks.StateSpace(; Tr.A, Tr.B, Tr.C, Tr.D)
+        R = Blocks.StateSpace(ssdata(Ryur)...)
     end
 
     eqs = [
         # Outer loop: velocity reference -> angle reference
-        connect(ref.output, :r2, F.input)
-        connect(F.output, RT.input, TR.input, RA.input)
-        connect(TR.output, outer_controller.reference)
-        connect(RT.output, torque_input.input2)
-        connect(RA.output, add_pi.input3)
+        connect(ref.output, :r2, R.input)
+        R.output.u[1] ~ add_pi.input3.u
+        R.output.u[2] ~ outer_controller.reference.u
+        R.output.u[3] ~ torque_input.input2.u
 
-        connect(plant.x_output, neg_gain.input)
-        connect(neg_gain.output, :y2, outer_controller.measurement)
+        # connect(R.output.u[1], add_pi.input3.u) # Bug in MTK
+        # connect(R.output.u[2], outer_controller.reference.u)
+        # connect(R.output.u[3], torque_input.input2.u)
+
+        connect(plant.x_output, :y2, outer_controller.measurement)
 
         # Add pi to outer controller output for inner loop reference
         connect(outer_controller.ctr_output, :u2, add_pi.input1)
@@ -376,19 +428,20 @@ bodeplot([Pcl_angle, Pcl_pos, Tr], w, legend=:bottom, plotphase=false, legendfon
 
 
 x0 = [
-    filtered_ssys.plant.theta => deg2rad(170)
-    filtered_ssys.plant => FlatDyadBotParams();
     filtered_ssys.inner_controller.k  => optimized_params[1, :Kp_standard];
     filtered_ssys.inner_controller.Ti => optimized_params[1, :Ti_standard];
     filtered_ssys.inner_controller.Td => optimized_params[1, :Td_standard];
     filtered_ssys.inner_controller.Nd => optimized_params[1, :Nd];
     filtered_ssys.outer_controller.k  => cascade_optimized_params[1, :Kp_standard];
     filtered_ssys.outer_controller.Ti => cascade_optimized_params[1, :Ti_standard];
+
+    filtered_ssys.plant.theta => deg2rad(170)
+    filtered_ssys.plant => FlatDyadBotParams();
 ]
 
 
 filtered_prob = ODEProblem(filtered_ssys, x0, (0.0, 20.0), dtmax=0.01)
 filtered_sol = solve(filtered_prob, Rodas5P())
-plot(filtered_sol, idxs=[filtered_ssys.plant.theta, filtered_ssys.plant.x_dot, filtered_ssys.plant.x, filtered_ssys.outer_controller.ctr_output.u, filtered_ssys.plant.tau, filtered_ssys.F.output.u]); hline!([π 0.15], l=(:dash, :black), primary=false, ylims=(-1, 3.5), size=(800,1600), legend=:right)
+plot(filtered_sol, idxs=[filtered_ssys.plant.theta, filtered_ssys.plant.x_dot, filtered_ssys.plant.x, filtered_ssys.outer_controller.ctr_output.u, filtered_ssys.plant.tau]); hline!([π 0.15], l=(:dash, :black), primary=false, ylims=(-1, 3.5), size=(800,1600), legend=:right)
 
 
