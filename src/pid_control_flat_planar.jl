@@ -445,3 +445,54 @@ filtered_sol = solve(filtered_prob, Rodas5P())
 plot(filtered_sol, idxs=[filtered_ssys.plant.theta, filtered_ssys.plant.x_dot, filtered_ssys.plant.x, filtered_ssys.outer_controller.ctr_output.u, filtered_ssys.plant.tau]); hline!([π 0.15], l=(:dash, :black), primary=false, ylims=(-1, 3.5), size=(800,1600), legend=:right)
 
 
+
+## Structured tuning
+# This is currently not working as expected due to MTKv10 not having parameter bindings. Requires MTKv11
+tunable_parameters = [
+    filtered_ssys.inner_controller.k  => (0.5, 1.5) .* optimized_params[1, :Kp_standard];
+    filtered_ssys.inner_controller.Td => (0.5, 1.5) .* optimized_params[1, :Td_standard];
+    filtered_ssys.inner_controller.Nd => (0.5, 1.5) .* optimized_params[1, :Nd];
+    filtered_ssys.outer_controller.k  => (0.5, 1.5) .* cascade_optimized_params[1, :Kp_standard];
+    filtered_ssys.outer_controller.Ti => (0.5, 1.5) .* cascade_optimized_params[1, :Ti_standard];
+]
+
+p0 = [
+    optimized_params[1, :Kp_standard];
+    optimized_params[1, :Td_standard];
+    optimized_params[1, :Nd];
+    cascade_optimized_params[1, :Kp_standard];
+    cascade_optimized_params[1, :Ti_standard];
+]
+
+operating_points = [ # Can be one or several operating points
+    Dict([
+        filtered_ssys.plant => FlatDyadBotParams();
+    ])
+]
+
+##
+# WSi = tf([2, 0], [1, 50])
+WSi = tf(2.0)
+mso_inner = MaximumSensitivityObjective(
+    weight = WSi,
+    output = filtered_model.y,
+    loop_openings = [filtered_model.y2]
+)
+
+WSo = tf([1.4, 0], [1, 0.5])
+mso_outer = MaximumSensitivityObjective(weight=WSo, output=filtered_model.y2)
+
+
+objectives = [
+    mso_inner,
+    mso_outer,
+]
+
+ts = 0:0.001:1
+sprob = DyadControlSystems.StructuredAutoTuningProblem(filtered_model, w, ts, objectives, operating_points, tunable_parameters)
+
+
+sres = solve(sprob, p0,
+    DyadControlSystems.IpoptSolver(verbose=true, exact_hessian=false, acceptable_iter=4, tol=1e-3, acceptable_tol=1e-2, max_iter=100);
+)
+plot(sres)
