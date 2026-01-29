@@ -41,7 +41,7 @@ The loop closed around the angle only has a zero in the origin corresponding to 
 
     systems = @named begin
         plant = PlanarMultibodybot()
-        controller = Blocks.LimPID(k=22.3659, Ti=false, Td=0.0632787, Nd=54.6269)#, u_max=15)
+        controller = Blocks.LimPID(k=0.487401, Ti=0.0587352, Td=0.0420526, Nd=119.368)#, u_max=15)
         ref = Blocks.Constant(k=theta_ref)
     end
 
@@ -62,7 +62,7 @@ x0 = [
     ssys.plant.body.w => 0.0  # Adjust for offset 
 ]
 
-prob = ODEProblem(ssys, x0, (0.0, 10.0))
+prob = ODEProblem(ssys, x0, (0.0, 1.0))
 sol = solve(prob, Rodas5P())
 plot(sol, idxs=[ssys.plant.theta_output.u, ssys.plant.x_output.u, ssys.plant.tau]); hline!([0], l=(:dash, :black), primary=false)
 
@@ -111,17 +111,17 @@ spec = JSC.PIDAutotuningAnalysisSpec(;
     step_input = "u",
     step_output = "y",
     Ts = 0.01,           # Sample time
-    duration = 2.0,      # Simulation duration
+    duration = 3.0,      # Simulation duration
     Ms = 1.6,            # Sensitivity peak constraint
     Mt = 1.6,            # Complementary sensitivity peak constraint
-    Mks = 100.0,         # Control sensitivity constraint
+    Mks = 2000.0,         # Control sensitivity constraint
     wl = 1e-2,           # Lower frequency bound
     wu = 1e3,            # Upper frequency bound
-    ki_ub = 0.0,         # Tune PD controller
+    # ki_ub = 0.0,         # Tune PD controller
     num_frequencies = 200,
     soft = true,
-    # homotopy = true,
-    # auto_resolve = true,
+    homotopy = true,
+    # auto_resolve = false,
 )
 
 # Run the autotuning analysis
@@ -150,15 +150,15 @@ display(optimized_params)
     systems = @named begin
         plant = PlanarMultibodybot()
         # Inner loop: angle controller
-        inner_controller = Blocks.LimPID(k=22.3659, Ti=false, Td=0.0632787, Nd=54.6269)
+        inner_controller = Blocks.LimPID(k=0.487401, Ti=0.0587352, Td=0.0420526, Nd=119.368)
         # Outer loop: velocity controller
-        outer_controller = Blocks.LimPID(k=0.0463128, Ti=3.34679, Td=2.23125, Nd=2.8527, wd=1, wp=1, u_max=deg2rad(25.0))
+        outer_controller = Blocks.LimPID(k=0.0666576, Ti=5.25024, Td=4.81393, Nd=4.76616, wd=1, wp=1, u_max=deg2rad(25.0))
         neg_gain = Blocks.Gain(k=1)
         ref = Blocks.Step(height=x_ref, start_time=10)
         # Add pi offset to inner loop reference
         pi_offset = Blocks.Constant(k=0)
         add_pi = Blocks.Add(k1=1, k2=1)
-        ref_filter = Blocks.FirstOrder(T=2)
+        ref_filter = Blocks.FirstOrder(T=1)
     end
 
     eqs = [
@@ -188,16 +188,16 @@ x0 = [
     cascade_ssys.plant.body.phi => deg2rad(5)
     # cascade_ssys.plant.wheelJoint.color => [0,0,0,0.5]
     cascade_ssys.plant.wheelJoint.frame_a.render => true
-    cascade_ssys.plant.wheelJoint.frame_a.length => 0.12
+    cascade_ssys.plant.wheelJoint.frame_a.length => 0.05
     cascade_ssys.plant.wheelJoint.frame_a.radius => 0.004
 ]
 
 cascade_prob = ODEProblem(cascade_ssys, x0, (0.0, 20.0))
-cascade_sol = solve(cascade_prob, Rodas5P())
+cascade_sol = solve(cascade_prob, Rodas5P(), dt=0.005, adaptive=false)
 plot(cascade_sol, idxs=[cascade_ssys.plant.theta_output.u, cascade_ssys.plant.x_output.u, cascade_ssys.outer_controller.ctr_output.u]); hline!([0 0.15], l=(:dash, :black), primary=false, ylims=(-1, 3.5), size=(800,1600))
 
-Multibody.render(cascade_model, cascade_sol, 0.0, lookat=[0,0.4,0], x=0, y=0.4, z=-1.0)[1]
-# Multibody.render(cascade_model, cascade_sol, lookat=[0,0.4,0], x=0, y=0.4, z=-1.0, timescale=0.5)
+Multibody.render(cascade_model, cascade_sol, 0.0, lookat=[0,0.2,0], x=0, y=0.2, z=-0.5)[1]
+# Multibody.render(cascade_model, cascade_sol, lookat=[0,0.2,0], x=0, y=0.2, z=-0.5, timescale=1)
 # plot(cascade_sol, idxs=[cascade_ssys.pi_offset.output.u])
 
 ##
@@ -260,7 +260,7 @@ bodeplot(L2)
 
 ## Swms = freqresp(S2, ws2)
 
-Si2 = get_named_sensitivity(cascade_tuning_model, [cascade_tuning_model.u])
+Si2 = get_named_sensitivity(cascade_tuning_model, [cascade_tuning_model.u]; Multibody.linsys...)
 w = exp10.(LinRange(-1, 3, 1000))
 Msi2, ws2 = hinfnorm2(Si2)
 bodeplot(Si2, w, plotphase=false); hline!([Msi2], l=(:dash, :black), label="\$M_S = \$$(round(Msi2, digits=2))")
@@ -271,10 +271,111 @@ nyquistplot(Li2)
 marginplot(Li2, w, adjust_phase_start=true)
 
 
-Li22 = get_named_looptransfer(cascade_tuning_model, [cascade_tuning_model.u]) |> minreal
+Li22 = get_named_looptransfer(cascade_tuning_model, [cascade_tuning_model.u]; Multibody.linsys...) |> minreal
 
 dmi2 = diskmargin(Li2)
 plot(dmi2)
 
 dmi22 = diskmargin(Li22)
 plot(dmi22)
+
+
+
+
+# ==============================================================================
+## Feedforward generation
+# ==============================================================================
+
+T0 = ss(tf([1], [0.1, 1]))
+Tr = T0^4
+
+Ryur = DyadControlSystems.feedforward_generator(cascade_tuning_model; # requires master branch
+    Tr,
+    measurement = [cascade_tuning_model.y, cascade_tuning_model.y2],
+    controlled_output = [cascade_tuning_model.y2],
+    control_input = [cascade_tuning_model.u],
+    Multibody.linsys...
+)
+
+Ryur = balance_statespace(Ryur)[1]
+
+@component function FilteredCascadeControlledFlatDyadBot(; name)
+    pars = @parameters begin
+        x_ref = 0.15  # Reference velocity
+    end
+
+    systems = @named begin
+        plant = PlanarMultibodybot()
+        # Inner loop: angle controller
+        inner_controller = Blocks.LimPID(k=22.3659, Ti=false, Td=0.0632787, Nd=54.6269)
+        # Outer loop: velocity controller
+        outer_controller = Blocks.LimPID(k=0.0666576, Ti=5.25024, Td=4.81393, Nd=4.76616, wd=1, wp=1, u_max=deg2rad(25.0))
+        neg_gain = Blocks.Gain(k=1)
+        ref = Blocks.Step(height=x_ref, start_time=5)
+        # Add pi offset to inner loop reference
+        pi_offset = Blocks.Constant(k=0)
+        add_pi = Blocks.Add3(k1=1, k2=1)
+
+        torque_input = Blocks.Add()
+        R = Blocks.StateSpace(ssdata(Ryur)...)
+    end
+
+    eqs = [
+
+
+        connect(ref.output, :r2, R.input)
+        R.output.u[1] ~ add_pi.input3.u
+        R.output.u[2] ~ outer_controller.reference.u
+        R.output.u[3] ~ torque_input.input2.u
+
+
+        # Outer loop: velocity reference -> angle reference
+        connect(plant.x_output, neg_gain.input)
+        connect(neg_gain.output, :y2, outer_controller.measurement)
+
+        # Add pi to outer controller output for inner loop reference
+        connect(outer_controller.ctr_output, :u2, add_pi.input1)
+        connect(pi_offset.output, add_pi.input2)
+
+        # Inner loop: angle reference -> torque
+        connect(add_pi.output, inner_controller.reference)
+        connect(plant.theta_output, :y, inner_controller.measurement)
+        connect(inner_controller.ctr_output, :u, torque_input.input1)
+        connect(torque_input.output, plant.control_input)
+    ]
+
+    System(eqs, t, [], pars; systems, name)
+end
+
+@named filtered_model = FilteredCascadeControlledFlatDyadBot()
+filtered_ssys = multibody(filtered_model)
+
+Pcl_angle = named_ss(filtered_model, [filtered_model.r2], [filtered_model.y]; allow_input_derivatives=true, Multibody.linsys...)
+Pcl_pos = named_ss(filtered_model, [filtered_model.r2], [filtered_model.y2]; allow_input_derivatives=true, Multibody.linsys...)
+
+Pcl_angle = minreal(Pcl_angle)
+Pcl_pos = minreal(Pcl_pos)
+
+w = exp10.(LinRange(-2.5, 1.5, 2000))
+bodeplot([Pcl_angle, Pcl_pos, Tr], w, legend=:bottom, plotphase=false, legendfontsize=8, hz=true, label=["Gar" "Gpr" "Tr"])
+
+
+x0 = [
+    filtered_ssys.inner_controller.k  => optimized_params[1, :Kp_standard];
+    filtered_ssys.inner_controller.Ti => false;#optimized_params[1, :Ti_standard];
+    filtered_ssys.inner_controller.Td => optimized_params[1, :Td_standard];
+    filtered_ssys.inner_controller.Nd => optimized_params[1, :Nd];
+    filtered_ssys.outer_controller.k  => cascade_optimized_params[1, :Kp_standard];
+    filtered_ssys.outer_controller.Ti => cascade_optimized_params[1, :Ti_standard];
+
+    filtered_ssys.plant.body.phi => deg2rad(-10)
+]
+
+
+filtered_prob = ODEProblem(filtered_ssys, x0, (0.0, 10.0))
+filtered_sol = solve(filtered_prob, Rodas5P(), dt=0.01, dtmin=0.01, adaptive=false)
+plot(filtered_sol, idxs=[filtered_ssys.plant.theta_output.u, filtered_ssys.plant.x_output.u, filtered_ssys.outer_controller.ctr_output.u, filtered_ssys.plant.tau]); hline!([0 0.15], l=(:dash, :black), primary=false, ylims=(-1, 3.5), size=(800,1600), legend=:right)
+
+plot(filtered_sol, idxs=[filtered_ssys.R.input.u; filtered_ssys.R.output.u; ])
+
+# Multibody.render(filtered_model, filtered_sol, lookat=[0,0.2,0], x=0, y=0.2, z=-0.5, timescale=1)

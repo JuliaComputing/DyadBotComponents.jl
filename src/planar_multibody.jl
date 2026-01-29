@@ -7,18 +7,18 @@ import ModelingToolkitStandardLibrary.Blocks
 using Random
 @component function PlanarMultibodybot(; name, g=9.81)
     pars = @parameters begin
-        M = 1.0,     [description="Body mass"]
-        m = 0.1,     [description="Wheel mass"]
-        R = 0.1,     [description="Wheel radius"]
-        L = 0.5,     [description="Distance from wheel axis to body center of mass"]
-        Ic = 0.1,    [description="Body moment of inertia"]
-        Iw = 0.01,   [description="Wheel moment of inertia"]
+        M = 0.1,     [description="Body mass"]
+        m = 0.05,     [description="Wheel mass"]
+        R = 0.04,     [description="Wheel radius"]
+        L = 0.08,     [description="Distance from wheel axis to body center of mass"]
+        Ib = 2.5e-4,    [description="Body moment of inertia"]
+        Iw = 1e-4,   [description="Wheel + motor moment of inertia"]
         g = g,    [description="Gravity"]
-        b_rot = 0.01,   [description="Rotational damping coefficient"]
+        b_rot = 0.0,   [description="Rotational damping coefficient"]
     end
 
     systems = @named begin
-        body = Pl.Body(m = M, I = Ic, phi=0, w=0.0, radius=0.05, gy=-g)
+        body = Pl.Body(m = M, I = Ib, phi=0, w=0.0, radius=0.05, gy=-g)
         wheel_body = Pl.Body(m = m, I = Iw, radius=0.01, gy=-g, phi=0, w=0.00)
         translation_cm = Pl.FixedTranslation(r = [0, L], radius=0.01)
         wheel_rotation = Pl.Revolute(axisflange=true, render=false)
