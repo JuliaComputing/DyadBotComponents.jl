@@ -1,0 +1,287 @@
+"""
+A simple motor model consisting of an ideal torque source acting on a revolute joint, with viscous friction acting between the rotor and the stator.
+"""
+component SimpleMotor
+  extends MultibodyComponents.PlanarMechanics.PartialTwoFrames
+  torquesource = RotationalComponents.Sources.TorqueSource() {^torquesource}
+  motor_rotation = MultibodyComponents.PlanarMechanics.Revolute(render = false) {^motor_rotation}
+  damper = RotationalComponents.Components.Damper(d = d) {^damper}
+  "Torque command"
+  torqueinput = Dyad.RealInput() {^torqueinput}
+  fixed = RotationalComponents.Components.Fixed() {^fixed}
+  "Viscous friction coefficient"
+  parameter d::RotationalDampingConstant = 0.0
+relations
+  connect(torquesource.spline, motor_rotation.flange_a, damper.spline_a) {^id6}
+  connect(frame_a, motor_rotation.frame_a) {^id7}
+  connect(motor_rotation.frame_b, frame_b) {^id8}
+  connect(torquesource.support, damper.spline_b, fixed.spline) {^id9}
+  connect(torqueinput, torquesource.tau) {^id10}
+metadata {
+  "Dyad": {
+    "icons": {"default": "dyad://MultibodyComponents/Revolute.svg"},
+    "labels": [
+      {
+        "label": "$(instance)",
+        "x": 500,
+        "y": 200,
+        "rot": 0,
+        "attrs": {"font-size": "160"}
+      }
+    ]
+  },
+  "_links": {
+    "torquesource": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 450, "y1": 590, "x2": 550, "y2": 690, "rot": 270}
+        },
+        "tags": []
+      }
+    },
+    "motor_rotation": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 450, "y1": 280, "x2": 550, "y2": 380, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "damper": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 560, "y1": 460, "x2": 660, "y2": 560, "rot": 90}
+        },
+        "tags": []
+      }
+    },
+    "torqueinput": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 460, "y1": 700, "x2": 540, "y2": 780, "rot": 270}
+        },
+        "tags": []
+      }
+    },
+    "fixed": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 670, "y1": 590, "x2": 770, "y2": 690, "rot": 270}
+        },
+        "tags": []
+      }
+    },
+    "id6": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [], "E": 2},
+          {"S": 3, "M": [{"x": 610, "y": 420}], "E": -1}
+        ],
+        "junctions": [{"x": 500, "y": 420}],
+        "renderStyle": "standard"
+      }
+    },
+    "id7": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 280, "y": 500}, {"x": 280, "y": 330}], "E": 2}],
+        "renderStyle": "standard"
+      }
+    },
+    "id8": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 720, "y": 330}, {"x": 720, "y": 500}], "E": 2}],
+        "renderStyle": "standard"
+      }
+    },
+    "id9": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [{"x": 610, "y": 640}], "E": -1},
+          {"S": -1, "M": [], "E": 2},
+          {"S": 3, "M": [], "E": -1}
+        ],
+        "junctions": [{"x": 610, "y": 640}],
+        "renderStyle": "standard"
+      }
+    },
+    "id10": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}}
+  }
+}
+end
+
+"""
+Planar model of a two-wheeled balancing robot.
+
+The robot consists of a wheel rolling without slip along the ground, an
+inverted-pendulum body mounted on the wheel axis through a motor, and an
+IMU-like sensor measuring the position of the wheel axis and the tilt angle
+of the body. The motor applies the commanded torque between the body and the
+wheel.
+
+Inputs and outputs:
+- `torque`: torque applied by the motor between body and wheel
+- `x`, `x_dot`: position and velocity of the wheel axis along the ground
+- `theta`, `theta_dot`: tilt angle and tilt rate of the body (zero when upright)
+
+The model must be accompanied by a `MultibodyComponents.PlanarMechanics.World`
+component in the top level of the enclosing model.
+"""
+component PlanarDyadBot
+  wheelJoint = MultibodyComponents.PlanarMechanics.OneDOFRollingWheelJoint(radius = R) {^wheelJoint}
+  wheelinertia = MultibodyComponents.PlanarMechanics.Body(I = Iw, radius = 0.01, m = m, phi = initial 0.0, w = initial 0.0) {^wheelinertia}
+  simplemotor = SimpleMotor(d = d) {^simplemotor}
+  body_mass = MultibodyComponents.PlanarMechanics.BodyShape(color = [0.2, 0.2, 0.2, 0.9], r = [0, 2 * L], r_cm = [0, L], m = M, I = Ib, radius = 0.03, body(w = initial 0.0)) {^body_mass}
+  IMU = MultibodyComponents.PlanarMechanics.AbsolutePosition(resolve_in_frame = MultibodyComponents.ResolveInFrame.World()) {^IMU}
+  "Motor torque command"
+  torque = Dyad.RealInput() {^torque}
+  "Position of the wheel axis"
+  x = Dyad.RealOutput() {^x}
+  "Body tilt angle"
+  theta = Dyad.RealOutput() {^theta}
+  "Velocity of the wheel axis"
+  x_dot = Dyad.RealOutput() {^x_dot}
+  "Body tilt rate"
+  theta_dot = Dyad.RealOutput() {^theta_dot}
+  "Body mass"
+  parameter M::Mass = 0.1
+  "Wheel mass"
+  parameter m::Mass = 0.05
+  "Wheel radius"
+  parameter R::Length = 0.04
+  "Distance from wheel axis to body center of mass"
+  parameter L::Length = 0.08
+  "Body moment of inertia"
+  parameter Ib::Inertia = 2.5e-4
+  "Wheel + motor moment of inertia"
+  parameter Iw::Inertia = 1e-4
+  "Motor viscous friction"
+  parameter d::RotationalDampingConstant = 0.0001
+  "Initial tilt angle of the body"
+  parameter phi0::Angle = 0.0
+relations
+  initial body_mass.body.phi = phi0
+  connect(wheelinertia.frame_a, wheelJoint.frame_a) {^id1}
+  connect(simplemotor.frame_b, wheelJoint.frame_a) {^id2}
+  connect(simplemotor.frame_a, IMU.frame_a, body_mass.frame_a) {^id3}
+  connect(torque, simplemotor.torqueinput) {^id4}
+  x = IMU.x
+  theta = IMU.phi
+  x_dot = wheelJoint.v
+  theta_dot = body_mass.body.w
+metadata {
+  "Dyad": {
+    "icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"},
+    "labels": [
+      {
+        "label": "$(instance)",
+        "x": 500,
+        "y": 1050,
+        "rot": 0,
+        "attrs": {"font-size": "120"}
+      }
+    ]
+  },
+  "_links": {
+    "wheelJoint": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 340, "y1": 620, "x2": 600, "y2": 880, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "wheelinertia": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 530, "y1": 600, "x2": 670, "y2": 740, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "simplemotor": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 420, "y1": 480, "x2": 520, "y2": 580, "rot": 90}
+        },
+        "tags": []
+      }
+    },
+    "body_mass": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 320, "y1": 130, "x2": 620, "y2": 430, "rot": 270}
+        },
+        "tags": []
+      }
+    },
+    "IMU": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 600, "y1": 420, "x2": 700, "y2": 520, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "torque": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 60, "y1": 460, "x2": 140, "y2": 540, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "x": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 300, "x2": 960, "y2": 380, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "theta": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 420, "x2": 960, "y2": 500, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "x_dot": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 540, "x2": 960, "y2": 620, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "theta_dot": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 660, "x2": 960, "y2": 740, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "id1": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 470, "y": 670}], "E": 2}],
+        "renderStyle": "standard"
+      }
+    },
+    "id2": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id3": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [{"x": 470, "y": 460}], "E": 2},
+          {"S": 3, "M": [], "E": -1}
+        ],
+        "junctions": [{"x": 470, "y": 460}],
+        "renderStyle": "standard"
+      }
+    },
+    "id4": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}}
+  }
+}
+end

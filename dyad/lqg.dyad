@@ -1,0 +1,365 @@
+"Wraps six scalar input signals into a 6-element signal array, for connecting scalar outputs to array inputs."
+component Mux6
+  u1 = Dyad.RealInput() {^u1}
+  u2 = Dyad.RealInput() {^u2}
+  u3 = Dyad.RealInput() {^u3}
+  u4 = Dyad.RealInput() {^u4}
+  u5 = Dyad.RealInput() {^u5}
+  u6 = Dyad.RealInput() {^u6}
+  y = [Dyad.RealOutput() for i in 1:6] {^y}
+relations
+  y = [u1, u2, u3, u4, u5, u6]
+metadata {
+  "Dyad": {"icons": {"default": "dyad://MultibodyComponents/Mux1.svg"}},
+  "_links": {
+    "u1": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -100, "y1": 0, "x2": 0, "y2": 100, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "u2": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -100, "y1": 180, "x2": 0, "y2": 280, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "u3": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -100, "y1": 360, "x2": 0, "y2": 460, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "u4": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -100, "y1": 540, "x2": 0, "y2": 640, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "u5": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -100, "y1": 720, "x2": 0, "y2": 820, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "u6": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -100, "y1": 900, "x2": 0, "y2": 1000, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "y": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 1000, "y1": 450, "x2": 1100, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    }
+  }
+}
+end
+
+"""
+Analysis model for LQG controller design for the balancing robot.
+
+The loop is closed with a negligibly small static output feedback so that the
+model is a well-posed closed-loop system, and analysis points are placed on
+all four measured outputs (`y_x`, `y_xd`, `y_theta`, `y_thetad`) and on the
+control input (`u`). The LQG design script `scripts/tune_lqg.jl` opens the
+loop at `u` and synthesizes an LQG controller from the linearized plant.
+"""
+component LQGTuningDyadBot
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82) {^world}
+  plant = PlanarDyadBot() {^plant}
+  g_x = BlockComponents.Math.Gain(k = 1e-10) {^g_x}
+  g_xd = BlockComponents.Math.Gain(k = 1e-10) {^g_xd}
+  g_theta = BlockComponents.Math.Gain(k = 1e-10) {^g_theta}
+  g_thetad = BlockComponents.Math.Gain(k = 1e-10) {^g_thetad}
+  add3 = BlockComponents.Math.Add3() {^add3}
+  add = BlockComponents.Math.Add() {^add}
+relations
+  y_x: analysis_point(plant.x, g_x.u)
+  y_xd: analysis_point(plant.x_dot, g_xd.u)
+  y_theta: analysis_point(plant.theta, g_theta.u)
+  y_thetad: analysis_point(plant.theta_dot, g_thetad.u)
+  u: analysis_point(add.y, plant.torque)
+  connect(plant.x, g_x.u) {^id1}
+  connect(plant.x_dot, g_xd.u) {^id2}
+  connect(plant.theta, g_theta.u) {^id3}
+  connect(plant.theta_dot, g_thetad.u) {^id4}
+  connect(g_x.y, add3.u1) {^id5}
+  connect(g_xd.y, add3.u2) {^id6}
+  connect(g_theta.y, add3.u3) {^id7}
+  connect(add3.y, add.u1) {^id8}
+  connect(g_thetad.y, add.u2) {^id9}
+  connect(add.y, plant.torque) {^id10}
+metadata {
+  "Dyad": {
+    "icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}
+  },
+  "_links": {
+    "world": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 110, "y1": 250, "x2": 10, "y2": 150, "rot": 180}
+        },
+        "tags": []
+      }
+    },
+    "plant": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 400, "y1": 400, "x2": 600, "y2": 600, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "g_x": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 700, "y1": 300, "x2": 780, "y2": 380, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "g_xd": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 700, "y1": 420, "x2": 780, "y2": 500, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "g_theta": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 700, "y1": 540, "x2": 780, "y2": 620, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "g_thetad": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 700, "y1": 660, "x2": 780, "y2": 740, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "add3": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 850, "y1": 420, "x2": 950, "y2": 520, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "add": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 1000, "y1": 500, "x2": 1100, "y2": 600, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "id1": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id2": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id3": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id4": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id5": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id6": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id7": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id8": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id9": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id10": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 1120, "y": 550},
+              {"x": 1120, "y": 850},
+              {"x": 340, "y": 850},
+              {"x": 340, "y": 500}
+            ],
+            "E": 2
+          }
+        ],
+        "renderStyle": "standard"
+      }
+    }
+  }
+}
+end
+
+"""
+Balancing robot stabilized by an LQG controller with reference feedforward.
+
+The controller is a state-space system computed by the LQG design script
+`scripts/tune_lqg.jl` and loaded from CSV files. Its six inputs are the
+references for position, velocity, tilt angle and tilt rate, followed by the
+measured position and tilt angle. Its single output is the motor torque.
+The position reference steps from zero to `step_height` at `step_time`.
+"""
+component LQGControlledDyadBot
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82) {^world}
+  plant = PlanarDyadBot(phi0 = phi0) {^plant}
+  controller = BlockComponents.Continuous.StateSpace(nx = lqg_nx(), nu = 6, ny = 1, A = lqg_A(), B = lqg_B(), C = lqg_C(), D = lqg_D()) {^controller}
+  step = BlockComponents.Sources.Step(final height = step_height, final start_time = step_time) {^step}
+  zero_xd = BlockComponents.Sources.Constant(k = 0) {^zero_xd}
+  zero_theta = BlockComponents.Sources.Constant(k = 0) {^zero_theta}
+  zero_thetad = BlockComponents.Sources.Constant(k = 0) {^zero_thetad}
+  mux = Mux6() {^mux}
+  torque_out = MultibodyComponents.Selector(nu = 1) {^torque_out}
+  "Height of the position reference step"
+  parameter step_height::Length = 0.15
+  "Time at which the position reference steps"
+  parameter step_time::Time = 5
+  "Initial tilt angle of the body"
+  parameter phi0::Angle = 0.1
+relations
+  u: analysis_point(torque_out.y, plant.torque)
+  connect(step.y, mux.u1) {^id1}
+  connect(zero_xd.y, mux.u2) {^id2}
+  connect(zero_theta.y, mux.u3) {^id3}
+  connect(zero_thetad.y, mux.u4) {^id4}
+  connect(plant.x, mux.u5) {^id5}
+  connect(plant.theta, mux.u6) {^id6}
+  connect(mux.y, controller.u) {^id7}
+  connect(controller.y, torque_out.u) {^id8}
+  connect(torque_out.y, plant.torque) {^id9}
+metadata {
+  "Dyad": {
+    "tests": {"case1": {"stop": 20}},
+    "icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}
+  },
+  "_links": {
+    "world": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 110, "y1": 250, "x2": 10, "y2": 150, "rot": 180}
+        },
+        "tags": []
+      }
+    },
+    "plant": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 600, "y1": 400, "x2": 800, "y2": 600, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "controller": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 240, "y1": 450, "x2": 340, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "step": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -100, "y1": 330, "x2": 0, "y2": 430, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "zero_xd": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -80, "y1": 460, "x2": -20, "y2": 520, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "zero_theta": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -80, "y1": 560, "x2": -20, "y2": 620, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "zero_thetad": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -80, "y1": 660, "x2": -20, "y2": 720, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "mux": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 90, "y1": 450, "x2": 170, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "torque_out": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 420, "y1": 470, "x2": 480, "y2": 530, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "id1": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id2": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id3": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id4": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id5": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 840, "y": 430},
+              {"x": 840, "y": 780},
+              {"x": 60, "y": 780},
+              {"x": 60, "y": 523}
+            ],
+            "E": 2
+          }
+        ],
+        "renderStyle": "standard"
+      }
+    },
+    "id6": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 820, "y": 460},
+              {"x": 820, "y": 740},
+              {"x": 40, "y": 740},
+              {"x": 40, "y": 545}
+            ],
+            "E": 2
+          }
+        ],
+        "renderStyle": "standard"
+      }
+    },
+    "id7": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id8": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id9": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}}
+  }
+}
+end

@@ -1,0 +1,184 @@
+"""
+Three-dimensional model of a two-wheeled balancing robot.
+
+Two individually spinning wheels are mounted on a common axle through revolute
+joints, allowing the body to tilt forward and backward. Each wheel uses a
+slip-based contact model, and viscous dampers act on the wheel spin joints.
+The main body extends upward from the center of the axle.
+
+The model is uncontrolled and serves as a structural starting point for 3D
+control design.
+
+Note: this model is numerically challenging. The initial equations produce a
+consistent rest pose, but adaptive integration of the two-wheel slip-contact
+loop currently stalls at the start of the simulation on the available solver
+stacks, with both rigid and compliant vertical contact.
+"""
+component DyadBot3D
+  "Use a compliant (elastic) vertical wheel-ground contact instead of a rigid contact constraint"
+  structural parameter elastic_contact::Boolean = false
+  world = MultibodyComponents.World() {^world}
+  "Left wheel. The wheel angles are not used as state variables since the axle closes a kinematic loop with the right wheel."
+  wheel_left = MultibodyComponents.SlippingWheel(radius = wheel_radius, m = wheel_mass, I_axis = wheel_I_axis, I_long = wheel_I_long, angular_state = false, elastic_contact = elastic_contact) {^wheel_left}
+  wheel_right = MultibodyComponents.SlippingWheel(radius = wheel_radius, m = wheel_mass, I_axis = wheel_I_axis, I_long = wheel_I_long, angular_state = true, elastic_contact = elastic_contact) {^wheel_right}
+  revolute_left = MultibodyComponents.Revolute(n = [0, 0, 1]) {^revolute_left}
+  revolute_right = MultibodyComponents.Revolute(n = [0, 0, 1]) {^revolute_right}
+  rod_left = MultibodyComponents.FixedTranslation(r = [0, 0, track / 2]) {^rod_left}
+  rod_right = MultibodyComponents.FixedTranslation(r = [0, 0, -track / 2]) {^rod_right}
+  "Small mass at the center of the axle"
+  axis_body = MultibodyComponents.Body(m = 0.01, r_cm = [0, 0, 0]) {^axis_body}
+  "Main body extending upward from the axle"
+  body = MultibodyComponents.BodyShape(m = body_mass, I_11 = 0.01 * 0.05 ^ 2, I_22 = 0.01 * 0.03 ^ 2, I_33 = 0.01 * 0.05 ^ 2, r = [0, body_height, 0]) {^body}
+  damper_left = RotationalComponents.Components.Damper(d = d_wheel) {^damper_left}
+  damper_right = RotationalComponents.Components.Damper(d = d_wheel) {^damper_right}
+  "Distance between the wheels"
+  parameter track::Length = 0.13
+  "Height of the body center of mass above the wheel axle"
+  parameter body_height::Length = 0.1
+  "Wheel radius"
+  parameter wheel_radius::Length = 0.04
+  "Body mass"
+  parameter body_mass::Mass = 0.1
+  "Wheel mass"
+  parameter wheel_mass::Mass = 0.05
+  "Moment of inertia of a wheel about its spin axis"
+  parameter wheel_I_axis::Inertia = 5e-5
+  "Moment of inertia of a wheel perpendicular to its spin axis"
+  parameter wheel_I_long::Inertia = 1e-5
+  "Wheel rotational damping coefficient"
+  parameter d_wheel::RotationalDampingConstant = 0.1
+relations
+  initial wheel_right.x = 0.0
+  initial wheel_right.z = -track / 2
+  initial wheel_left.z = track / 2
+  initial wheel_right.angles = [0, 0, 0]
+  initial revolute_left.phi = 0.0
+  initial revolute_right.phi = 0.0
+  connect(wheel_left.frame_a, revolute_left.frame_b) {^id1}
+  connect(wheel_right.frame_a, revolute_right.frame_b) {^id2}
+  connect(revolute_left.frame_a, rod_left.frame_b) {^id3}
+  connect(revolute_right.frame_a, rod_right.frame_b) {^id4}
+  connect(rod_left.frame_a, axis_body.frame_a) {^id5}
+  connect(rod_right.frame_a, axis_body.frame_a) {^id6}
+  connect(axis_body.frame_a, body.frame_a) {^id7}
+  connect(damper_left.spline_a, revolute_left.axis) {^id8}
+  connect(damper_left.spline_b, revolute_left.support) {^id9}
+  connect(damper_right.spline_a, revolute_right.axis) {^id10}
+  connect(damper_right.spline_b, revolute_right.support) {^id11}
+metadata {
+  "Dyad": {
+    "icons": {"default": "dyad://DyadBotComponents/DyadBot3D.svg"}
+  },
+  "_links": {
+    "world": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 150, "y1": 900, "x2": 50, "y2": 800, "rot": 180}
+        },
+        "tags": []
+      }
+    },
+    "wheel_left": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 50, "y1": 450, "x2": 150, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "wheel_right": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 850, "y1": 450, "x2": 950, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "revolute_left": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 200, "y1": 450, "x2": 300, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "revolute_right": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 800, "y1": 550, "x2": 700, "y2": 450, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "rod_left": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 350, "y1": 450, "x2": 450, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "rod_right": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 650, "y1": 550, "x2": 550, "y2": 450, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "axis_body": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 450, "y1": 350, "x2": 550, "y2": 450, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "body": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 450, "y1": 150, "x2": 550, "y2": 250, "rot": 270}
+        },
+        "tags": []
+      }
+    },
+    "damper_left": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 200, "y1": 620, "x2": 300, "y2": 720, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "damper_right": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 700, "y1": 620, "x2": 800, "y2": 720, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "id1": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id2": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id3": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id4": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id5": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 470, "y": 500}], "E": 2}],
+        "renderStyle": "standard"
+      }
+    },
+    "id6": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 530, "y": 500}], "E": 2}],
+        "renderStyle": "standard"
+      }
+    },
+    "id7": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id8": {"Dyad": {"edges": [{"S": 1, "M": [{"x": 250, "y": 600}], "E": 2}], "renderStyle": "standard"}},
+    "id9": {"Dyad": {"edges": [{"S": 1, "M": [{"x": 310, "y": 600}], "E": 2}], "renderStyle": "standard"}},
+    "id10": {"Dyad": {"edges": [{"S": 1, "M": [{"x": 750, "y": 600}], "E": 2}], "renderStyle": "standard"}},
+    "id11": {"Dyad": {"edges": [{"S": 1, "M": [{"x": 690, "y": 600}], "E": 2}], "renderStyle": "standard"}}
+  }
+}
+end

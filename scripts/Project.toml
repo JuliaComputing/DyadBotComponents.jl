@@ -1,0 +1,13 @@
+[deps]
+BlockComponents = "1ef5d832-be8e-447f-9f2c-8b5d17d15fd3"
+ControlSystemsBase = "aaaaaaaa-a6ca-5380-bf3e-84a91bcd477e"
+ControlSystemsMTK = "687d7614-c7e5-45fc-bfc3-9ee385575c88"
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+DyadBotComponents = "6baa8624-4e17-4d27-96ac-5a32f577bc5c"
+DyadControlSystems = "6f9e59d0-2838-4fee-9bce-c163a6c9592b"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
+MultibodyComponents = "01883e52-22cd-4538-b14d-b44f958a131d"
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+RotationalComponents = "824fa3ed-d7dc-4365-8bdf-ac77a1ac2011"

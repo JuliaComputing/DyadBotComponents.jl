@@ -1,0 +1,251 @@
+"Wraps a scalar input signal into a 1-element signal array, for connecting scalar outputs to array inputs."
+component Mux1
+  u = Dyad.RealInput() {^u}
+  y = [Dyad.RealOutput() for i in 1:1] {^y}
+relations
+  y = [u]
+metadata {
+  "Dyad": {"icons": {"default": "dyad://MultibodyComponents/Mux1.svg"}},
+  "_links": {
+    "u": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -100, "y1": 450, "x2": 0, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "y": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 1000, "y1": 450, "x2": 1100, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    }
+  }
+}
+end
+
+"""
+Cascade-controlled balancing robot with a feedforward generator.
+
+This is a continuation of CascadeControlledDyadBot, adding a feedforward
+generator computed with the script `scripts/compute_feedforward.jl`. The
+feedforward generator provides a filtered position reference to the outer
+controller as well as a tilt-angle feedforward reference for the inner
+controller and a direct torque feedforward signal applied to the motor
+torque input. Both inner feedforward signals are connected to the `u_ff`
+port on the `LimPID` components.
+"""
+component CascadeFFDyadBot
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82) {^world}
+  plant = PlanarDyadBot(phi0 = phi0) {^plant}
+  square = BlockComponents.Sources.Square(amplitude = 0.05, frequency = 1 / 10) {^square}
+  angle_controller = BlockComponents.Continuous.LimPID(k = 0.487401, Ti = 0.0587352, Td = 0.0420526, Nd = 119.368, y_max = 0.1) {^angle_controller}
+  pos_controller = BlockComponents.Continuous.LimPID(k = 0.0666576, Ti = 5.25024, Td = 4.81393, Nd = 4.76616, wd = 1, wp = 1, y_max = deg2rad(25.0)) {^pos_controller}
+  gain = BlockComponents.Math.Gain(k = -1) {^gain}
+  gain1 = BlockComponents.Math.Gain(k = -1) {^gain1}
+  """
+  refgen has 1 input (position reference) and 3 outputs:
+     y[1]: angle feedforward
+     y[2]: filtered position reference
+     y[3]: torque feedforward
+  """
+  refgen = BlockComponents.Continuous.StateSpace(nx = ff_nx(), nu = 1, ny = 3, A = ff_A(), B = ff_B(), C = ff_C(), D = ff_D()) {^refgen}
+  angle_ff = MultibodyComponents.Selector(nu = 3) {^angle_ff}
+  pos_ref = MultibodyComponents.Selector(nu = 3, index = 2) {^pos_ref}
+  torque_ff = MultibodyComponents.Selector(nu = 3, index = 3) {^torque_ff}
+  "This negative gain is required since we are providing the angle reference signal to the `u_ff` connector of the outer controller which sits behind the negative gain `gain1`. We are thus effectively negating `gain1` with this `gain2`."
+  gain2 = BlockComponents.Math.Gain(k = -1) {^gain2}
+  mux1 = Mux1() {^mux1}
+  "Initial tilt angle of the body"
+  parameter phi0::Angle = 0.1
+relations
+  y: analysis_point(plant.theta, angle_controller.u_m)
+  y2: analysis_point(plant.x, pos_controller.u_m)
+  u: analysis_point(angle_controller.y, gain.u)
+  u2: analysis_point(pos_controller.y, gain1.u)
+  connect(plant.theta, angle_controller.u_m) {^id1}
+  connect(plant.x, pos_controller.u_m) {^id2}
+  connect(pos_controller.y, gain1.u) {^id3}
+  connect(gain1.y, angle_controller.u_s) {^id4}
+  connect(gain.y, plant.torque) {^id5}
+  connect(angle_controller.y, gain.u) {^id6}
+  connect(pos_ref.y, pos_controller.u_s) {^id7}
+  connect(refgen.y, pos_ref.u) {^id8}
+  connect(refgen.y, torque_ff.u, angle_ff.u) {^id9}
+  connect(square.y, mux1.u) {^id10}
+  connect(mux1.y, refgen.u) {^id11}
+  connect(angle_ff.y, gain2.u) {^id12}
+  connect(gain2.y, pos_controller.u_ff) {^id13}
+  connect(torque_ff.y, angle_controller.u_ff) {^id14}
+metadata {
+  "Dyad": {
+    "tests": {"case1": {"stop": 20}},
+    "icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}
+  },
+  "_links": {
+    "world": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 110, "y1": 250, "x2": 10, "y2": 150, "rot": 180}
+        },
+        "tags": []
+      }
+    },
+    "plant": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 600, "y1": 400, "x2": 800, "y2": 600, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "square": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -830, "y1": 450, "x2": -730, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "angle_controller": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 160, "y1": 450, "x2": 260, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "pos_controller": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -160, "y1": 450, "x2": -60, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "gain": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 320, "y1": 460, "x2": 400, "y2": 540, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "gain1": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 20, "y1": 460, "x2": 100, "y2": 540, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "refgen": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -570, "y1": 450, "x2": -470, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "angle_ff": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -400, "y1": 320, "x2": -340, "y2": 380, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "pos_ref": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -400, "y1": 470, "x2": -340, "y2": 530, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "torque_ff": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -400, "y1": 600, "x2": -340, "y2": 660, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "gain2": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -290, "y1": 320, "x2": -230, "y2": 380, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "mux1": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -680, "y1": 460, "x2": -620, "y2": 540, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "id1": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 820, "y": 460},
+              {"x": 820, "y": 700},
+              {"x": 130, "y": 700},
+              {"x": 130, "y": 523}
+            ],
+            "E": 2
+          }
+        ],
+        "renderStyle": "standard"
+      }
+    },
+    "id2": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 840, "y": 430},
+              {"x": 840, "y": 760},
+              {"x": -190, "y": 760},
+              {"x": -190, "y": 523}
+            ],
+            "E": 2
+          }
+        ],
+        "renderStyle": "standard"
+      }
+    },
+    "id3": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id4": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id5": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id6": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id7": {"Dyad": {"edges": [{"S": 1, "M": [{"x": -320, "y": 500}, {"x": -320, "y": 477}], "E": 2}], "renderStyle": "standard"}},
+    "id8": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id9": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [{"x": -440, "y": 630}], "E": -1},
+          {"S": -1, "M": [], "E": 2},
+          {"S": 3, "M": [{"x": -440, "y": 350}], "E": -1}
+        ],
+        "junctions": [{"x": -440, "y": 500}],
+        "renderStyle": "standard"
+      }
+    },
+    "id10": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id11": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id13": {"Dyad": {"edges": [{"S": 1, "M": [{"x": -210, "y": 350}, {"x": -110, "y": 350}, {"x": -110, "y": 447}], "E": 2}], "renderStyle": "standard"}},
+    "id14": {"Dyad": {"edges": [{"S": 1, "M": [{"x": -320, "y": 630}, {"x": 210, "y": 630}, {"x": 210, "y": 447}], "E": 2}], "renderStyle": "standard"}}
+  }
+}
+end
