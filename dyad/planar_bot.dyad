@@ -1,6 +1,4 @@
-"""
-A simple motor model consisting of an ideal torque source acting on a revolute joint, with viscous friction acting between the rotor and the stator.
-"""
+"A simple motor model consisting of an ideal torque source acting on a revolute joint, with viscous friction acting between the rotor and the stator."
 component SimpleMotor
   extends MultibodyComponents.PlanarMechanics.PartialTwoFrames
   torquesource = RotationalComponents.Sources.TorqueSource() {^torquesource}
@@ -129,9 +127,9 @@ component in the top level of the enclosing model.
 """
 component PlanarDyadBot
   wheelJoint = MultibodyComponents.PlanarMechanics.OneDOFRollingWheelJoint(radius = R) {^wheelJoint}
-  wheelinertia = MultibodyComponents.PlanarMechanics.Body(I = Iw, radius = 0.01, m = m, phi = initial 0.0, w = initial 0.0) {^wheelinertia}
+  wheelinertia = MultibodyComponents.PlanarMechanics.Body(I = Iw, radius = 0.01, m = m, phi(initial = 0.0), w(initial = 0.0)) {^wheelinertia}
   simplemotor = SimpleMotor(d = d) {^simplemotor}
-  body_mass = MultibodyComponents.PlanarMechanics.BodyShape(color = [0.2, 0.2, 0.2, 0.9], r = [0, 2 * L], r_cm = [0, L], m = M, I = Ib, radius = 0.03, body(w = initial 0.0)) {^body_mass}
+  body_mass = MultibodyComponents.PlanarMechanics.BodyShape(color = [0.2, 0.2, 0.2, 0.9], r = [0, 2 * L], r_cm = [0, L], m = M, I = Ib, radius = 0.03, body(w(initial = 0.0))) {^body_mass}
   IMU = MultibodyComponents.PlanarMechanics.AbsolutePosition(resolve_in_frame = MultibodyComponents.ResolveInFrame.World()) {^IMU}
   "Motor torque command"
   torque = Dyad.RealInput() {^torque}
@@ -161,10 +159,10 @@ component PlanarDyadBot
   parameter phi0::Angle = 0.0
 relations
   initial body_mass.body.phi = phi0
-  connect(wheelinertia.frame_a, wheelJoint.frame_a) {^id1}
-  connect(simplemotor.frame_b, wheelJoint.frame_a) {^id2}
-  connect(simplemotor.frame_a, IMU.frame_a, body_mass.frame_a) {^id3}
-  connect(torque, simplemotor.torqueinput) {^id4}
+  connect(wheelinertia.frame_a, wheelJoint.frame_a) {^id11}
+  connect(simplemotor.frame_b, wheelJoint.frame_a) {^id12}
+  connect(simplemotor.frame_a, IMU.frame_a, body_mass.frame_a) {^id13}
+  connect(torque, simplemotor.torqueinput) {^id14}
   x = IMU.x
   theta = IMU.phi
   x_dot = wheelJoint.v
@@ -216,12 +214,7 @@ metadata {
       }
     },
     "IMU": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 600, "y1": 420, "x2": 700, "y2": 520, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 600, "y1": 410, "x2": 700, "y2": 510}}}
     },
     "torque": {
       "Dyad": {
@@ -263,25 +256,26 @@ metadata {
         "tags": []
       }
     },
-    "id1": {
+    "id11": {
       "Dyad": {
         "edges": [{"S": 1, "M": [{"x": 470, "y": 670}], "E": 2}],
         "renderStyle": "standard"
       }
     },
-    "id2": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id3": {
+    "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id13": {
       "Dyad": {
         "edges": [
           {"S": 1, "M": [], "E": -1},
-          {"S": -1, "M": [{"x": 470, "y": 460}], "E": 2},
+          {"S": -1, "M": [], "E": 2},
           {"S": 3, "M": [], "E": -1}
         ],
-        "junctions": [{"x": 470, "y": 460}],
-        "renderStyle": "standard"
+        "junctions": [{"x": 470, "y": 460}]
       }
     },
-    "id4": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}}
+    "id14": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 140, "y": 500}, {"x": 140, "y": 530}], "E": 2}]}
+    }
   }
 }
 end

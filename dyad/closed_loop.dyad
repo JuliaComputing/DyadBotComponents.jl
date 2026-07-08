@@ -24,11 +24,11 @@ component AngleControlledDyadBot
 relations
   y: analysis_point(plant.theta, angle_controller.u_m)
   u: analysis_point(angle_controller.y, gain.u)
-  connect(ref.y, angle_controller.u_s) {^id1}
-  connect(plant.theta, angle_controller.u_m) {^id2}
-  connect(angle_controller.y, gain.u) {^id3}
-  connect(gain.y, plant.torque) {^id4}
-  connect(constant_ff.y, angle_controller.u_ff) {^id5}
+  connect(plant.theta, angle_controller.u_m) {^id7}
+  connect(angle_controller.y, gain.u) {^id8}
+  connect(gain.y, plant.torque) {^id9}
+  connect(constant_ff.y, angle_controller.u_ff) {^id10}
+  connect(ref.y, angle_controller.u_s) {^id11}
 metadata {
   "Dyad": {
     "tests": {"case1": {"stop": 5}},
@@ -52,58 +52,41 @@ metadata {
       }
     },
     "angle_controller": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 160, "y1": 450, "x2": 260, "y2": 550, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 170, "y1": 450, "x2": 270, "y2": 550}}}
     },
     "ref": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 10, "y1": 450, "x2": 110, "y2": 550, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 10, "y1": 430, "x2": 110, "y2": 530}}}
     },
     "gain": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 320, "y1": 460, "x2": 400, "y2": 540, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 400, "y1": 460, "x2": 480, "y2": 540}}}
     },
     "constant_ff": {
       "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 180, "y1": 330, "x2": 240, "y2": 390, "rot": 90}
-        },
-        "tags": []
+        "placement": {"diagram": {"x1": 190, "y1": 330, "x2": 250, "y2": 390, "rot": 90}}
       }
     },
-    "id1": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id2": {
+    "id7": {
       "Dyad": {
         "edges": [
           {
             "S": 1,
             "M": [
-              {"x": 800, "y": 460},
+              {"x": 800, "y": 492},
               {"x": 800, "y": 700},
               {"x": 130, "y": 700},
               {"x": 130, "y": 523}
             ],
             "E": 2
           }
-        ],
-        "renderStyle": "standard"
+        ]
       }
     },
-    "id3": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id4": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id5": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}}
+    "id8": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id9": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id10": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id11": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 135, "y": 480}, {"x": 135, "y": 477}], "E": 2}]}
+    }
   }
 }
 end
@@ -155,17 +138,17 @@ relations
   y2: analysis_point(plant.x, pos_controller.u_m)
   u: analysis_point(angle_controller.y, gain.u)
   u2: analysis_point(pos_controller.y, gain1.u)
-  connect(square.y, firstorder.u) {^id1}
-  connect(firstorder.y, firstorder1.u) {^id2}
-  connect(firstorder1.y, pos_controller.u_s) {^id3}
-  connect(plant.x, pos_controller.u_m) {^id4}
-  connect(pos_controller.y, gain1.u) {^id5}
-  connect(gain1.y, angle_controller.u_s) {^id6}
-  connect(plant.theta, angle_controller.u_m) {^id7}
-  connect(angle_controller.y, gain.u) {^id8}
-  connect(gain.y, plant.torque) {^id9}
-  connect(constant1.y, pos_controller.u_ff) {^id10}
-  connect(constant2.y, angle_controller.u_ff) {^id11}
+  connect(square.y, firstorder.u) {^id12}
+  connect(firstorder.y, firstorder1.u) {^id13}
+  connect(plant.x, pos_controller.u_m) {^id14}
+  connect(pos_controller.y, gain1.u) {^id15}
+  connect(gain1.y, angle_controller.u_s) {^id16}
+  connect(plant.theta, angle_controller.u_m) {^id17}
+  connect(angle_controller.y, gain.u) {^id18}
+  connect(gain.y, plant.torque) {^id19}
+  connect(constant1.y, pos_controller.u_ff) {^id20}
+  connect(constant2.y, angle_controller.u_ff) {^id21}
+  connect(firstorder1.y, pos_controller.u_s) {^id22}
 metadata {
   "Dyad": {
     "tests": {"case1": {"stop": 20}},
@@ -189,28 +172,13 @@ metadata {
       }
     },
     "square": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": -720, "y1": 450, "x2": -620, "y2": 550, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": -660, "y1": 430, "x2": -560, "y2": 530}}}
     },
     "firstorder": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": -570, "y1": 450, "x2": -470, "y2": 550, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": -510, "y1": 430, "x2": -410, "y2": 530}}}
     },
     "firstorder1": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": -430, "y1": 450, "x2": -330, "y2": 550, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": -350, "y1": 430, "x2": -250, "y2": 530}}}
     },
     "angle_controller": {
       "Dyad": {
@@ -229,12 +197,7 @@ metadata {
       }
     },
     "gain": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 320, "y1": 460, "x2": 400, "y2": 540, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 420, "y1": 460, "x2": 500, "y2": 540}}}
     },
     "gain1": {
       "Dyad": {
@@ -260,49 +223,49 @@ metadata {
         "tags": []
       }
     },
-    "id1": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id2": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id3": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id4": {
+    "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id13": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id14": {
       "Dyad": {
         "edges": [
           {
             "S": 1,
             "M": [
-              {"x": 840, "y": 430},
+              {"x": 840, "y": 468},
               {"x": 840, "y": 760},
               {"x": -190, "y": 760},
               {"x": -190, "y": 523}
             ],
             "E": 2
           }
-        ],
-        "renderStyle": "standard"
+        ]
       }
     },
-    "id5": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id6": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id7": {
+    "id15": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id16": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 130, "y": 500}, {"x": 130, "y": 477}], "E": 2}]}
+    },
+    "id17": {
       "Dyad": {
         "edges": [
           {
             "S": 1,
             "M": [
-              {"x": 820, "y": 460},
+              {"x": 820, "y": 492},
               {"x": 820, "y": 700},
               {"x": 130, "y": 700},
               {"x": 130, "y": 523}
             ],
             "E": 2
           }
-        ],
-        "renderStyle": "standard"
+        ]
       }
     },
-    "id8": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id9": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id10": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id11": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}}
+    "id18": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id19": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id20": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id21": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id22": {"Dyad": {"edges": [{"S": 1, "M": [{"x": -245, "y": 477}], "E": 2}]}}
   }
 }
 end

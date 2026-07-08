@@ -96,20 +96,18 @@ relations
   y_theta: analysis_point(plant.theta, g_theta.u)
   y_thetad: analysis_point(plant.theta_dot, g_thetad.u)
   u: analysis_point(add.y, plant.torque)
-  connect(plant.x, g_x.u) {^id1}
-  connect(plant.x_dot, g_xd.u) {^id2}
-  connect(plant.theta, g_theta.u) {^id3}
-  connect(plant.theta_dot, g_thetad.u) {^id4}
-  connect(g_x.y, add3.u1) {^id5}
-  connect(g_xd.y, add3.u2) {^id6}
-  connect(g_theta.y, add3.u3) {^id7}
-  connect(add3.y, add.u1) {^id8}
-  connect(g_thetad.y, add.u2) {^id9}
-  connect(add.y, plant.torque) {^id10}
+  connect(plant.x, g_x.u) {^id9}
+  connect(plant.x_dot, g_xd.u) {^id10}
+  connect(plant.theta, g_theta.u) {^id11}
+  connect(plant.theta_dot, g_thetad.u) {^id12}
+  connect(add3.y, add.u1) {^id13}
+  connect(g_thetad.y, add.u2) {^id14}
+  connect(add.y, plant.torque) {^id15}
+  connect(g_theta.y, add3.u2) {^id16}
+  connect(g_xd.y, add3.u3) {^id17}
+  connect(g_x.y, add3.u1) {^id18}
 metadata {
-  "Dyad": {
-    "icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}
-  },
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}},
   "_links": {
     "world": {
       "Dyad": {
@@ -128,36 +126,16 @@ metadata {
       }
     },
     "g_x": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 700, "y1": 300, "x2": 780, "y2": 380, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 690, "y1": 300, "x2": 770, "y2": 380}}}
     },
     "g_xd": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 700, "y1": 420, "x2": 780, "y2": 500, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 690, "y1": 540, "x2": 770, "y2": 620}}}
     },
     "g_theta": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 700, "y1": 540, "x2": 780, "y2": 620, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 690, "y1": 430, "x2": 770, "y2": 510}}}
     },
     "g_thetad": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 700, "y1": 660, "x2": 780, "y2": 740, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 690, "y1": 660, "x2": 770, "y2": 740}}}
     },
     "add3": {
       "Dyad": {
@@ -168,38 +146,42 @@ metadata {
       }
     },
     "add": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 1000, "y1": 500, "x2": 1100, "y2": 600, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 1010, "y1": 450, "x2": 1110, "y2": 550}}}
     },
-    "id1": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id2": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id3": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id4": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id5": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id6": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id7": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id8": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id9": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id9": {"Dyad": {"edges": [{"S": 1, "M": [{"x": 584, "y": 340}], "E": 2}]}},
     "id10": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 640, "y": 516}, {"x": 640, "y": 580}], "E": 2}]}
+    },
+    "id11": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 620, "y": 492}, {"x": 620, "y": 470}], "E": 2}]}
+    },
+    "id12": {"Dyad": {"edges": [{"S": 1, "M": [{"x": 584, "y": 700}], "E": 2}]}},
+    "id13": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id14": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 955, "y": 700}, {"x": 955, "y": 530}], "E": 2}]}
+    },
+    "id15": {
       "Dyad": {
         "edges": [
           {
             "S": 1,
             "M": [
-              {"x": 1120, "y": 550},
-              {"x": 1120, "y": 850},
-              {"x": 340, "y": 850},
+              {"x": 1120, "y": 500},
+              {"x": 1120, "y": 810},
+              {"x": 340, "y": 810},
               {"x": 340, "y": 500}
             ],
             "E": 2
           }
-        ],
-        "renderStyle": "standard"
+        ]
       }
+    },
+    "id16": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id17": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 812, "y": 580}, {"x": 812, "y": 500}], "E": 2}]}
+    },
+    "id18": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 810, "y": 340}, {"x": 810, "y": 440}], "E": 2}]}
     }
   }
 }
@@ -232,15 +214,15 @@ component LQGControlledDyadBot
   parameter phi0::Angle = 0.1
 relations
   u: analysis_point(torque_out.y, plant.torque)
-  connect(step.y, mux.u1) {^id1}
-  connect(zero_xd.y, mux.u2) {^id2}
-  connect(zero_theta.y, mux.u3) {^id3}
-  connect(zero_thetad.y, mux.u4) {^id4}
-  connect(plant.x, mux.u5) {^id5}
-  connect(plant.theta, mux.u6) {^id6}
-  connect(mux.y, controller.u) {^id7}
-  connect(controller.y, torque_out.u) {^id8}
-  connect(torque_out.y, plant.torque) {^id9}
+  connect(step.y, mux.u1) {^id10}
+  connect(zero_xd.y, mux.u2) {^id11}
+  connect(zero_theta.y, mux.u3) {^id12}
+  connect(zero_thetad.y, mux.u4) {^id13}
+  connect(plant.x, mux.u5) {^id14}
+  connect(plant.theta, mux.u6) {^id15}
+  connect(mux.y, controller.u) {^id16}
+  connect(controller.y, torque_out.u) {^id17}
+  connect(torque_out.y, plant.torque) {^id18}
 metadata {
   "Dyad": {
     "tests": {"case1": {"stop": 20}},
@@ -319,11 +301,11 @@ metadata {
         "tags": []
       }
     },
-    "id1": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id2": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id3": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id4": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id5": {
+    "id10": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id11": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id13": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id14": {
       "Dyad": {
         "edges": [
           {
@@ -340,7 +322,7 @@ metadata {
         "renderStyle": "standard"
       }
     },
-    "id6": {
+    "id15": {
       "Dyad": {
         "edges": [
           {
@@ -357,9 +339,9 @@ metadata {
         "renderStyle": "standard"
       }
     },
-    "id7": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id8": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id9": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}}
+    "id16": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id17": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id18": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}}
   }
 }
 end
