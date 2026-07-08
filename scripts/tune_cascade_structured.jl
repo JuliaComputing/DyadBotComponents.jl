@@ -44,9 +44,9 @@ ssys = multibody(model)
 # a rad/s, limited by the unstable pendulum pole), so the two loops get
 # different roll-off frequencies.
 Mt = 2.0
-ωc_angle = 100.0
+ωc_angle = 200.0
 WT_angle = tf(Mt * ωc_angle, [1.0, ωc_angle])
-ωc_pos = 5.0
+ωc_pos = 10.0
 WT_pos = tf(Mt * ωc_pos, [1.0, ωc_pos])
 
 # Sensitivity weights. The outer position loop owns the low-frequency range:
@@ -70,10 +70,10 @@ t = 0:0.01:3
 # run with the reference active. The source value does not affect the
 # linearizations (it enters through linear blocks only).
 op = Dict([
-    ssys.angle_controller.u_m => 0
+    # ssys.angle_controller.u_m => 0
     ssys.angle_controller.integrator.y => 0
     ssys.angle_controller.derivative.x => 0
-    ssys.pos_controller.u_m => 0
+    # ssys.pos_controller.u_m => 0
     ssys.pos_controller.integrator.y => 0
     ssys.pos_controller.derivative.x => 0
     ssys.plant.body_mass.body.phi => 0
@@ -91,14 +91,14 @@ operating_points = [op]
 # sensitivity functions), so tracking performance must be rewarded
 # explicitly.
 simprob = ODEProblem(ssys, [], (0.0, 20.0))
-terr = 0:0.05:20
+terr = 0:0.1:20
 function tracking_cost(sol)
     sol.retcode == ReturnCode.Success || return 1e6 # penalize gains for which the simulation fails
     e = sol(terr, idxs = ssys.plant.x).u .- sol(terr, idxs = ssys.firstorder1.y).u
-    1e4 * sum(abs2, e) / length(terr)
+    1e2 * sum(abs2, e) / length(terr)
 end
 simobj = SimulationObjective(; costfun = tracking_cost, prob = simprob,
-    solve_args = (Rodas5P(),), solve_kwargs = (; reltol = 1e-6, abstol = 1e-8))
+    solve_args = (Rodas5P(),), solve_kwargs = (; reltol = 1e-8, abstol = 1e-8))
 
 objectives = [
     simobj,
@@ -162,3 +162,24 @@ oprob = ODEProblem(ssys, Dict(DyadControlSystems.optmap(res)), (0.0, 20.0))
 sol = solve(oprob, Rodas5P())
 @show sol.retcode
 plot(sol, idxs = [ssys.plant.theta, ssys.plant.x, ssys.square.y])
+
+
+
+#=
+optimization status : Success
+objective status    
+        :SimulationObjective => 0.03544817713041285
+        :MaximumSensitivityObjective => 0.0
+        :MaximumSensitivityObjective => 0.0
+        :MaximumComplementarySensitivityObjective => 0.0
+        :MaximumComplementarySensitivityObjective => 0.0
+        :PoleLocationObjective => 0.0
+minimizer (obtain with `optmap(res)`
+        k_angle => 0.25223177002412134
+        Ti_angle => 4.492649470796655
+        Td_angle => 0.07535177198242332
+        k_pos => 0.7382833570482313
+        Ti_pos => 41.62571931622867
+        Td_pos => 0.537697918931463
+objective value     : 0.06372773315974468
+=#
