@@ -1,3 +1,12 @@
+# Structured tuning (tune_cascade_structured.jl) needs BlockComponents PR #322,
+# which binds the LimPID internal gains to the controller parameters (`final`).
+# Without it the structured-tuning fast path changes k/Ti/Td but the internal
+# gain blocks keep their baked defaults, so the precompiled linearization
+# disagrees with a fresh one ("relative frequency-response error 1.0") and the
+# optimizer diverges. #322 is not in a registered version yet, so pin main.
+[sources]
+BlockComponents = {url = "https://github.com/JuliaComputing/BlockComponents", rev = "main"}
+
 [deps]
 BlockComponents = "1ef5d832-be8e-447f-9f2c-8b5d17d15fd3"
 ControlSystemsBase = "aaaaaaaa-a6ca-5380-bf3e-84a91bcd477e"
