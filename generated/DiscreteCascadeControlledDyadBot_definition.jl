@@ -7,26 +7,17 @@
 import Moshi as __Ext__Moshi
 
 @doc Markdown.doc"""
-   CascadeControlledDyadBot(; name, k_angle, Ti_angle, Td_angle, k_pos, Ti_pos, Td_pos, phi0)
+   DiscreteCascadeControlledDyadBot(; name, Ts, k_angle, Ti_angle, Td_angle, k_pos, Ti_pos, Td_pos, phi0)
 
-Balancing robot with a cascade control system: an inner loop stabilizes the
-body tilt angle and an outer loop controls the position of the robot along
-the ground. The position reference is a square wave filtered through two
-first-order filters to obtain a smooth reference trajectory.
-
-The control system is encapsulated in the `CascadeController` subcomponent; the
-discrete-time model `DiscreteCascadeControlledDyadBot` is identical except that
-`controller` is a `DiscreteCascadeController`.
-
-The six controller gains are exposed as top-level parameters so that they can
-be tuned, either one loop at a time with the scripts `scripts/tune_angle_pid.jl`
-and `scripts/tune_cascade_pid.jl`, or all simultaneously with
-`scripts/tune_cascade_structured.jl`.
+Discrete-time version of `CascadeControlledDyadBot`. Identical to the continuous
+model except that the control system is a sampled-data `DiscreteCascadeController`
+running on a common clock with period `Ts`.
 
 ## Parameters:
 
 | Name         | Description                         | Units  |   Default value |
 | ------------ | ----------------------------------- | ------ | --------------- |
+| `Ts`         | Controller sample interval                         | --  |   0.005 |
 | `k_angle`         | Proportional gain of the inner angle controller                         | --  |   0.487401 |
 | `Ti_angle`         | Integrator time constant of the inner angle controller                         | s  |   0.0587352 |
 | `Td_angle`         | Derivative time constant of the inner angle controller                         | s  |   0.0420526 |
@@ -35,12 +26,12 @@ and `scripts/tune_cascade_pid.jl`, or all simultaneously with
 | `Td_pos`         | Derivative time constant of the outer position controller                         | s  |   4.81393 |
 | `phi0`         | Initial tilt angle of the body                         | rad  |   0.1 |
 """
-@component function CascadeControlledDyadBot(; name = nothing, k_angle=0.487401, Ti_angle=0.0587352, Td_angle=0.0420526, k_pos=0.0666576, Ti_pos=5.25024, Td_pos=4.81393, phi0=0.1, kwargs...)
+@component function DiscreteCascadeControlledDyadBot(; name = nothing, Ts=0.005, k_angle=0.487401, Ti_angle=0.0587352, Td_angle=0.0420526, k_pos=0.0666576, Ti_pos=5.25024, Td_pos=4.81393, phi0=0.1, kwargs...)
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
   
-    @named model = CascadeControlledDyadBot()
+    @named model = DiscreteCascadeControlledDyadBot()
   """))
 
   __overrides = __build_overrides(kwargs)
@@ -115,9 +106,9 @@ and `scripts/tune_cascade_pid.jl`, or all simultaneously with
   # Subcomponent firstorder1 of type BlockComponents.Continuous.FirstOrder
   firstorder1_overrides = __pop_subcomponent_overrides!(__overrides, "firstorder1")
   push!(__systems, @named firstorder1 = BlockComponents.Continuous.FirstOrder(; T=0.1, firstorder1_overrides...))
-  # Subcomponent controller of type DyadBotComponents.CascadeController
+  # Subcomponent controller of type DyadBotComponents.DiscreteCascadeController
   controller_overrides = __pop_subcomponent_overrides!(__overrides, "controller")
-  push!(__systems, @named controller = DyadBotComponents.CascadeController(; k_angle=k_angle, Ti_angle=Ti_angle, Td_angle=Td_angle, k_pos=k_pos, Ti_pos=Ti_pos, Td_pos=Td_pos, controller_overrides...))
+  push!(__systems, @named controller = DyadBotComponents.DiscreteCascadeController(; k_angle=k_angle, Ti_angle=Ti_angle, Td_angle=Td_angle, k_pos=k_pos, Ti_pos=Ti_pos, Td_pos=Td_pos, Ts=Ts, controller_overrides...))
 
   ### Check there are no unmatched overrides
   isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
@@ -142,4 +133,4 @@ and `scripts/tune_cascade_pid.jl`, or all simultaneously with
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
-export CascadeControlledDyadBot
+export DiscreteCascadeControlledDyadBot

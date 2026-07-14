@@ -106,12 +106,12 @@ loop at `u` and synthesizes an LQG controller from the linearized plant.
   push!(__eqs, connect(plant.x_dot, g_xd.u))
   push!(__eqs, connect(plant.theta, g_theta.u))
   push!(__eqs, connect(plant.theta_dot, g_thetad.u))
-  push!(__eqs, connect(g_x.y, add3.u1))
-  push!(__eqs, connect(g_xd.y, add3.u2))
-  push!(__eqs, connect(g_theta.y, add3.u3))
   push!(__eqs, connect(add3.y, add.u1))
   push!(__eqs, connect(g_thetad.y, add.u2))
   push!(__eqs, connect(add.y, plant.torque))
+  push!(__eqs, connect(g_theta.y, add3.u2))
+  push!(__eqs, connect(g_xd.y, add3.u3))
+  push!(__eqs, connect(g_x.y, add3.u1))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)

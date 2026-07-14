@@ -38,8 +38,8 @@ Tr = T0^4
 # specified explicitly here.
 op = Dict([
     ssys.square.amplitude => 0
-    ssys.angle_controller.u_m => 0
-    ssys.pos_controller.u_m => 0
+    ssys.controller.angle_controller.u_m => 0
+    ssys.controller.pos_controller.u_m => 0
     ssys.plant.body_mass.body.phi => 0
     ssys.plant.body_mass.body.w => 0
     ssys.plant.wheelinertia.phi => 0
@@ -50,9 +50,9 @@ op = Dict([
 
 Ryur = DyadControlSystems.feedforward_generator(model;
     Tr,
-    measurement = [model.y, model.y2],
-    controlled_output = [model.y2],
-    control_input = [model.u],
+    measurement = [model.controller.y, model.controller.y2],
+    controlled_output = [model.controller.y2],
+    control_input = [model.controller.u],
     op,
     MultibodyComponents.linsys...
 )

@@ -38,10 +38,10 @@ hline!([0], l = (:dash, :black), primary = false)
 using ModelingToolkit: Symbolics
 overrides = Dict{Symbolics.SymbolicT, Symbolics.SymbolicT}()
 for (k, v) in [
-    ssys.angle_controller.u_m => 0.0
-    ssys.angle_controller.integrator.y => 0.0
-    ssys.angle_controller.derivative.x => 0.0
-    ssys.gain.u => 0.0
+    ssys.controller.angle_controller.u_m => 0.0
+    ssys.controller.angle_controller.integrator.y => 0.0
+    ssys.controller.angle_controller.derivative.x => 0.0
+    ssys.controller.gain.u => 0.0
     ssys.plant.torque => 0.0
     ssys.plant.body_mass.body.phi => 0.0
     ssys.plant.body_mass.body.w => 0.0
@@ -52,7 +52,7 @@ for (k, v) in [
 end
 
 ## Loop-shaping quantities at the current gains
-S = get_named_sensitivity(tuning_model, tuning_model.y; op = overrides, MultibodyComponents.linsys...) |> sminreal
+S = get_named_sensitivity(tuning_model, tuning_model.controller.y; op = overrides, MultibodyComponents.linsys...) |> sminreal
 Ms, ws = hinfnorm2(S)
 bodeplot(S, title = "\$S(s)\$ angle controlled", plotphase = false, legend = :bottomright)
 hline!([Ms], l = (:dash, :black), label = "\$M_S = \$$(round(Ms, digits = 2))")
@@ -61,10 +61,10 @@ hline!([Ms], l = (:dash, :black), label = "\$M_S = \$$(round(Ms, digits = 2))")
 spec = JSC.PIDAutotuningAnalysisSpec(;
     name = :AngleTuning,
     model = tuning_model,
-    measurement = "y",
-    control_input = "u",
-    step_input = "u",
-    step_output = "y",
+    measurement = "controller.y",
+    control_input = "controller.u",
+    step_input = "controller.u",
+    step_output = "controller.y",
     Ts = 0.01,           # Sample time
     duration = 3.0,      # Simulation duration
     Ms = 1.6,            # Sensitivity peak constraint

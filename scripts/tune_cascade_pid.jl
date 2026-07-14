@@ -36,14 +36,14 @@ using ModelingToolkit: Symbolics
 overrides = Dict{Symbolics.SymbolicT, Symbolics.SymbolicT}()
 for (k, v) in [
     ssys.square.amplitude => 0.0
-    ssys.angle_controller.u_m => 0.0
-    ssys.angle_controller.integrator.y => 0.0
-    ssys.angle_controller.derivative.x => 0.0
-    ssys.pos_controller.u_m => 0.0
-    ssys.pos_controller.integrator.y => 0.0
-    ssys.pos_controller.derivative.x => 0.0
-    ssys.gain.u => 0.0
-    ssys.gain1.u => 0.0
+    ssys.controller.angle_controller.u_m => 0.0
+    ssys.controller.angle_controller.integrator.y => 0.0
+    ssys.controller.angle_controller.derivative.x => 0.0
+    ssys.controller.pos_controller.u_m => 0.0
+    ssys.controller.pos_controller.integrator.y => 0.0
+    ssys.controller.pos_controller.derivative.x => 0.0
+    ssys.controller.gain.u => 0.0
+    ssys.controller.gain1.u => 0.0
     ssys.plant.torque => 0.0
     ssys.plant.body_mass.body.phi => 0.0
     ssys.plant.body_mass.body.w => 0.0
@@ -63,10 +63,10 @@ end
 cascade_spec = JSC.PIDAutotuningAnalysisSpec(;
     name = :CascadePositionTuning,
     model = cascade_tuning_model,
-    measurement = "y2",
-    control_input = "u2",
-    step_input = "u2",
-    step_output = "y2",
+    measurement = "controller.y2",
+    control_input = "controller.u2",
+    step_input = "controller.u2",
+    step_output = "controller.y2",
     ref = 0.0,
     Ts = 0.01,
     duration = 15.0,
@@ -97,7 +97,7 @@ display(cascade_optimized_params)
 ## Robustness analysis of the full cascade at the current gains
 # MIMO output sensitivity at both measurements
 S2 = get_named_sensitivity(cascade_tuning_model,
-    [cascade_tuning_model.y, cascade_tuning_model.y2]; op = overrides, MultibodyComponents.linsys...)
+    [cascade_tuning_model.controller.y, cascade_tuning_model.controller.y2]; op = overrides, MultibodyComponents.linsys...)
 Ms2, ws2 = hinfnorm2(S2)
 sigmaplot(S2)
 hline!([Ms2], l = (:dash, :black), label = "\$M_S = \$$(round(Ms2, digits = 2))")
@@ -106,14 +106,14 @@ L2 = inv(S2) - ss(I(2))
 bodeplot(L2)
 
 # Input sensitivity at the torque input
-Si2 = get_named_sensitivity(cascade_tuning_model, [cascade_tuning_model.u]; op = overrides, MultibodyComponents.linsys...)
+Si2 = get_named_sensitivity(cascade_tuning_model, [cascade_tuning_model.controller.u]; op = overrides, MultibodyComponents.linsys...)
 w = exp10.(LinRange(-1, 3, 1000))
 Msi2, _ = hinfnorm2(Si2)
 bodeplot(Si2, w, plotphase = false)
 hline!([Msi2], l = (:dash, :black), label = "\$M_S = \$$(round(Msi2, digits = 2))")
 
 # Input loop transfer and diskmargin
-Li2 = get_named_looptransfer(cascade_tuning_model, [cascade_tuning_model.u]; op = overrides, MultibodyComponents.linsys...) |> minreal
+Li2 = get_named_looptransfer(cascade_tuning_model, [cascade_tuning_model.controller.u]; op = overrides, MultibodyComponents.linsys...) |> minreal
 marginplot(Li2, w, adjust_phase_start = true)
 
 dmi2 = diskmargin(Li2)

@@ -7,34 +7,27 @@
 import Moshi as __Ext__Moshi
 
 @doc Markdown.doc"""
-   AngleControlledDyadBot(; name, k_angle, Ti_angle, Td_angle, phi0)
+   DiscreteCascadeFFDyadBot(; name, Ts, phi0)
 
-Balancing robot stabilized by a single PID controller regulating the body
-tilt angle to zero. The robot starts from a tilted initial configuration and
-the controller recovers the upright pose. Since only the angle is controlled,
-the position of the robot drifts freely.
-
-The control system is encapsulated in the `AngleController` subcomponent; the
-discrete-time model `DiscreteAngleControlledDyadBot` is identical except that
-`controller` is a `DiscreteAngleController`.
-
-The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
+Discrete-time version of `CascadeFFDyadBot`. Identical to the continuous model
+except that the control system is a sampled-data `DiscreteCascadeFFController`.
+The feed-forward generator and selectors run in continuous time; their outputs
+are sampled inside the controller. The sample interval is set by the top-level
+structural parameter `Ts`.
 
 ## Parameters:
 
 | Name         | Description                         | Units  |   Default value |
 | ------------ | ----------------------------------- | ------ | --------------- |
-| `k_angle`         | Proportional gain of the angle controller                         | --  |   0.487401 |
-| `Ti_angle`         | Integrator time constant of the angle controller                         | s  |   0.0587352 |
-| `Td_angle`         | Derivative time constant of the angle controller                         | s  |   0.0420526 |
+| `Ts`         | Controller sample interval                         | --  |   0.005 |
 | `phi0`         | Initial tilt angle of the body                         | rad  |   0.1 |
 """
-@component function AngleControlledDyadBot(; name = nothing, k_angle=0.487401, Ti_angle=0.0587352, Td_angle=0.0420526, phi0=0.1, kwargs...)
+@component function DiscreteCascadeFFDyadBot(; name = nothing, Ts=0.005, phi0=0.1, kwargs...)
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
   
-    @named model = AngleControlledDyadBot()
+    @named model = DiscreteCascadeFFDyadBot()
   """))
 
   __overrides = __build_overrides(kwargs)
@@ -60,15 +53,6 @@ The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
   ### Deferred assignment (default values that depend on final parameters)
 
   ### Symbolic Parameters
-  __local__k_angle = k_angle
-  append!(__params, @parameters (k_angle::Real), [description = "Proportional gain of the angle controller"])
-  __initial_conditions[k_angle] = __local__k_angle
-  __local__Ti_angle = Ti_angle
-  append!(__params, @parameters (Ti_angle::Real), [description = "Integrator time constant of the angle controller"])
-  __initial_conditions[Ti_angle] = __local__Ti_angle
-  __local__Td_angle = Td_angle
-  append!(__params, @parameters (Td_angle::Real), [description = "Derivative time constant of the angle controller"])
-  __initial_conditions[Td_angle] = __local__Td_angle
   __local__phi0 = phi0
   append!(__params, @parameters (phi0::Real), [description = "Initial tilt angle of the body"])
   __initial_conditions[phi0] = __local__phi0
@@ -91,9 +75,27 @@ The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
   # Subcomponent plant of type DyadBotComponents.PlanarDyadBot
   plant_overrides = __pop_subcomponent_overrides!(__overrides, "plant")
   push!(__systems, @named plant = DyadBotComponents.PlanarDyadBot(; phi0=phi0, plant_overrides...))
-  # Subcomponent controller of type DyadBotComponents.AngleController
+  # Subcomponent square of type BlockComponents.Sources.Square
+  square_overrides = __pop_subcomponent_overrides!(__overrides, "square")
+  push!(__systems, @named square = BlockComponents.Sources.Square(; amplitude=0.05, frequency=Float64(1 / 10), square_overrides...))
+  # Subcomponent refgen of type BlockComponents.Continuous.StateSpace
+  refgen_overrides = __pop_subcomponent_overrides!(__overrides, "refgen")
+  push!(__systems, @named refgen = BlockComponents.Continuous.StateSpace(; nx=ff_nx(), nu=1, ny=3, A=ff_A(), B=ff_B(), C=ff_C(), D=ff_D(), refgen_overrides...))
+  # Subcomponent angle_ff of type MultibodyComponents.Selector
+  angle_ff_overrides = __pop_subcomponent_overrides!(__overrides, "angle_ff")
+  push!(__systems, @named angle_ff = MultibodyComponents.Selector(; nu=3, angle_ff_overrides...))
+  # Subcomponent pos_ref of type MultibodyComponents.Selector
+  pos_ref_overrides = __pop_subcomponent_overrides!(__overrides, "pos_ref")
+  push!(__systems, @named pos_ref = MultibodyComponents.Selector(; nu=3, index=2, pos_ref_overrides...))
+  # Subcomponent torque_ff of type MultibodyComponents.Selector
+  torque_ff_overrides = __pop_subcomponent_overrides!(__overrides, "torque_ff")
+  push!(__systems, @named torque_ff = MultibodyComponents.Selector(; nu=3, index=3, torque_ff_overrides...))
+  # Subcomponent mux1 of type DyadBotComponents.Mux1
+  mux1_overrides = __pop_subcomponent_overrides!(__overrides, "mux1")
+  push!(__systems, @named mux1 = DyadBotComponents.Mux1(; mux1_overrides...))
+  # Subcomponent controller of type DyadBotComponents.DiscreteCascadeFFController
   controller_overrides = __pop_subcomponent_overrides!(__overrides, "controller")
-  push!(__systems, @named controller = DyadBotComponents.AngleController(; k_angle=k_angle, Ti_angle=Ti_angle, Td_angle=Td_angle, controller_overrides...))
+  push!(__systems, @named controller = DyadBotComponents.DiscreteCascadeFFController(; Ts=Ts, controller_overrides...))
 
   ### Check there are no unmatched overrides
   isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
@@ -106,10 +108,17 @@ The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
   __assertions = []
 
   ### Equations
-  push!(__eqs, connect(plant.theta, controller.measurement))
+  push!(__eqs, connect(square.y, mux1.u))
+  push!(__eqs, connect(mux1.y, refgen.u))
+  push!(__eqs, connect(refgen.y, angle_ff.u, pos_ref.u, torque_ff.u))
+  push!(__eqs, connect(angle_ff.y, controller.angle_ff))
+  push!(__eqs, connect(pos_ref.y, controller.pos_reference))
+  push!(__eqs, connect(torque_ff.y, controller.torque_ff))
+  push!(__eqs, connect(plant.theta, controller.angle_measurement))
+  push!(__eqs, connect(plant.x, controller.pos_measurement))
   push!(__eqs, connect(controller.torque, plant.torque))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
-export AngleControlledDyadBot
+export DiscreteCascadeFFDyadBot

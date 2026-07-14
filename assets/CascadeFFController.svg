@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <rect x="4" y="4" width="992" height="992" fill="#fff" stroke="#A1A1AA" stroke-width="8"/>
+  <!-- axes -->
+  <path d="M240 190 V710" fill="none" stroke="#8f8f8f" stroke-width="6"/>
+  <path d="M224 220 L240 176 L256 220 Z" fill="#8f8f8f"/>
+  <path d="M220 690 H830" fill="none" stroke="#8f8f8f" stroke-width="6"/>
+  <path d="M800 674 L844 690 L800 706 Z" fill="#8f8f8f"/>
+  <!-- feed-forward path (direct) -->
+  <path d="M280 235 H770" fill="none" stroke="#2a9d3a" stroke-width="8" stroke-dasharray="20,14"/>
+  <path d="M760 214 L804 235 L760 256 Z" fill="#2a9d3a"/>
+  <!-- setpoint -->
+  <path d="M280 320 H810" fill="none" stroke="#c33" stroke-width="5" stroke-dasharray="16,12"/>
+  <!-- inner (fast) loop response -->
+  <path d="M280 690 C 370 690 390 340 810 325" fill="none" stroke="#84bfed" stroke-width="12" stroke-linecap="round"/>
+  <!-- outer (slow) loop response -->
+  <path d="M280 690 C 520 690 580 340 810 320" fill="none" stroke="#007fff" stroke-width="16" stroke-linecap="round"/>
+  <!-- label -->
+  <text x="500" y="905" font-family="Arial, Helvetica, sans-serif" font-size="120" font-weight="bold" fill="#131316" text-anchor="middle">cascade + ff</text>
+</svg>

@@ -161,13 +161,12 @@ stacks, with both rigid and compliant vertical contact.
   push!(__eqs, connect(wheel_right.frame_a, revolute_right.frame_b))
   push!(__eqs, connect(revolute_left.frame_a, rod_left.frame_b))
   push!(__eqs, connect(revolute_right.frame_a, rod_right.frame_b))
-  push!(__eqs, connect(rod_left.frame_a, axis_body.frame_a))
-  push!(__eqs, connect(rod_right.frame_a, axis_body.frame_a))
-  push!(__eqs, connect(axis_body.frame_a, body.frame_a))
   push!(__eqs, connect(damper_left.spline_a, revolute_left.axis))
   push!(__eqs, connect(damper_left.spline_b, revolute_left.support))
-  push!(__eqs, connect(damper_right.spline_a, revolute_right.axis))
   push!(__eqs, connect(damper_right.spline_b, revolute_right.support))
+  push!(__eqs, connect(rod_right.frame_a, rod_left.frame_a, axis_body.frame_a))
+  push!(__eqs, connect(axis_body.frame_a, body.frame_a))
+  push!(__eqs, connect(revolute_right.axis, damper_right.spline_a))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)

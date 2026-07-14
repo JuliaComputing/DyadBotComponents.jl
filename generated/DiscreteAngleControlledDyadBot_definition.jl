@@ -7,34 +7,29 @@
 import Moshi as __Ext__Moshi
 
 @doc Markdown.doc"""
-   AngleControlledDyadBot(; name, k_angle, Ti_angle, Td_angle, phi0)
+   DiscreteAngleControlledDyadBot(; name, Ts, k_angle, Ti_angle, Td_angle, phi0)
 
-Balancing robot stabilized by a single PID controller regulating the body
-tilt angle to zero. The robot starts from a tilted initial configuration and
-the controller recovers the upright pose. Since only the angle is controlled,
-the position of the robot drifts freely.
-
-The control system is encapsulated in the `AngleController` subcomponent; the
-discrete-time model `DiscreteAngleControlledDyadBot` is identical except that
-`controller` is a `DiscreteAngleController`.
-
-The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
+Discrete-time version of `AngleControlledDyadBot`. Identical to the continuous
+model except that the control system is a sampled-data `DiscreteAngleController`
+(`DiscretePIDStandard` with a `Sampler`, `ZeroOrderHold` and `PeriodicClock`).
+The sample interval is set by the top-level structural parameter `Ts`.
 
 ## Parameters:
 
 | Name         | Description                         | Units  |   Default value |
 | ------------ | ----------------------------------- | ------ | --------------- |
+| `Ts`         | Controller sample interval                         | --  |   0.005 |
 | `k_angle`         | Proportional gain of the angle controller                         | --  |   0.487401 |
 | `Ti_angle`         | Integrator time constant of the angle controller                         | s  |   0.0587352 |
 | `Td_angle`         | Derivative time constant of the angle controller                         | s  |   0.0420526 |
 | `phi0`         | Initial tilt angle of the body                         | rad  |   0.1 |
 """
-@component function AngleControlledDyadBot(; name = nothing, k_angle=0.487401, Ti_angle=0.0587352, Td_angle=0.0420526, phi0=0.1, kwargs...)
+@component function DiscreteAngleControlledDyadBot(; name = nothing, Ts=0.005, k_angle=0.487401, Ti_angle=0.0587352, Td_angle=0.0420526, phi0=0.1, kwargs...)
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
   
-    @named model = AngleControlledDyadBot()
+    @named model = DiscreteAngleControlledDyadBot()
   """))
 
   __overrides = __build_overrides(kwargs)
@@ -91,9 +86,9 @@ The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
   # Subcomponent plant of type DyadBotComponents.PlanarDyadBot
   plant_overrides = __pop_subcomponent_overrides!(__overrides, "plant")
   push!(__systems, @named plant = DyadBotComponents.PlanarDyadBot(; phi0=phi0, plant_overrides...))
-  # Subcomponent controller of type DyadBotComponents.AngleController
+  # Subcomponent controller of type DyadBotComponents.DiscreteAngleController
   controller_overrides = __pop_subcomponent_overrides!(__overrides, "controller")
-  push!(__systems, @named controller = DyadBotComponents.AngleController(; k_angle=k_angle, Ti_angle=Ti_angle, Td_angle=Td_angle, controller_overrides...))
+  push!(__systems, @named controller = DyadBotComponents.DiscreteAngleController(; k_angle=k_angle, Ti_angle=Ti_angle, Td_angle=Td_angle, Ts=Ts, controller_overrides...))
 
   ### Check there are no unmatched overrides
   isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
@@ -112,4 +107,4 @@ The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
-export AngleControlledDyadBot
+export DiscreteAngleControlledDyadBot
