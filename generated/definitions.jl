@@ -200,10 +200,16 @@ end
 
 
 include("AngleControlledDyadBot_definition.jl")
+include("AngleController_definition.jl")
 include("CascadeControlledDyadBot_definition.jl")
+include("CascadeController_definition.jl")
+include("CascadeFFController_definition.jl")
 include("CascadeFFDyadBot_definition.jl")
 include("DiscreteAngleControlledDyadBot_definition.jl")
+include("DiscreteAngleController_definition.jl")
 include("DiscreteCascadeControlledDyadBot_definition.jl")
+include("DiscreteCascadeController_definition.jl")
+include("DiscreteCascadeFFController_definition.jl")
 include("DiscreteCascadeFFDyadBot_definition.jl")
 include("DyadBot3D_definition.jl")
 include("LQGControlledDyadBot_definition.jl")

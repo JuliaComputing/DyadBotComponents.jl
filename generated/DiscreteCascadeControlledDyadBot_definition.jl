@@ -9,22 +9,9 @@ import Moshi as __Ext__Moshi
 @doc Markdown.doc"""
    DiscreteCascadeControlledDyadBot(; name, Ts, k_angle, Ti_angle, Td_angle, k_pos, Ti_pos, Td_pos, phi0)
 
-Discrete-time version of `CascadeControlledDyadBot`. Both the inner
-tilt-angle loop and the outer position loop are realized with sampled-data
-`DiscretePIDStandard` controllers running on a common clock defined by the
-top-level structural parameter `Ts`.
-
-The continuous plant measurements (tilt angle and position) are sampled by
-`Sampler` blocks, the two discrete controllers run in cascade (the outer
-position controller produces the tilt-angle reference for the inner
-controller), and a `ZeroOrderHold` reconstructs the continuous motor torque.
-The square-wave position reference is smoothed by two continuous first-order
-filters before being sampled.
-
-The six controller gains are shared with the continuous
-`CascadeControlledDyadBot` and can be tuned with the scripts
-`scripts/tune_angle_pid.jl`, `scripts/tune_cascade_pid.jl`, or
-`scripts/tune_cascade_structured.jl`.
+Discrete-time version of `CascadeControlledDyadBot`. Identical to the continuous
+model except that the control system is a sampled-data `DiscreteCascadeController`
+running on a common clock with period `Ts`.
 
 ## Parameters:
 
@@ -119,57 +106,9 @@ The six controller gains are shared with the continuous
   # Subcomponent firstorder1 of type BlockComponents.Continuous.FirstOrder
   firstorder1_overrides = __pop_subcomponent_overrides!(__overrides, "firstorder1")
   push!(__systems, @named firstorder1 = BlockComponents.Continuous.FirstOrder(; T=0.1, firstorder1_overrides...))
-  # Subcomponent angle_controller of type DiscreteComponents.DiscretePIDStandard
-  angle_controller_overrides = __pop_subcomponent_overrides!(__overrides, "angle_controller")
-  push!(__systems, @named angle_controller = DiscreteComponents.DiscretePIDStandard(; Nd=119.368, y_max=0.1, angle_controller_overrides...))
-  __bindings[angle_controller.K] = k_angle
-  __bindings[angle_controller.Ti] = Ti_angle
-  __bindings[angle_controller.Td] = Td_angle
-  # Now remove initial conditions in angle_controller that correspond to the bindings just added
-  __angle_controller_ics = ModelingToolkit.get_initial_conditions(angle_controller)
-  __no_namespace_angle_controller = ModelingToolkit.toggle_namespacing(angle_controller, false)
-  __angle_controller_K = Symbolics.unwrap(__no_namespace_angle_controller.K)::Symbolics.SymbolicT
-  delete!(__angle_controller_ics, __angle_controller_K)
-  __angle_controller_Ti = Symbolics.unwrap(__no_namespace_angle_controller.Ti)::Symbolics.SymbolicT
-  delete!(__angle_controller_ics, __angle_controller_Ti)
-  __angle_controller_Td = Symbolics.unwrap(__no_namespace_angle_controller.Td)::Symbolics.SymbolicT
-  delete!(__angle_controller_ics, __angle_controller_Td)
-  # Subcomponent pos_controller of type DiscreteComponents.DiscretePIDStandard
-  pos_controller_overrides = __pop_subcomponent_overrides!(__overrides, "pos_controller")
-  push!(__systems, @named pos_controller = DiscreteComponents.DiscretePIDStandard(; Nd=4.76616, wd=Float64(1), wp=Float64(1), y_max=deg2rad(25.0), pos_controller_overrides...))
-  __bindings[pos_controller.K] = k_pos
-  __bindings[pos_controller.Ti] = Ti_pos
-  __bindings[pos_controller.Td] = Td_pos
-  # Now remove initial conditions in pos_controller that correspond to the bindings just added
-  __pos_controller_ics = ModelingToolkit.get_initial_conditions(pos_controller)
-  __no_namespace_pos_controller = ModelingToolkit.toggle_namespacing(pos_controller, false)
-  __pos_controller_K = Symbolics.unwrap(__no_namespace_pos_controller.K)::Symbolics.SymbolicT
-  delete!(__pos_controller_ics, __pos_controller_K)
-  __pos_controller_Ti = Symbolics.unwrap(__no_namespace_pos_controller.Ti)::Symbolics.SymbolicT
-  delete!(__pos_controller_ics, __pos_controller_Ti)
-  __pos_controller_Td = Symbolics.unwrap(__no_namespace_pos_controller.Td)::Symbolics.SymbolicT
-  delete!(__pos_controller_ics, __pos_controller_Td)
-  # Subcomponent gain of type BlockComponents.Math.Gain
-  gain_overrides = __pop_subcomponent_overrides!(__overrides, "gain")
-  push!(__systems, @named gain = BlockComponents.Math.Gain(; k=Float64(-1), gain_overrides...))
-  # Subcomponent gain1 of type BlockComponents.Math.Gain
-  gain1_overrides = __pop_subcomponent_overrides!(__overrides, "gain1")
-  push!(__systems, @named gain1 = BlockComponents.Math.Gain(; k=Float64(-1), gain1_overrides...))
-  # Subcomponent sampler_theta of type DiscreteComponents.Sampler
-  sampler_theta_overrides = __pop_subcomponent_overrides!(__overrides, "sampler_theta")
-  push!(__systems, @named sampler_theta = DiscreteComponents.Sampler(; sampler_theta_overrides...))
-  # Subcomponent sampler_x of type DiscreteComponents.Sampler
-  sampler_x_overrides = __pop_subcomponent_overrides!(__overrides, "sampler_x")
-  push!(__systems, @named sampler_x = DiscreteComponents.Sampler(; sampler_x_overrides...))
-  # Subcomponent sampler_ref of type DiscreteComponents.Sampler
-  sampler_ref_overrides = __pop_subcomponent_overrides!(__overrides, "sampler_ref")
-  push!(__systems, @named sampler_ref = DiscreteComponents.Sampler(; sampler_ref_overrides...))
-  # Subcomponent zoh of type DiscreteComponents.ZeroOrderHold
-  zoh_overrides = __pop_subcomponent_overrides!(__overrides, "zoh")
-  push!(__systems, @named zoh = DiscreteComponents.ZeroOrderHold(; zoh_overrides...))
-  # Subcomponent clock of type DiscreteComponents.PeriodicClock
-  clock_overrides = __pop_subcomponent_overrides!(__overrides, "clock")
-  push!(__systems, @named clock = DiscreteComponents.PeriodicClock(; dt=Ts, clock_overrides...))
+  # Subcomponent controller of type DyadBotComponents.DiscreteCascadeController
+  controller_overrides = __pop_subcomponent_overrides!(__overrides, "controller")
+  push!(__systems, @named controller = DyadBotComponents.DiscreteCascadeController(; k_angle=k_angle, Ti_angle=Ti_angle, Td_angle=Td_angle, k_pos=k_pos, Ti_pos=Ti_pos, Td_pos=Td_pos, Ts=Ts, controller_overrides...))
 
   ### Check there are no unmatched overrides
   isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
@@ -186,17 +125,10 @@ The six controller gains are shared with the continuous
   ### Equations
   push!(__eqs, connect(square.y, firstorder.u))
   push!(__eqs, connect(firstorder.y, firstorder1.u))
-  push!(__eqs, connect(firstorder1.y, sampler_ref.u))
-  push!(__eqs, connect(sampler_ref.y, pos_controller.reference))
-  push!(__eqs, connect(plant.x, sampler_x.u))
-  push!(__eqs, connect(sampler_x.y, pos_controller.measurement))
-  push!(__eqs, connect(pos_controller.ctr_output, gain1.u))
-  push!(__eqs, connect(gain1.y, angle_controller.reference))
-  push!(__eqs, connect(plant.theta, sampler_theta.u))
-  push!(__eqs, connect(sampler_theta.y, angle_controller.measurement, clock.y))
-  push!(__eqs, connect(angle_controller.ctr_output, gain.u))
-  push!(__eqs, connect(gain.y, zoh.u))
-  push!(__eqs, connect(zoh.y, plant.torque))
+  push!(__eqs, connect(firstorder1.y, controller.pos_reference))
+  push!(__eqs, connect(plant.x, controller.pos_measurement))
+  push!(__eqs, connect(plant.theta, controller.angle_measurement))
+  push!(__eqs, connect(controller.torque, plant.torque))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)

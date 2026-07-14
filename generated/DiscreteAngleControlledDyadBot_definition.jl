@@ -9,15 +9,10 @@ import Moshi as __Ext__Moshi
 @doc Markdown.doc"""
    DiscreteAngleControlledDyadBot(; name, Ts, k_angle, Ti_angle, Td_angle, phi0)
 
-Discrete-time version of `AngleControlledDyadBot`. The balancing robot is
-stabilized by a single sampled-data PID controller regulating the body tilt
-angle to zero. The tilt angle is sampled by a `Sampler`, the discrete
-`DiscretePIDStandard` computes the control action once per clock tick, and a
-`ZeroOrderHold` reconstructs the continuous motor torque. The sample interval
-is set by the top-level structural parameter `Ts` via a `PeriodicClock`.
-
-The controller gains are shared with the continuous `AngleControlledDyadBot`
-and can be tuned with the script `scripts/tune_angle_pid.jl`.
+Discrete-time version of `AngleControlledDyadBot`. Identical to the continuous
+model except that the control system is a sampled-data `DiscreteAngleController`
+(`DiscretePIDStandard` with a `Sampler`, `ZeroOrderHold` and `PeriodicClock`).
+The sample interval is set by the top-level structural parameter `Ts`.
 
 ## Parameters:
 
@@ -91,36 +86,9 @@ and can be tuned with the script `scripts/tune_angle_pid.jl`.
   # Subcomponent plant of type DyadBotComponents.PlanarDyadBot
   plant_overrides = __pop_subcomponent_overrides!(__overrides, "plant")
   push!(__systems, @named plant = DyadBotComponents.PlanarDyadBot(; phi0=phi0, plant_overrides...))
-  # Subcomponent angle_controller of type DiscreteComponents.DiscretePIDStandard
-  angle_controller_overrides = __pop_subcomponent_overrides!(__overrides, "angle_controller")
-  push!(__systems, @named angle_controller = DiscreteComponents.DiscretePIDStandard(; Nd=119.368, y_max=0.1, angle_controller_overrides...))
-  __bindings[angle_controller.K] = k_angle
-  __bindings[angle_controller.Ti] = Ti_angle
-  __bindings[angle_controller.Td] = Td_angle
-  # Now remove initial conditions in angle_controller that correspond to the bindings just added
-  __angle_controller_ics = ModelingToolkit.get_initial_conditions(angle_controller)
-  __no_namespace_angle_controller = ModelingToolkit.toggle_namespacing(angle_controller, false)
-  __angle_controller_K = Symbolics.unwrap(__no_namespace_angle_controller.K)::Symbolics.SymbolicT
-  delete!(__angle_controller_ics, __angle_controller_K)
-  __angle_controller_Ti = Symbolics.unwrap(__no_namespace_angle_controller.Ti)::Symbolics.SymbolicT
-  delete!(__angle_controller_ics, __angle_controller_Ti)
-  __angle_controller_Td = Symbolics.unwrap(__no_namespace_angle_controller.Td)::Symbolics.SymbolicT
-  delete!(__angle_controller_ics, __angle_controller_Td)
-  # Subcomponent ref of type BlockComponents.Sources.Constant
-  ref_overrides = __pop_subcomponent_overrides!(__overrides, "ref")
-  push!(__systems, @named ref = BlockComponents.Sources.Constant(; k=Float64(0), ref_overrides...))
-  # Subcomponent gain of type BlockComponents.Math.Gain
-  gain_overrides = __pop_subcomponent_overrides!(__overrides, "gain")
-  push!(__systems, @named gain = BlockComponents.Math.Gain(; k=Float64(-1), gain_overrides...))
-  # Subcomponent sampler of type DiscreteComponents.Sampler
-  sampler_overrides = __pop_subcomponent_overrides!(__overrides, "sampler")
-  push!(__systems, @named sampler = DiscreteComponents.Sampler(; sampler_overrides...))
-  # Subcomponent zoh of type DiscreteComponents.ZeroOrderHold
-  zoh_overrides = __pop_subcomponent_overrides!(__overrides, "zoh")
-  push!(__systems, @named zoh = DiscreteComponents.ZeroOrderHold(; zoh_overrides...))
-  # Subcomponent clock of type DiscreteComponents.PeriodicClock
-  clock_overrides = __pop_subcomponent_overrides!(__overrides, "clock")
-  push!(__systems, @named clock = DiscreteComponents.PeriodicClock(; dt=Ts, clock_overrides...))
+  # Subcomponent controller of type DyadBotComponents.DiscreteAngleController
+  controller_overrides = __pop_subcomponent_overrides!(__overrides, "controller")
+  push!(__systems, @named controller = DyadBotComponents.DiscreteAngleController(; k_angle=k_angle, Ti_angle=Ti_angle, Td_angle=Td_angle, Ts=Ts, controller_overrides...))
 
   ### Check there are no unmatched overrides
   isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
@@ -133,12 +101,8 @@ and can be tuned with the script `scripts/tune_angle_pid.jl`.
   __assertions = []
 
   ### Equations
-  push!(__eqs, connect(plant.theta, sampler.u))
-  push!(__eqs, connect(sampler.y, angle_controller.measurement, clock.y))
-  push!(__eqs, connect(ref.y, angle_controller.reference))
-  push!(__eqs, connect(angle_controller.ctr_output, zoh.u))
-  push!(__eqs, connect(zoh.y, gain.u))
-  push!(__eqs, connect(gain.y, plant.torque))
+  push!(__eqs, connect(plant.theta, controller.measurement))
+  push!(__eqs, connect(controller.torque, plant.torque))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)

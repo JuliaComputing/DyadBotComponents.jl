@@ -9,21 +9,11 @@ import Moshi as __Ext__Moshi
 @doc Markdown.doc"""
    DiscreteCascadeFFDyadBot(; name, Ts, phi0)
 
-Discrete-time version of `CascadeFFDyadBot`. The cascade-controlled balancing
-robot uses sampled-data `DiscretePIDStandard` controllers together with the
-same continuous feedforward generator.
-
-Because `DiscretePIDStandard` has no feedforward input, the feedforward
-signals are injected with explicit `Add` blocks instead of the `u_ff` ports
-used by the continuous `LimPID`. The feedforward generator and selectors run
-in continuous time; their outputs are sampled before being combined with the
-discrete controller signals. The torque feedforward is added to the inner
-controller output, and the tilt-angle feedforward is added to the inner-loop
-reference produced by the outer controller. The sample interval is set by the
-top-level structural parameter `Ts`.
-
-The feedforward generator matrices are computed with the script
-`scripts/compute_feedforward.jl`.
+Discrete-time version of `CascadeFFDyadBot`. Identical to the continuous model
+except that the control system is a sampled-data `DiscreteCascadeFFController`.
+The feed-forward generator and selectors run in continuous time; their outputs
+are sampled inside the controller. The sample interval is set by the top-level
+structural parameter `Ts`.
 
 ## Parameters:
 
@@ -88,18 +78,6 @@ The feedforward generator matrices are computed with the script
   # Subcomponent square of type BlockComponents.Sources.Square
   square_overrides = __pop_subcomponent_overrides!(__overrides, "square")
   push!(__systems, @named square = BlockComponents.Sources.Square(; amplitude=0.05, frequency=Float64(1 / 10), square_overrides...))
-  # Subcomponent angle_controller of type DiscreteComponents.DiscretePIDStandard
-  angle_controller_overrides = __pop_subcomponent_overrides!(__overrides, "angle_controller")
-  push!(__systems, @named angle_controller = DiscreteComponents.DiscretePIDStandard(; K=0.487401, Ti=0.0587352, Td=0.0420526, Nd=119.368, y_max=0.1, angle_controller_overrides...))
-  # Subcomponent pos_controller of type DiscreteComponents.DiscretePIDStandard
-  pos_controller_overrides = __pop_subcomponent_overrides!(__overrides, "pos_controller")
-  push!(__systems, @named pos_controller = DiscreteComponents.DiscretePIDStandard(; K=0.0666576, Ti=5.25024, Td=4.81393, Nd=4.76616, wd=Float64(1), wp=Float64(1), y_max=deg2rad(25.0), pos_controller_overrides...))
-  # Subcomponent gain of type BlockComponents.Math.Gain
-  gain_overrides = __pop_subcomponent_overrides!(__overrides, "gain")
-  push!(__systems, @named gain = BlockComponents.Math.Gain(; k=Float64(-1), gain_overrides...))
-  # Subcomponent gain1 of type BlockComponents.Math.Gain
-  gain1_overrides = __pop_subcomponent_overrides!(__overrides, "gain1")
-  push!(__systems, @named gain1 = BlockComponents.Math.Gain(; k=Float64(-1), gain1_overrides...))
   # Subcomponent refgen of type BlockComponents.Continuous.StateSpace
   refgen_overrides = __pop_subcomponent_overrides!(__overrides, "refgen")
   push!(__systems, @named refgen = BlockComponents.Continuous.StateSpace(; nx=ff_nx(), nu=1, ny=3, A=ff_A(), B=ff_B(), C=ff_C(), D=ff_D(), refgen_overrides...))
@@ -115,33 +93,9 @@ The feedforward generator matrices are computed with the script
   # Subcomponent mux1 of type DyadBotComponents.Mux1
   mux1_overrides = __pop_subcomponent_overrides!(__overrides, "mux1")
   push!(__systems, @named mux1 = DyadBotComponents.Mux1(; mux1_overrides...))
-  # Subcomponent sampler_theta of type DiscreteComponents.Sampler
-  sampler_theta_overrides = __pop_subcomponent_overrides!(__overrides, "sampler_theta")
-  push!(__systems, @named sampler_theta = DiscreteComponents.Sampler(; sampler_theta_overrides...))
-  # Subcomponent sampler_x of type DiscreteComponents.Sampler
-  sampler_x_overrides = __pop_subcomponent_overrides!(__overrides, "sampler_x")
-  push!(__systems, @named sampler_x = DiscreteComponents.Sampler(; sampler_x_overrides...))
-  # Subcomponent sampler_posref of type DiscreteComponents.Sampler
-  sampler_posref_overrides = __pop_subcomponent_overrides!(__overrides, "sampler_posref")
-  push!(__systems, @named sampler_posref = DiscreteComponents.Sampler(; sampler_posref_overrides...))
-  # Subcomponent sampler_angleff of type DiscreteComponents.Sampler
-  sampler_angleff_overrides = __pop_subcomponent_overrides!(__overrides, "sampler_angleff")
-  push!(__systems, @named sampler_angleff = DiscreteComponents.Sampler(; sampler_angleff_overrides...))
-  # Subcomponent sampler_torqueff of type DiscreteComponents.Sampler
-  sampler_torqueff_overrides = __pop_subcomponent_overrides!(__overrides, "sampler_torqueff")
-  push!(__systems, @named sampler_torqueff = DiscreteComponents.Sampler(; sampler_torqueff_overrides...))
-  # Subcomponent add_angleref of type BlockComponents.Math.Add
-  add_angleref_overrides = __pop_subcomponent_overrides!(__overrides, "add_angleref")
-  push!(__systems, @named add_angleref = BlockComponents.Math.Add(; add_angleref_overrides...))
-  # Subcomponent add_torque of type BlockComponents.Math.Add
-  add_torque_overrides = __pop_subcomponent_overrides!(__overrides, "add_torque")
-  push!(__systems, @named add_torque = BlockComponents.Math.Add(; add_torque_overrides...))
-  # Subcomponent zoh of type DiscreteComponents.ZeroOrderHold
-  zoh_overrides = __pop_subcomponent_overrides!(__overrides, "zoh")
-  push!(__systems, @named zoh = DiscreteComponents.ZeroOrderHold(; zoh_overrides...))
-  # Subcomponent clock of type DiscreteComponents.PeriodicClock
-  clock_overrides = __pop_subcomponent_overrides!(__overrides, "clock")
-  push!(__systems, @named clock = DiscreteComponents.PeriodicClock(; dt=Ts, clock_overrides...))
+  # Subcomponent controller of type DyadBotComponents.DiscreteCascadeFFController
+  controller_overrides = __pop_subcomponent_overrides!(__overrides, "controller")
+  push!(__systems, @named controller = DyadBotComponents.DiscreteCascadeFFController(; Ts=Ts, controller_overrides...))
 
   ### Check there are no unmatched overrides
   isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
@@ -156,26 +110,13 @@ The feedforward generator matrices are computed with the script
   ### Equations
   push!(__eqs, connect(square.y, mux1.u))
   push!(__eqs, connect(mux1.y, refgen.u))
-  push!(__eqs, connect(refgen.y, pos_ref.u))
-  push!(__eqs, connect(refgen.y, angle_ff.u))
-  push!(__eqs, connect(refgen.y, torque_ff.u))
-  push!(__eqs, connect(pos_ref.y, sampler_posref.u))
-  push!(__eqs, connect(angle_ff.y, sampler_angleff.u))
-  push!(__eqs, connect(torque_ff.y, sampler_torqueff.u))
-  push!(__eqs, connect(plant.x, sampler_x.u))
-  push!(__eqs, connect(sampler_x.y, pos_controller.measurement))
-  push!(__eqs, connect(sampler_posref.y, pos_controller.reference))
-  push!(__eqs, connect(pos_controller.ctr_output, gain1.u))
-  push!(__eqs, connect(gain1.y, add_angleref.u1))
-  push!(__eqs, connect(sampler_angleff.y, add_angleref.u2))
-  push!(__eqs, connect(add_angleref.y, angle_controller.reference))
-  push!(__eqs, connect(plant.theta, sampler_theta.u))
-  push!(__eqs, connect(sampler_theta.y, angle_controller.measurement, clock.y))
-  push!(__eqs, connect(angle_controller.ctr_output, add_torque.u1))
-  push!(__eqs, connect(sampler_torqueff.y, add_torque.u2))
-  push!(__eqs, connect(add_torque.y, gain.u))
-  push!(__eqs, connect(gain.y, zoh.u))
-  push!(__eqs, connect(zoh.y, plant.torque))
+  push!(__eqs, connect(refgen.y, angle_ff.u, pos_ref.u, torque_ff.u))
+  push!(__eqs, connect(angle_ff.y, controller.angle_ff))
+  push!(__eqs, connect(pos_ref.y, controller.pos_reference))
+  push!(__eqs, connect(torque_ff.y, controller.torque_ff))
+  push!(__eqs, connect(plant.theta, controller.angle_measurement))
+  push!(__eqs, connect(plant.x, controller.pos_measurement))
+  push!(__eqs, connect(controller.torque, plant.torque))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)

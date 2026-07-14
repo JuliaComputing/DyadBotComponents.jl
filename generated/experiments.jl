@@ -10,10 +10,16 @@ end
 
 
 include("AngleControlledDyadBot_experiment.jl")
+include("AngleController_experiment.jl")
 include("CascadeControlledDyadBot_experiment.jl")
+include("CascadeController_experiment.jl")
+include("CascadeFFController_experiment.jl")
 include("CascadeFFDyadBot_experiment.jl")
 include("DiscreteAngleControlledDyadBot_experiment.jl")
+include("DiscreteAngleController_experiment.jl")
 include("DiscreteCascadeControlledDyadBot_experiment.jl")
+include("DiscreteCascadeController_experiment.jl")
+include("DiscreteCascadeFFController_experiment.jl")
 include("DiscreteCascadeFFDyadBot_experiment.jl")
 include("DyadBot3D_experiment.jl")
 include("LQGControlledDyadBot_experiment.jl")

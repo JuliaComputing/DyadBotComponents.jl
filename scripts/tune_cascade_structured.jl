@@ -70,12 +70,12 @@ t = 0:0.01:3
 # run with the reference active. The source value does not affect the
 # linearizations (it enters through linear blocks only).
 op = Dict([
-    # ssys.angle_controller.u_m => 0
-    ssys.angle_controller.integrator.y => 0
-    ssys.angle_controller.derivative.x => 0
-    # ssys.pos_controller.u_m => 0
-    ssys.pos_controller.integrator.y => 0
-    ssys.pos_controller.derivative.x => 0
+    # ssys.controller.angle_controller.u_m => 0
+    ssys.controller.angle_controller.integrator.y => 0
+    ssys.controller.angle_controller.derivative.x => 0
+    # ssys.controller.pos_controller.u_m => 0
+    ssys.controller.pos_controller.integrator.y => 0
+    ssys.controller.pos_controller.derivative.x => 0
     ssys.plant.body_mass.body.phi => 0
     ssys.plant.body_mass.body.w => 0
     ssys.plant.wheelinertia.phi => 0
@@ -102,15 +102,15 @@ simobj = SimulationObjective(; costfun = tracking_cost, prob = simprob,
 
 objectives = [
     simobj,
-    MaximumSensitivityObjective(WS_angle, m.y),
-    MaximumSensitivityObjective(WS_pos, m.y2),
-    MaximumComplementarySensitivityObjective(WT_angle, m.y),
-    MaximumComplementarySensitivityObjective(WT_pos, m.y2),
+    MaximumSensitivityObjective(WS_angle, m.controller.y),
+    MaximumSensitivityObjective(WS_pos, m.controller.y2),
+    MaximumComplementarySensitivityObjective(WT_angle, m.controller.y),
+    MaximumComplementarySensitivityObjective(WT_pos, m.controller.y2),
     # The sensitivity bounds alone do not guarantee stability over a finite
     # frequency grid; forbid right-half-plane closed-loop poles. The margin
     # (required decay rate of every pole) must be small: the position loop of
     # this robot is slow, with its dominant poles well below one rad/s.
-    PoleLocationObjective(output = m.y, margin = 0.01, reduce = true),
+    PoleLocationObjective(output = m.controller.y, margin = 0.01, reduce = true),
 ]
 
 # All six tunable gains and their box constraints
@@ -145,9 +145,9 @@ using ControlSystemsMTK
 # Operating point including the optimized parameters
 opopt = merge(operating_points[1], Dict(DyadControlSystems.optmap(res)))
 
-S_angle = get_named_sensitivity(model, [m.y]; op = opopt, balance = true,
+S_angle = get_named_sensitivity(model, [m.controller.y]; op = opopt, balance = true,
     MultibodyComponents.linsys...) |> sminreal
-S_pos = get_named_sensitivity(model, [m.y2]; op = opopt, balance = true,
+S_pos = get_named_sensitivity(model, [m.controller.y2]; op = opopt, balance = true,
     MultibodyComponents.linsys...) |> sminreal
 bodeplot([S_angle, S_pos], plotphase = false, lab = ["So angle" "So position"])
 

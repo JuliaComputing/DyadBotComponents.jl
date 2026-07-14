@@ -16,8 +16,11 @@ generator computed with the script `scripts/compute_feedforward.jl`. The
 feedforward generator provides a filtered position reference to the outer
 controller as well as a tilt-angle feedforward reference for the inner
 controller and a direct torque feedforward signal applied to the motor
-torque input. Both inner feedforward signals are connected to the `u_ff`
-port on the `LimPID` components.
+torque input.
+
+The control system is encapsulated in the `CascadeFFController` subcomponent;
+the discrete-time model `DiscreteCascadeFFDyadBot` is identical except that
+`controller` is a `DiscreteCascadeFFController`.
 
 ## Parameters:
 
@@ -81,18 +84,6 @@ port on the `LimPID` components.
   # Subcomponent square of type BlockComponents.Sources.Square
   square_overrides = __pop_subcomponent_overrides!(__overrides, "square")
   push!(__systems, @named square = BlockComponents.Sources.Square(; amplitude=0.05, frequency=Float64(1 / 10), square_overrides...))
-  # Subcomponent angle_controller of type BlockComponents.Continuous.LimPID
-  angle_controller_overrides = __pop_subcomponent_overrides!(__overrides, "angle_controller")
-  push!(__systems, @named angle_controller = BlockComponents.Continuous.LimPID(; k=0.487401, Ti=0.0587352, Td=0.0420526, Nd=119.368, y_max=0.1, angle_controller_overrides...))
-  # Subcomponent pos_controller of type BlockComponents.Continuous.LimPID
-  pos_controller_overrides = __pop_subcomponent_overrides!(__overrides, "pos_controller")
-  push!(__systems, @named pos_controller = BlockComponents.Continuous.LimPID(; k=0.0666576, Ti=5.25024, Td=4.81393, Nd=4.76616, wd=Float64(1), wp=Float64(1), y_max=deg2rad(25.0), pos_controller_overrides...))
-  # Subcomponent gain of type BlockComponents.Math.Gain
-  gain_overrides = __pop_subcomponent_overrides!(__overrides, "gain")
-  push!(__systems, @named gain = BlockComponents.Math.Gain(; k=Float64(-1), gain_overrides...))
-  # Subcomponent gain1 of type BlockComponents.Math.Gain
-  gain1_overrides = __pop_subcomponent_overrides!(__overrides, "gain1")
-  push!(__systems, @named gain1 = BlockComponents.Math.Gain(; k=Float64(-1), gain1_overrides...))
   # Subcomponent refgen of type BlockComponents.Continuous.StateSpace
   refgen_overrides = __pop_subcomponent_overrides!(__overrides, "refgen")
   push!(__systems, @named refgen = BlockComponents.Continuous.StateSpace(; nx=ff_nx(), nu=1, ny=3, A=ff_A(), B=ff_B(), C=ff_C(), D=ff_D(), refgen_overrides...))
@@ -105,12 +96,12 @@ port on the `LimPID` components.
   # Subcomponent torque_ff of type MultibodyComponents.Selector
   torque_ff_overrides = __pop_subcomponent_overrides!(__overrides, "torque_ff")
   push!(__systems, @named torque_ff = MultibodyComponents.Selector(; nu=3, index=3, torque_ff_overrides...))
-  # Subcomponent gain2 of type BlockComponents.Math.Gain
-  gain2_overrides = __pop_subcomponent_overrides!(__overrides, "gain2")
-  push!(__systems, @named gain2 = BlockComponents.Math.Gain(; k=Float64(-1), gain2_overrides...))
   # Subcomponent mux1 of type DyadBotComponents.Mux1
   mux1_overrides = __pop_subcomponent_overrides!(__overrides, "mux1")
   push!(__systems, @named mux1 = DyadBotComponents.Mux1(; mux1_overrides...))
+  # Subcomponent controller of type DyadBotComponents.CascadeFFController
+  controller_overrides = __pop_subcomponent_overrides!(__overrides, "controller")
+  push!(__systems, @named controller = DyadBotComponents.CascadeFFController(; controller_overrides...))
 
   ### Check there are no unmatched overrides
   isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
@@ -123,24 +114,15 @@ port on the `LimPID` components.
   __assertions = []
 
   ### Equations
-  push!(__eqs, connect(plant.theta, :y, angle_controller.u_m))
-  push!(__eqs, connect(plant.x, :y2, pos_controller.u_m))
-  push!(__eqs, connect(angle_controller.y, :u, gain.u))
-  push!(__eqs, connect(pos_controller.y, :u2, gain1.u))
-  push!(__eqs, connect(plant.theta, angle_controller.u_m))
-  push!(__eqs, connect(plant.x, pos_controller.u_m))
-  push!(__eqs, connect(pos_controller.y, gain1.u))
-  push!(__eqs, connect(gain1.y, angle_controller.u_s))
-  push!(__eqs, connect(gain.y, plant.torque))
-  push!(__eqs, connect(angle_controller.y, gain.u))
-  push!(__eqs, connect(pos_ref.y, pos_controller.u_s))
-  push!(__eqs, connect(refgen.y, pos_ref.u))
-  push!(__eqs, connect(refgen.y, torque_ff.u, angle_ff.u))
   push!(__eqs, connect(square.y, mux1.u))
   push!(__eqs, connect(mux1.y, refgen.u))
-  push!(__eqs, connect(angle_ff.y, gain2.u))
-  push!(__eqs, connect(torque_ff.y, angle_controller.u_ff))
-  push!(__eqs, connect(gain2.y, pos_controller.u_ff))
+  push!(__eqs, connect(refgen.y, angle_ff.u, pos_ref.u, torque_ff.u))
+  push!(__eqs, connect(angle_ff.y, controller.angle_ff))
+  push!(__eqs, connect(pos_ref.y, controller.pos_reference))
+  push!(__eqs, connect(torque_ff.y, controller.torque_ff))
+  push!(__eqs, connect(plant.theta, controller.angle_measurement))
+  push!(__eqs, connect(plant.x, controller.pos_measurement))
+  push!(__eqs, connect(controller.torque, plant.torque))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)

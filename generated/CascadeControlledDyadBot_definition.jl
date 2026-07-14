@@ -14,8 +14,9 @@ body tilt angle and an outer loop controls the position of the robot along
 the ground. The position reference is a square wave filtered through two
 first-order filters to obtain a smooth reference trajectory.
 
-The outer position controller outputs the tilt-angle reference for the inner
-angle controller: to move forward, the robot first has to lean forward.
+The control system is encapsulated in the `CascadeController` subcomponent; the
+discrete-time model `DiscreteCascadeControlledDyadBot` is identical except that
+`controller` is a `DiscreteCascadeController`.
 
 The six controller gains are exposed as top-level parameters so that they can
 be tuned, either one loop at a time with the scripts `scripts/tune_angle_pid.jl`
@@ -114,48 +115,9 @@ and `scripts/tune_cascade_pid.jl`, or all simultaneously with
   # Subcomponent firstorder1 of type BlockComponents.Continuous.FirstOrder
   firstorder1_overrides = __pop_subcomponent_overrides!(__overrides, "firstorder1")
   push!(__systems, @named firstorder1 = BlockComponents.Continuous.FirstOrder(; T=0.1, firstorder1_overrides...))
-  # Subcomponent angle_controller of type BlockComponents.Continuous.LimPID
-  angle_controller_overrides = __pop_subcomponent_overrides!(__overrides, "angle_controller")
-  push!(__systems, @named angle_controller = BlockComponents.Continuous.LimPID(; Nd=119.368, y_max=0.1, angle_controller_overrides...))
-  __bindings[angle_controller.k] = k_angle
-  __bindings[angle_controller.Ti] = Ti_angle
-  __bindings[angle_controller.Td] = Td_angle
-  # Now remove initial conditions in angle_controller that correspond to the bindings just added
-  __angle_controller_ics = ModelingToolkit.get_initial_conditions(angle_controller)
-  __no_namespace_angle_controller = ModelingToolkit.toggle_namespacing(angle_controller, false)
-  __angle_controller_k = Symbolics.unwrap(__no_namespace_angle_controller.k)::Symbolics.SymbolicT
-  delete!(__angle_controller_ics, __angle_controller_k)
-  __angle_controller_Ti = Symbolics.unwrap(__no_namespace_angle_controller.Ti)::Symbolics.SymbolicT
-  delete!(__angle_controller_ics, __angle_controller_Ti)
-  __angle_controller_Td = Symbolics.unwrap(__no_namespace_angle_controller.Td)::Symbolics.SymbolicT
-  delete!(__angle_controller_ics, __angle_controller_Td)
-  # Subcomponent pos_controller of type BlockComponents.Continuous.LimPID
-  pos_controller_overrides = __pop_subcomponent_overrides!(__overrides, "pos_controller")
-  push!(__systems, @named pos_controller = BlockComponents.Continuous.LimPID(; Nd=4.76616, wd=Float64(1), wp=Float64(1), y_max=deg2rad(25.0), pos_controller_overrides...))
-  __bindings[pos_controller.k] = k_pos
-  __bindings[pos_controller.Ti] = Ti_pos
-  __bindings[pos_controller.Td] = Td_pos
-  # Now remove initial conditions in pos_controller that correspond to the bindings just added
-  __pos_controller_ics = ModelingToolkit.get_initial_conditions(pos_controller)
-  __no_namespace_pos_controller = ModelingToolkit.toggle_namespacing(pos_controller, false)
-  __pos_controller_k = Symbolics.unwrap(__no_namespace_pos_controller.k)::Symbolics.SymbolicT
-  delete!(__pos_controller_ics, __pos_controller_k)
-  __pos_controller_Ti = Symbolics.unwrap(__no_namespace_pos_controller.Ti)::Symbolics.SymbolicT
-  delete!(__pos_controller_ics, __pos_controller_Ti)
-  __pos_controller_Td = Symbolics.unwrap(__no_namespace_pos_controller.Td)::Symbolics.SymbolicT
-  delete!(__pos_controller_ics, __pos_controller_Td)
-  # Subcomponent gain of type BlockComponents.Math.Gain
-  gain_overrides = __pop_subcomponent_overrides!(__overrides, "gain")
-  push!(__systems, @named gain = BlockComponents.Math.Gain(; k=Float64(-1), gain_overrides...))
-  # Subcomponent gain1 of type BlockComponents.Math.Gain
-  gain1_overrides = __pop_subcomponent_overrides!(__overrides, "gain1")
-  push!(__systems, @named gain1 = BlockComponents.Math.Gain(; k=Float64(-1), gain1_overrides...))
-  # Subcomponent constant1 of type BlockComponents.Sources.Constant
-  constant1_overrides = __pop_subcomponent_overrides!(__overrides, "constant1")
-  push!(__systems, @named constant1 = BlockComponents.Sources.Constant(; k=Float64(0), constant1_overrides...))
-  # Subcomponent constant2 of type BlockComponents.Sources.Constant
-  constant2_overrides = __pop_subcomponent_overrides!(__overrides, "constant2")
-  push!(__systems, @named constant2 = BlockComponents.Sources.Constant(; k=Float64(0), constant2_overrides...))
+  # Subcomponent controller of type DyadBotComponents.CascadeController
+  controller_overrides = __pop_subcomponent_overrides!(__overrides, "controller")
+  push!(__systems, @named controller = DyadBotComponents.CascadeController(; k_angle=k_angle, Ti_angle=Ti_angle, Td_angle=Td_angle, k_pos=k_pos, Ti_pos=Ti_pos, Td_pos=Td_pos, controller_overrides...))
 
   ### Check there are no unmatched overrides
   isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
@@ -170,21 +132,12 @@ and `scripts/tune_cascade_pid.jl`, or all simultaneously with
   __assertions = []
 
   ### Equations
-  push!(__eqs, connect(plant.theta, :y, angle_controller.u_m))
-  push!(__eqs, connect(plant.x, :y2, pos_controller.u_m))
-  push!(__eqs, connect(angle_controller.y, :u, gain.u))
-  push!(__eqs, connect(pos_controller.y, :u2, gain1.u))
   push!(__eqs, connect(square.y, firstorder.u))
   push!(__eqs, connect(firstorder.y, firstorder1.u))
-  push!(__eqs, connect(plant.x, pos_controller.u_m))
-  push!(__eqs, connect(pos_controller.y, gain1.u))
-  push!(__eqs, connect(gain1.y, angle_controller.u_s))
-  push!(__eqs, connect(plant.theta, angle_controller.u_m))
-  push!(__eqs, connect(angle_controller.y, gain.u))
-  push!(__eqs, connect(gain.y, plant.torque))
-  push!(__eqs, connect(constant1.y, pos_controller.u_ff))
-  push!(__eqs, connect(constant2.y, angle_controller.u_ff))
-  push!(__eqs, connect(firstorder1.y, pos_controller.u_s))
+  push!(__eqs, connect(firstorder1.y, controller.pos_reference))
+  push!(__eqs, connect(plant.x, controller.pos_measurement))
+  push!(__eqs, connect(plant.theta, controller.angle_measurement))
+  push!(__eqs, connect(controller.torque, plant.torque))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
