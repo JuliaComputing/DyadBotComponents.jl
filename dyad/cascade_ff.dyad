@@ -193,7 +193,7 @@ relations
   connect(torque_ff, sampler_torqueff.u) {^id26}
   connect(sampler_torqueff.y, angle_controller.u_ff) {^id27}
   connect(angle_measurement, sampler_theta.u) {^id28}
-  connect(sampler_theta.y, angle_controller.u_m) {^id29}
+  connect(sampler_theta.y, angle_controller.u_m, clock.y) {^id29}
   connect(angle_controller.y, gain.u) {^id30}
   connect(gain.y, zoh.u) {^id31}
   connect(zoh.y, torque) {^id32}
@@ -354,12 +354,11 @@ metadata {
     "id29": {
       "Dyad": {
         "edges": [
-          {
-            "S": 1,
-            "M": [{"x": 710, "y": 700}, {"x": 530, "y": 700}, {"x": 530, "y": 524}],
-            "E": 2
-          }
-        ]
+          {"S": 1, "M": [{"x": 710, "y": 700}], "E": -1},
+          {"S": -1, "M": [{"x": 530, "y": 524}], "E": 2},
+          {"S": 3, "M": [{"x": 460, "y": 700}], "E": -1}
+        ],
+        "junctions": [{"x": 530, "y": 700}]
       }
     },
     "id30": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},

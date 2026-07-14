@@ -142,7 +142,7 @@ controller.
   push!(__eqs, connect(torque_ff, sampler_torqueff.u))
   push!(__eqs, connect(sampler_torqueff.y, angle_controller.u_ff))
   push!(__eqs, connect(angle_measurement, sampler_theta.u))
-  push!(__eqs, connect(sampler_theta.y, angle_controller.u_m))
+  push!(__eqs, connect(sampler_theta.y, angle_controller.u_m, clock.y))
   push!(__eqs, connect(angle_controller.y, gain.u))
   push!(__eqs, connect(gain.y, zoh.u))
   push!(__eqs, connect(zoh.y, torque))

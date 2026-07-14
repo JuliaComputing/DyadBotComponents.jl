@@ -134,10 +134,10 @@ and `scripts/tune_cascade_pid.jl`, or all simultaneously with
   ### Equations
   push!(__eqs, connect(square.y, firstorder.u))
   push!(__eqs, connect(firstorder.y, firstorder1.u))
-  push!(__eqs, connect(firstorder1.y, controller.pos_reference))
-  push!(__eqs, connect(plant.x, controller.pos_measurement))
-  push!(__eqs, connect(plant.theta, controller.angle_measurement))
   push!(__eqs, connect(controller.torque, plant.torque))
+  push!(__eqs, connect(plant.theta, controller.angle_measurement))
+  push!(__eqs, connect(plant.x, controller.pos_measurement))
+  push!(__eqs, connect(firstorder1.y, controller.pos_reference))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
