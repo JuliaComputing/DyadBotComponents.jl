@@ -30,3 +30,6 @@ end
 end
 
 end
+
+# Self-contained (defines its own `using`s and `@testset`), so include at top level.
+include("test_stabilization.jl")
