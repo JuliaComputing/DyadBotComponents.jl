@@ -125,7 +125,7 @@ metadata {
       "Dyad": {"placement": {"diagram": {"x1": 150, "y1": 470, "x2": 250, "y2": 570}}}
     },
     "zoh": {
-      "Dyad": {"placement": {"diagram": {"x1": 550, "y1": 450, "x2": 650, "y2": 560}}}
+      "Dyad": {"placement": {"diagram": {"x1": 560, "y1": 450, "x2": 660, "y2": 550}}}
     },
     "clock": {
       "Dyad": {"placement": {"diagram": {"x1": 360, "y1": 630, "x2": 460, "y2": 730}}}
@@ -147,16 +147,8 @@ metadata {
       "Dyad": {"edges": [{"S": 1, "M": [{"x": 325, "y": 330}, {"x": 325, "y": 472}], "E": 2}]}
     },
     "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id13": {
-      "Dyad": {
-        "edges": [{"S": 1, "M": [{"x": 513.05, "y": 500}, {"x": 513.05, "y": 505}], "E": 2}]
-      }
-    },
-    "id14": {
-      "Dyad": {
-        "edges": [{"S": 1, "M": [{"x": 688.55, "y": 505}, {"x": 688.55, "y": 500}], "E": 2}]
-      }
-    }
+    "id13": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id14": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}}
   }
 }
 end
@@ -186,8 +178,8 @@ component AngleControlledDyadBot
   "Initial tilt angle of the body"
   parameter phi0::Angle = 0.1
 relations
-  connect(plant.theta, controller.measurement) {^id4}
-  connect(controller.torque, plant.torque) {^id5}
+  connect(controller.torque, plant.torque) {^id4}
+  connect(plant.theta, controller.measurement) {^id5}
 metadata {
   "Dyad": {
     "tests": {"case1": {"stop": 5}},
@@ -211,25 +203,29 @@ metadata {
       }
     },
     "controller": {
-      "Dyad": {"placement": {"diagram": {"x1": 150, "y1": 450, "x2": 300, "y2": 600}}}
+      "Dyad": {"placement": {"diagram": {"x1": 270, "y1": 420, "x2": 420, "y2": 570}}}
     },
     "id4": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 503.75, "y": 495}, {"x": 503.75, "y": 500}], "E": 2}]
+      }
+    },
+    "id5": {
       "Dyad": {
         "edges": [
           {
             "S": 1,
             "M": [
-              {"x": 800, "y": 492},
-              {"x": 800, "y": 700},
-              {"x": 130, "y": 700},
-              {"x": 130, "y": 600}
+              {"x": 770, "y": 492},
+              {"x": 770, "y": 660},
+              {"x": 220, "y": 660},
+              {"x": 220, "y": 495}
             ],
             "E": 2
           }
         ]
       }
-    },
-    "id5": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}}
+    }
   }
 }
 end
@@ -255,8 +251,8 @@ component DiscreteAngleControlledDyadBot
   "Controller sample interval"
   structural parameter Ts::Real = 0.005
 relations
-  connect(plant.theta, controller.measurement) {^id4}
-  connect(controller.torque, plant.torque) {^id5}
+  connect(controller.torque, plant.torque) {^id4}
+  connect(plant.theta, controller.measurement) {^id5}
 metadata {
   "Dyad": {
     "tests": {"case1": {"stop": 5}},
@@ -280,25 +276,29 @@ metadata {
       }
     },
     "controller": {
-      "Dyad": {"placement": {"diagram": {"x1": 150, "y1": 450, "x2": 300, "y2": 600}}}
+      "Dyad": {"placement": {"diagram": {"x1": 210, "y1": 430, "x2": 360, "y2": 580}}}
     },
     "id4": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 473.75, "y": 505}, {"x": 473.75, "y": 500}], "E": 2}]
+      }
+    },
+    "id5": {
       "Dyad": {
         "edges": [
           {
             "S": 1,
             "M": [
-              {"x": 800, "y": 492},
-              {"x": 800, "y": 700},
-              {"x": 130, "y": 700},
-              {"x": 130, "y": 600}
+              {"x": 780, "y": 492},
+              {"x": 780, "y": 660},
+              {"x": 170, "y": 660},
+              {"x": 170, "y": 505}
             ],
             "E": 2
           }
         ]
       }
-    },
-    "id5": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}}
+    }
   }
 }
 end
@@ -361,21 +361,25 @@ metadata {
   "Dyad": {"icons": {"default": "dyad://DyadBotComponents/CascadeController.svg"}},
   "_links": {
     "angle_measurement": {
-      "Dyad": {"placement": {"diagram": {"x1": 320, "y1": 640, "x2": 420, "y2": 740}}}
+      "Dyad": {
+        "placement": {"diagram": {"x1": 670, "y1": 1000, "x2": 770, "y2": 1100, "rot": 270}}
+      }
     },
     "pos_measurement": {
-      "Dyad": {"placement": {"diagram": {"x1": -180, "y1": 640, "x2": -80, "y2": 740}}}
+      "Dyad": {
+        "placement": {"diagram": {"x1": 320, "y1": 1100, "x2": 220, "y2": 1000, "rot": 90}}
+      }
     },
     "pos_reference": {
-      "Dyad": {"placement": {"diagram": {"x1": -360, "y1": 450, "x2": -260, "y2": 550}}}
+      "Dyad": {"placement": {"diagram": {"x1": -100, "y1": 450, "x2": 0, "y2": 550}}}
     },
     "torque": {
-      "Dyad": {"placement": {"diagram": {"x1": 560, "y1": 450, "x2": 660, "y2": 550}}}
+      "Dyad": {"placement": {"diagram": {"x1": 1000, "y1": 450, "x2": 1100, "y2": 550}}}
     },
     "angle_controller": {
       "Dyad": {
         "placement": {
-          "diagram": {"iconName": "default", "x1": 160, "y1": 450, "x2": 260, "y2": 550, "rot": 0}
+          "diagram": {"iconName": "default", "x1": 560, "y1": 450, "x2": 660, "y2": 550, "rot": 0}
         },
         "tags": []
       }
@@ -383,18 +387,18 @@ metadata {
     "pos_controller": {
       "Dyad": {
         "placement": {
-          "diagram": {"iconName": "default", "x1": -160, "y1": 450, "x2": -60, "y2": 550, "rot": 0}
+          "diagram": {"iconName": "default", "x1": 240, "y1": 450, "x2": 340, "y2": 550, "rot": 0}
         },
         "tags": []
       }
     },
     "gain": {
-      "Dyad": {"placement": {"diagram": {"x1": 420, "y1": 460, "x2": 500, "y2": 540}}}
+      "Dyad": {"placement": {"diagram": {"x1": 820, "y1": 460, "x2": 900, "y2": 540}}}
     },
     "gain1": {
       "Dyad": {
         "placement": {
-          "diagram": {"iconName": "default", "x1": 20, "y1": 460, "x2": 100, "y2": 540, "rot": 0}
+          "diagram": {"iconName": "default", "x1": 420, "y1": 460, "x2": 500, "y2": 540, "rot": 0}
         },
         "tags": []
       }
@@ -402,7 +406,7 @@ metadata {
     "constant1": {
       "Dyad": {
         "placement": {
-          "diagram": {"iconName": "default", "x1": -140, "y1": 330, "x2": -80, "y2": 390, "rot": 90}
+          "diagram": {"iconName": "default", "x1": 260, "y1": 330, "x2": 320, "y2": 390, "rot": 90}
         },
         "tags": []
       }
@@ -410,20 +414,51 @@ metadata {
     "constant2": {
       "Dyad": {
         "placement": {
-          "diagram": {"iconName": "default", "x1": 180, "y1": 330, "x2": 240, "y2": 390, "rot": 90}
+          "diagram": {"iconName": "default", "x1": 580, "y1": 330, "x2": 640, "y2": 390, "rot": 90}
         },
         "tags": []
       }
     },
-    "id11": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id11": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 270, "y": 1010}, {"x": 235, "y": 1010}], "E": 2}]
+      }
+    },
     "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id13": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id14": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id13": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 521, "y": 500},
+              {"x": 521, "y": 480},
+              {"x": 538, "y": 480},
+              {"x": 538, "y": 477}
+            ],
+            "E": 2
+          }
+        ]
+      }
+    },
+    "id14": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [{"x": 720, "y": 1010}, {"x": 530, "y": 1010}, {"x": 530, "y": 523}],
+            "E": 2
+          }
+        ]
+      }
+    },
     "id15": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
     "id16": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
     "id17": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
     "id18": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id19": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}}
+    "id19": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": -10, "y": 500}, {"x": -10, "y": 477}], "E": 2}]}
+    }
   }
 }
 end
@@ -469,85 +504,93 @@ component DiscreteCascadeController
   "Controller sample interval"
   structural parameter Ts::Real = 0.005
 relations
-  connect(pos_reference, sampler_ref.u) {^id14}
-  connect(sampler_ref.y, pos_controller.u_s) {^id15}
-  connect(pos_measurement, sampler_x.u) {^id16}
-  connect(sampler_x.y, pos_controller.u_m) {^id17}
-  connect(pos_controller.y, gain1.u) {^id18}
-  connect(gain1.y, angle_controller.u_s) {^id19}
-  connect(angle_measurement, sampler_theta.u) {^id20}
-  connect(sampler_theta.y, angle_controller.u_m, clock.y) {^id21}
-  connect(angle_controller.y, gain.u) {^id22}
-  connect(gain.y, zoh.u) {^id23}
-  connect(zoh.y, torque) {^id24}
+  connect(sampler_ref.y, pos_controller.u_s) {^id14}
+  connect(pos_controller.y, gain1.u) {^id15}
+  connect(gain1.y, angle_controller.u_s) {^id16}
+  connect(angle_controller.y, gain.u) {^id17}
+  connect(gain.y, zoh.u) {^id18}
+  connect(zoh.y, torque) {^id19}
+  connect(sampler_theta.u, angle_measurement) {^id20}
+  connect(pos_measurement, sampler_x.u) {^id21}
+  connect(sampler_x.y, pos_controller.u_m) {^id22}
+  connect(sampler_theta.y, angle_controller.u_m, clock.y) {^id23}
+  connect(pos_reference, sampler_ref.u) {^id24}
 metadata {
   "Dyad": {"icons": {"default": "dyad://DyadBotComponents/DiscreteCascadeController.svg"}},
   "_links": {
     "angle_measurement": {
-      "Dyad": {"placement": {"diagram": {"x1": 320, "y1": 640, "x2": 420, "y2": 740}}}
+      "Dyad": {
+        "placement": {"diagram": {"x1": 680, "y1": 1000, "x2": 780, "y2": 1100, "rot": 270}}
+      }
     },
     "pos_measurement": {
-      "Dyad": {"placement": {"diagram": {"x1": -180, "y1": 640, "x2": -80, "y2": 740}}}
+      "Dyad": {
+        "placement": {"diagram": {"x1": 240, "y1": 1000, "x2": 340, "y2": 1100, "rot": 270}}
+      }
     },
     "pos_reference": {
-      "Dyad": {"placement": {"diagram": {"x1": -420, "y1": 450, "x2": -320, "y2": 550}}}
+      "Dyad": {"placement": {"diagram": {"x1": -100, "y1": 450, "x2": 0, "y2": 550}}}
     },
     "torque": {
-      "Dyad": {"placement": {"diagram": {"x1": 560, "y1": 450, "x2": 660, "y2": 550}}}
+      "Dyad": {"placement": {"diagram": {"x1": 1000, "y1": 450, "x2": 1100, "y2": 550}}}
     },
     "angle_controller": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 160, "y1": 450, "x2": 260, "y2": 550, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 560, "y1": 450, "x2": 660, "y2": 550}}}
     },
     "pos_controller": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": -160, "y1": 450, "x2": -60, "y2": 550, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 240, "y1": 450, "x2": 340, "y2": 550}}}
     },
     "gain": {
-      "Dyad": {"placement": {"diagram": {"x1": 420, "y1": 460, "x2": 500, "y2": 540}}}
+      "Dyad": {"placement": {"diagram": {"x1": 720, "y1": 460, "x2": 800, "y2": 540}}}
     },
     "gain1": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 20, "y1": 460, "x2": 100, "y2": 540, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 420, "y1": 460, "x2": 500, "y2": 540}}}
     },
     "sampler_theta": {
-      "Dyad": {"placement": {"diagram": {"x1": 320, "y1": 630, "x2": 220, "y2": 730}}}
+      "Dyad": {
+        "placement": {"diagram": {"x1": 780, "y1": 730, "x2": 680, "y2": 830, "rot": 90}}
+      }
     },
     "sampler_x": {
-      "Dyad": {"placement": {"diagram": {"x1": -60, "y1": 630, "x2": -160, "y2": 730}}}
+      "Dyad": {
+        "placement": {"diagram": {"x1": 270, "y1": 710, "x2": 170, "y2": 810, "rot": 90}}
+      }
     },
     "sampler_ref": {
-      "Dyad": {"placement": {"diagram": {"x1": -300, "y1": 450, "x2": -220, "y2": 530}}}
+      "Dyad": {"placement": {"diagram": {"x1": 90, "y1": 430, "x2": 170, "y2": 510}}}
     },
     "zoh": {
-      "Dyad": {"placement": {"diagram": {"x1": 300, "y1": 450, "x2": 380, "y2": 550}}}
+      "Dyad": {"placement": {"diagram": {"x1": 850, "y1": 450, "x2": 950, "y2": 550}}}
     },
     "clock": {
-      "Dyad": {"placement": {"diagram": {"x1": 200, "y1": 760, "x2": 300, "y2": 860}}}
+      "Dyad": {
+        "placement": {"diagram": {"x1": 490, "y1": 740, "x2": 590, "y2": 840, "rot": 90}}
+      }
     },
-    "id14": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id14": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 195, "y": 470}, {"x": 195, "y": 472}], "E": 2}]}
+    },
     "id15": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id16": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id16": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 515, "y": 500}, {"x": 515, "y": 472}], "E": 2}]}
+    },
     "id17": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
     "id18": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
     "id19": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
     "id20": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id21": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id22": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id23": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id24": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}}
+    "id21": {"Dyad": {"edges": [{"S": 1, "M": [{"x": 220, "y": 1050}], "E": 2}]}},
+    "id22": {"Dyad": {"edges": [{"S": 1, "M": [{"x": 220, "y": 524}], "E": 2}]}},
+    "id23": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [{"x": 730, "y": 690}], "E": -1},
+          {"S": -1, "M": [{"x": 540, "y": 690}, {"x": 540, "y": 524}], "E": 2},
+          {"S": 3, "M": [], "E": -1}
+        ],
+        "junctions": [{"x": 540, "y": 690}]
+      }
+    },
+    "id24": {"Dyad": {"edges": [{"S": 1, "M": [{"x": -50, "y": 470}], "E": 2}]}}
   }
 }
 end
@@ -704,10 +747,10 @@ relations
   initial firstorder1.x = 0.0
   connect(square.y, firstorder.u) {^id7}
   connect(firstorder.y, firstorder1.u) {^id8}
-  connect(firstorder1.y, controller.pos_reference) {^id9}
-  connect(plant.x, controller.pos_measurement) {^id10}
-  connect(plant.theta, controller.angle_measurement) {^id11}
-  connect(controller.torque, plant.torque) {^id12}
+  connect(plant.x, controller.pos_measurement) {^id9}
+  connect(plant.theta, controller.angle_measurement) {^id10}
+  connect(plant.torque, controller.torque) {^id11}
+  connect(firstorder1.y, controller.pos_reference) {^id12}
 metadata {
   "Dyad": {
     "tests": {"case1": {"stop": 20}},
@@ -731,30 +774,40 @@ metadata {
       }
     },
     "square": {
-      "Dyad": {"placement": {"diagram": {"x1": -660, "y1": 430, "x2": -560, "y2": 530}}}
+      "Dyad": {"placement": {"diagram": {"x1": -190, "y1": 430, "x2": -90, "y2": 530}}}
     },
     "firstorder": {
-      "Dyad": {"placement": {"diagram": {"x1": -510, "y1": 430, "x2": -410, "y2": 530}}}
+      "Dyad": {"placement": {"diagram": {"x1": -40, "y1": 430, "x2": 60, "y2": 530}}}
     },
     "firstorder1": {
-      "Dyad": {"placement": {"diagram": {"x1": -350, "y1": 430, "x2": -250, "y2": 530}}}
+      "Dyad": {"placement": {"diagram": {"x1": 120, "y1": 430, "x2": 220, "y2": 530}}}
     },
     "controller": {
-      "Dyad": {"placement": {"diagram": {"x1": -180, "y1": 430, "x2": 60, "y2": 620}}}
+      "Dyad": {"placement": {"diagram": {"x1": 280, "y1": 390, "x2": 510, "y2": 570}}}
     },
     "id7": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
     "id8": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id9": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id9": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [{"x": 840, "y": 468}, {"x": 840, "y": 760}, {"x": 346.7, "y": 760}],
+            "E": 2
+          }
+        ]
+      }
+    },
     "id10": {
       "Dyad": {
         "edges": [
           {
             "S": 1,
             "M": [
-              {"x": 840, "y": 468},
-              {"x": 840, "y": 760},
-              {"x": -190, "y": 760},
-              {"x": -190, "y": 620}
+              {"x": 820, "y": 492},
+              {"x": 820, "y": 700},
+              {"x": 450, "y": 700},
+              {"x": 450, "y": 569.5}
             ],
             "E": 2
           }
@@ -763,18 +816,7 @@ metadata {
     },
     "id11": {
       "Dyad": {
-        "edges": [
-          {
-            "S": 1,
-            "M": [
-              {"x": 820, "y": 492},
-              {"x": 820, "y": 700},
-              {"x": 30, "y": 700},
-              {"x": 30, "y": 620}
-            ],
-            "E": 2
-          }
-        ]
+        "edges": [{"S": 1, "M": [{"x": 549.75, "y": 500}, {"x": 549.75, "y": 480}], "E": 2}]
       }
     },
     "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}}
