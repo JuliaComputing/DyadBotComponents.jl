@@ -71,7 +71,7 @@ structural parameter `Ts`.
   ### Components
   # Subcomponent world of type MultibodyComponents.PlanarMechanics.World
   world_overrides = __pop_subcomponent_overrides!(__overrides, "world")
-  push!(__systems, @named world = MultibodyComponents.PlanarMechanics.World(; g=9.82, world_overrides...))
+  push!(__systems, @named world = MultibodyComponents.PlanarMechanics.World(; g=9.82, nominal_length=0.1, world_overrides...))
   # Subcomponent plant of type DyadBotComponents.PlanarDyadBot
   plant_overrides = __pop_subcomponent_overrides!(__overrides, "plant")
   push!(__systems, @named plant = DyadBotComponents.PlanarDyadBot(; phi0=phi0, plant_overrides...))
