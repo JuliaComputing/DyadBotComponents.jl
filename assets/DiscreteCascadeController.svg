@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <rect x="4" y="4" width="992" height="992" fill="#fff" stroke="#A1A1AA" stroke-width="8"/>
+  <!-- axes -->
+  <path d="M240 190 V710" fill="none" stroke="#8f8f8f" stroke-width="6"/>
+  <path d="M224 220 L240 176 L256 220 Z" fill="#8f8f8f"/>
+  <path d="M220 690 H830" fill="none" stroke="#8f8f8f" stroke-width="6"/>
+  <path d="M800 674 L844 690 L800 706 Z" fill="#8f8f8f"/>
+  <!-- setpoint -->
+  <path d="M280 300 H810" fill="none" stroke="#c33" stroke-width="5" stroke-dasharray="16,12"/>
+  <!-- inner (fast) loop, lighter -->
+  <path d="M280 690 H350 V470 H420 V360 H490 V325 H810" fill="none" stroke="#84bfed" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- outer (slow) loop, sampled staircase -->
+  <path d="M280 690 H370 V600 H460 V510 H550 V430 H640 V360 H730 V320 H810" fill="none" stroke="#007fff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- clock: discrete-time indicator -->
+  <circle cx="852" cy="150" r="64" fill="#fff" stroke="#131316" stroke-width="10"/>
+  <path d="M852 150 V102" fill="none" stroke="#131316" stroke-width="10" stroke-linecap="round"/>
+  <path d="M852 150 H890" fill="none" stroke="#131316" stroke-width="10" stroke-linecap="round"/>
+  <!-- label -->
+  <text x="500" y="905" font-family="Arial, Helvetica, sans-serif" font-size="150" font-weight="bold" fill="#131316" text-anchor="middle">cascade</text>
+</svg>

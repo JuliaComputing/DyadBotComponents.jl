@@ -130,9 +130,9 @@ controller runs once per clock tick on a `PeriodicClock` with period `Ts`, and a
   push!(__eqs, connect(measurement, sampler.u))
   push!(__eqs, connect(sampler.y, angle_controller.u_m, clock.y))
   push!(__eqs, connect(ref.y, angle_controller.u_s))
+  push!(__eqs, connect(gain.y, torque))
   push!(__eqs, connect(angle_controller.y, zoh.u))
   push!(__eqs, connect(zoh.y, gain.u))
-  push!(__eqs, connect(gain.y, torque))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)

@@ -34,7 +34,7 @@ relations
   connect(constant_ff.y, angle_controller.u_ff) {^id10}
   connect(ref.y, angle_controller.u_s) {^id11}
 metadata {
-  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}},
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/AngleController.svg"}},
   "_links": {
     "measurement": {
       "Dyad": {"placement": {"diagram": {"x1": -100, "y1": 450, "x2": 0, "y2": 550}}}
@@ -104,7 +104,7 @@ relations
   connect(angle_controller.y, zoh.u) {^id13}
   connect(zoh.y, gain.u) {^id14}
 metadata {
-  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}},
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/DiscreteAngleController.svg"}},
   "_links": {
     "measurement": {
       "Dyad": {"placement": {"diagram": {"x1": -100, "y1": 450, "x2": 0, "y2": 550}}}
@@ -358,7 +358,7 @@ relations
   connect(constant2.y, angle_controller.u_ff) {^id18}
   connect(pos_reference, pos_controller.u_s) {^id19}
 metadata {
-  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}},
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/CascadeController.svg"}},
   "_links": {
     "angle_measurement": {
       "Dyad": {"placement": {"diagram": {"x1": 320, "y1": 640, "x2": 420, "y2": 740}}}
@@ -481,7 +481,7 @@ relations
   connect(gain.y, zoh.u) {^id23}
   connect(zoh.y, torque) {^id24}
 metadata {
-  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}},
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/DiscreteCascadeController.svg"}},
   "_links": {
     "angle_measurement": {
       "Dyad": {"placement": {"diagram": {"x1": 320, "y1": 640, "x2": 420, "y2": 740}}}
