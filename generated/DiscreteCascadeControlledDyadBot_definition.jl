@@ -93,7 +93,7 @@ running on a common clock with period `Ts`.
   ### Components
   # Subcomponent world of type MultibodyComponents.PlanarMechanics.World
   world_overrides = __pop_subcomponent_overrides!(__overrides, "world")
-  push!(__systems, @named world = MultibodyComponents.PlanarMechanics.World(; g=9.82, world_overrides...))
+  push!(__systems, @named world = MultibodyComponents.PlanarMechanics.World(; g=9.82, nominal_length=0.1, world_overrides...))
   # Subcomponent plant of type DyadBotComponents.PlanarDyadBot
   plant_overrides = __pop_subcomponent_overrides!(__overrides, "plant")
   push!(__systems, @named plant = DyadBotComponents.PlanarDyadBot(; phi0=phi0, plant_overrides...))
@@ -125,10 +125,10 @@ running on a common clock with period `Ts`.
   ### Equations
   push!(__eqs, connect(square.y, firstorder.u))
   push!(__eqs, connect(firstorder.y, firstorder1.u))
-  push!(__eqs, connect(firstorder1.y, controller.pos_reference))
   push!(__eqs, connect(plant.x, controller.pos_measurement))
   push!(__eqs, connect(plant.theta, controller.angle_measurement))
   push!(__eqs, connect(controller.torque, plant.torque))
+  push!(__eqs, connect(firstorder1.y, controller.pos_reference))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)

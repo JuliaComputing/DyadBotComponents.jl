@@ -82,7 +82,7 @@ control input (`u`). The LQG design script `scripts/tune_lqg.jl` opens the
 loop at `u` and synthesizes an LQG controller from the linearized plant.
 """
 component LQGTuningDyadBot
-  world = MultibodyComponents.PlanarMechanics.World(g = 9.82) {^world}
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
   plant = PlanarDyadBot() {^plant}
   g_x = BlockComponents.Math.Gain(k = 1e-10) {^g_x}
   g_xd = BlockComponents.Math.Gain(k = 1e-10) {^g_xd}
@@ -197,7 +197,7 @@ measured position and tilt angle. Its single output is the motor torque.
 The position reference steps from zero to `step_height` at `step_time`.
 """
 component LQGControlledDyadBot
-  world = MultibodyComponents.PlanarMechanics.World(g = 9.82) {^world}
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
   plant = PlanarDyadBot(phi0 = phi0) {^plant}
   controller = BlockComponents.Continuous.StateSpace(nx = lqg_nx(), nu = 6, ny = 1, A = lqg_A(), B = lqg_B(), C = lqg_C(), D = lqg_D()) {^controller}
   step = BlockComponents.Sources.Step(final height = step_height, final start_time = step_time) {^step}

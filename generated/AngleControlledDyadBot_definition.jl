@@ -87,7 +87,7 @@ The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
   ### Components
   # Subcomponent world of type MultibodyComponents.PlanarMechanics.World
   world_overrides = __pop_subcomponent_overrides!(__overrides, "world")
-  push!(__systems, @named world = MultibodyComponents.PlanarMechanics.World(; g=9.82, world_overrides...))
+  push!(__systems, @named world = MultibodyComponents.PlanarMechanics.World(; g=9.82, nominal_length=0.1, world_overrides...))
   # Subcomponent plant of type DyadBotComponents.PlanarDyadBot
   plant_overrides = __pop_subcomponent_overrides!(__overrides, "plant")
   push!(__systems, @named plant = DyadBotComponents.PlanarDyadBot(; phi0=phi0, plant_overrides...))
@@ -106,8 +106,8 @@ The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
   __assertions = []
 
   ### Equations
-  push!(__eqs, connect(plant.theta, controller.measurement))
   push!(__eqs, connect(controller.torque, plant.torque))
+  push!(__eqs, connect(plant.theta, controller.measurement))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)

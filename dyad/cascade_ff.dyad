@@ -384,7 +384,7 @@ the discrete-time model `DiscreteCascadeFFDyadBot` is identical except that
 `controller` is a `DiscreteCascadeFFController`.
 """
 component CascadeFFDyadBot
-  world = MultibodyComponents.PlanarMechanics.World(g = 9.82) {^world}
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
   plant = PlanarDyadBot(phi0 = phi0) {^plant}
   square = BlockComponents.Sources.Square(amplitude = 0.05, frequency = 1 / 10) {^square}
   """
@@ -498,7 +498,7 @@ are sampled inside the controller. The sample interval is set by the top-level
 structural parameter `Ts`.
 """
 component DiscreteCascadeFFDyadBot
-  world = MultibodyComponents.PlanarMechanics.World(g = 9.82) {^world}
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
   plant = PlanarDyadBot(phi0 = phi0) {^plant}
   square = BlockComponents.Sources.Square(amplitude = 0.05, frequency = 1 / 10) {^square}
   """

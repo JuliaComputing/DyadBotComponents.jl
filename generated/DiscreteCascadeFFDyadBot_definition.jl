@@ -109,14 +109,14 @@ structural parameter `Ts`.
 
   ### Equations
   push!(__eqs, connect(square.y, mux1.u))
-  push!(__eqs, connect(mux1.y, refgen.u))
-  push!(__eqs, connect(refgen.y, angle_ff.u, pos_ref.u, torque_ff.u))
+  push!(__eqs, connect(controller.torque, plant.torque))
+  push!(__eqs, connect(plant.x, controller.pos_measurement))
+  push!(__eqs, connect(plant.theta, controller.angle_measurement))
+  push!(__eqs, connect(torque_ff.y, controller.torque_ff))
   push!(__eqs, connect(angle_ff.y, controller.angle_ff))
   push!(__eqs, connect(pos_ref.y, controller.pos_reference))
-  push!(__eqs, connect(torque_ff.y, controller.torque_ff))
-  push!(__eqs, connect(plant.theta, controller.angle_measurement))
-  push!(__eqs, connect(plant.x, controller.pos_measurement))
-  push!(__eqs, connect(controller.torque, plant.torque))
+  push!(__eqs, connect(refgen.y, pos_ref.u, torque_ff.u, angle_ff.u))
+  push!(__eqs, connect(mux1.y, refgen.u))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)

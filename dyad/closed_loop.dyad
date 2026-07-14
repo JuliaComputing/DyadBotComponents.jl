@@ -166,7 +166,7 @@ discrete-time model `DiscreteAngleControlledDyadBot` is identical except that
 The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
 """
 component AngleControlledDyadBot
-  world = MultibodyComponents.PlanarMechanics.World(g = 9.82) {^world}
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
   plant = PlanarDyadBot(phi0 = phi0) {^plant}
   controller = AngleController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle) {^controller}
   "Proportional gain of the angle controller"
@@ -237,7 +237,7 @@ model except that the control system is a sampled-data `DiscreteAngleController`
 The sample interval is set by the top-level structural parameter `Ts`.
 """
 component DiscreteAngleControlledDyadBot
-  world = MultibodyComponents.PlanarMechanics.World(g = 9.82) {^world}
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
   plant = PlanarDyadBot(phi0 = phi0) {^plant}
   controller = DiscreteAngleController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle, Ts = Ts) {^controller}
   "Proportional gain of the angle controller"
@@ -611,7 +611,7 @@ and `scripts/tune_cascade_pid.jl`, or all simultaneously with
 `scripts/tune_cascade_structured.jl`.
 """
 component CascadeControlledDyadBot
-  world = MultibodyComponents.PlanarMechanics.World(g = 9.82) {^world}
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
   plant = PlanarDyadBot(phi0 = phi0) {^plant}
   square = BlockComponents.Sources.Square(amplitude = 0.05, frequency = 1 / 10) {^square}
   firstorder = BlockComponents.Continuous.FirstOrder(T = 0.1) {^firstorder}
@@ -636,10 +636,10 @@ relations
   initial firstorder1.x = 0.0
   connect(square.y, firstorder.u) {^id7}
   connect(firstorder.y, firstorder1.u) {^id8}
-  connect(firstorder1.y, controller.pos_reference) {^id9}
-  connect(plant.x, controller.pos_measurement) {^id10}
-  connect(plant.theta, controller.angle_measurement) {^id11}
-  connect(controller.torque, plant.torque) {^id12}
+  connect(controller.torque, plant.torque) {^id9}
+  connect(plant.theta, controller.angle_measurement) {^id10}
+  connect(plant.x, controller.pos_measurement) {^id11}
+  connect(firstorder1.y, controller.pos_reference) {^id12}
 metadata {
   "Dyad": {
     "tests": {"case1": {"stop": 20}},
@@ -663,30 +663,31 @@ metadata {
       }
     },
     "square": {
-      "Dyad": {"placement": {"diagram": {"x1": -660, "y1": 430, "x2": -560, "y2": 530}}}
+      "Dyad": {"placement": {"diagram": {"x1": -230, "y1": 450, "x2": -130, "y2": 550}}}
     },
     "firstorder": {
-      "Dyad": {"placement": {"diagram": {"x1": -510, "y1": 430, "x2": -410, "y2": 530}}}
+      "Dyad": {"placement": {"diagram": {"x1": -90, "y1": 450, "x2": 10, "y2": 550}}}
     },
     "firstorder1": {
-      "Dyad": {"placement": {"diagram": {"x1": -350, "y1": 430, "x2": -250, "y2": 530}}}
+      "Dyad": {"placement": {"diagram": {"x1": 60, "y1": 450, "x2": 160, "y2": 550}}}
     },
     "controller": {
-      "Dyad": {"placement": {"diagram": {"x1": -180, "y1": 430, "x2": 60, "y2": 620}}}
+      "Dyad": {"placement": {"diagram": {"x1": 240, "y1": 410, "x2": 480, "y2": 600}}}
     },
     "id7": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
     "id8": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id9": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id9": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 501, "y": 505}, {"x": 501, "y": 500}], "E": 2}]}
+    },
     "id10": {
       "Dyad": {
         "edges": [
           {
             "S": 1,
             "M": [
-              {"x": 840, "y": 468},
-              {"x": 840, "y": 760},
-              {"x": -190, "y": 760},
-              {"x": -190, "y": 620}
+              {"x": 820, "y": 492},
+              {"x": 820, "y": 710},
+              {"x": 412.79999999999995, "y": 710}
             ],
             "E": 2
           }
@@ -698,18 +699,17 @@ metadata {
         "edges": [
           {
             "S": 1,
-            "M": [
-              {"x": 820, "y": 492},
-              {"x": 820, "y": 700},
-              {"x": 30, "y": 700},
-              {"x": 30, "y": 620}
-            ],
+            "M": [{"x": 850, "y": 468}, {"x": 850, "y": 760}, {"x": 304.8, "y": 760}],
             "E": 2
           }
         ]
       }
     },
-    "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}}
+    "id12": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 196.5, "y": 500}, {"x": 196.5, "y": 505}], "E": 2}]
+      }
+    }
   }
 }
 end
@@ -720,7 +720,7 @@ model except that the control system is a sampled-data `DiscreteCascadeControlle
 running on a common clock with period `Ts`.
 """
 component DiscreteCascadeControlledDyadBot
-  world = MultibodyComponents.PlanarMechanics.World(g = 9.82) {^world}
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
   plant = PlanarDyadBot(phi0 = phi0) {^plant}
   square = BlockComponents.Sources.Square(amplitude = 0.05, frequency = 1 / 10) {^square}
   firstorder = BlockComponents.Continuous.FirstOrder(T = 0.1) {^firstorder}

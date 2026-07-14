@@ -164,17 +164,17 @@ torque.
   __assertions = []
 
   ### Equations
-  push!(__eqs, connect(pos_reference, sampler_ref.u))
   push!(__eqs, connect(sampler_ref.y, pos_controller.u_s))
-  push!(__eqs, connect(pos_measurement, sampler_x.u))
-  push!(__eqs, connect(sampler_x.y, pos_controller.u_m))
   push!(__eqs, connect(pos_controller.y, gain1.u))
   push!(__eqs, connect(gain1.y, angle_controller.u_s))
-  push!(__eqs, connect(angle_measurement, sampler_theta.u))
-  push!(__eqs, connect(sampler_theta.y, angle_controller.u_m, clock.y))
   push!(__eqs, connect(angle_controller.y, gain.u))
   push!(__eqs, connect(gain.y, zoh.u))
   push!(__eqs, connect(zoh.y, torque))
+  push!(__eqs, connect(sampler_theta.u, angle_measurement))
+  push!(__eqs, connect(pos_measurement, sampler_x.u))
+  push!(__eqs, connect(sampler_x.y, pos_controller.u_m))
+  push!(__eqs, connect(sampler_theta.y, angle_controller.u_m, clock.y))
+  push!(__eqs, connect(pos_reference, sampler_ref.u))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
