@@ -207,3 +207,212 @@ metadata {
   }
 }
 end
+
+"""
+Discrete-time version of `CascadeFFDyadBot`. The cascade-controlled balancing
+robot uses sampled-data `DiscretePIDStandard` controllers together with the
+same continuous feedforward generator.
+
+Because `DiscretePIDStandard` has no feedforward input, the feedforward
+signals are injected with explicit `Add` blocks instead of the `u_ff` ports
+used by the continuous `LimPID`. The feedforward generator and selectors run
+in continuous time; their outputs are sampled before being combined with the
+discrete controller signals. The torque feedforward is added to the inner
+controller output, and the tilt-angle feedforward is added to the inner-loop
+reference produced by the outer controller. The sample interval is set by the
+top-level structural parameter `Ts`.
+
+The feedforward generator matrices are computed with the script
+`scripts/compute_feedforward.jl`.
+"""
+component DiscreteCascadeFFDyadBot
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82) {^world}
+  plant = PlanarDyadBot(phi0 = phi0) {^plant}
+  square = BlockComponents.Sources.Square(amplitude = 0.05, frequency = 1 / 10) {^square}
+  angle_controller = DiscreteComponents.DiscretePIDStandard(K = 0.487401, Ti = 0.0587352, Td = 0.0420526, Nd = 119.368, y_max = 0.1) {^angle_controller}
+  pos_controller = DiscreteComponents.DiscretePIDStandard(K = 0.0666576, Ti = 5.25024, Td = 4.81393, Nd = 4.76616, wd = 1, wp = 1, y_max = deg2rad(25.0)) {^pos_controller}
+  gain = BlockComponents.Math.Gain(k = -1) {^gain}
+  gain1 = BlockComponents.Math.Gain(k = -1) {^gain1}
+  """
+  refgen has 1 input (position reference) and 3 outputs:
+     y[1]: angle feedforward
+     y[2]: filtered position reference
+     y[3]: torque feedforward
+  """
+  refgen = BlockComponents.Continuous.StateSpace(nx = ff_nx(), nu = 1, ny = 3, A = ff_A(), B = ff_B(), C = ff_C(), D = ff_D()) {^refgen}
+  angle_ff = MultibodyComponents.Selector(nu = 3) {^angle_ff}
+  pos_ref = MultibodyComponents.Selector(nu = 3, index = 2) {^pos_ref}
+  torque_ff = MultibodyComponents.Selector(nu = 3, index = 3) {^torque_ff}
+  mux1 = Mux1() {^mux1}
+  sampler_theta = DiscreteComponents.Sampler() {^sampler_theta}
+  sampler_x = DiscreteComponents.Sampler() {^sampler_x}
+  sampler_posref = DiscreteComponents.Sampler() {^sampler_posref}
+  sampler_angleff = DiscreteComponents.Sampler() {^sampler_angleff}
+  sampler_torqueff = DiscreteComponents.Sampler() {^sampler_torqueff}
+  "Adds the sampled tilt-angle feedforward to the inner-loop reference produced by the outer controller."
+  add_angleref = BlockComponents.Math.Add() {^add_angleref}
+  "Adds the sampled torque feedforward to the inner controller output before the actuator gain."
+  add_torque = BlockComponents.Math.Add() {^add_torque}
+  zoh = DiscreteComponents.ZeroOrderHold() {^zoh}
+  clock = DiscreteComponents.PeriodicClock(dt = Ts) {^clock}
+  "Initial tilt angle of the body"
+  parameter phi0::Angle = 0.1
+  "Controller sample interval"
+  structural parameter Ts::Real = 0.005
+relations
+  connect(square.y, mux1.u) {^id10}
+  connect(mux1.y, refgen.u) {^id11}
+  connect(refgen.y, pos_ref.u) {^id12}
+  connect(refgen.y, angle_ff.u) {^id13}
+  connect(refgen.y, torque_ff.u) {^id14}
+  connect(pos_ref.y, sampler_posref.u) {^id15}
+  connect(angle_ff.y, sampler_angleff.u) {^id16}
+  connect(torque_ff.y, sampler_torqueff.u) {^id17}
+  connect(plant.x, sampler_x.u) {^id18}
+  connect(sampler_x.y, pos_controller.measurement) {^id19}
+  connect(sampler_posref.y, pos_controller.reference) {^id20}
+  connect(pos_controller.ctr_output, gain1.u) {^id21}
+  connect(gain1.y, add_angleref.u1) {^id22}
+  connect(sampler_angleff.y, add_angleref.u2) {^id23}
+  connect(add_angleref.y, angle_controller.reference) {^id24}
+  connect(plant.theta, sampler_theta.u) {^id25}
+  connect(sampler_theta.y, angle_controller.measurement, clock.y) {^id26}
+  connect(angle_controller.ctr_output, add_torque.u1) {^id27}
+  connect(sampler_torqueff.y, add_torque.u2) {^id28}
+  connect(add_torque.y, gain.u) {^id29}
+  connect(gain.y, zoh.u) {^id30}
+  connect(zoh.y, plant.torque) {^id31}
+metadata {
+  "Dyad": {
+    "tests": {"case1": {"stop": 20}},
+    "icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}
+  },
+  "_links": {
+    "world": {
+      "Dyad": {"placement": {"diagram": {"x1": 150, "y1": 160, "x2": 50, "y2": 60, "rot": 180}}}
+    },
+    "plant": {
+      "Dyad": {"placement": {"diagram": {"x1": 420, "y1": 400, "x2": 620, "y2": 600}}}
+    },
+    "square": {
+      "Dyad": {"placement": {"diagram": {"x1": -830, "y1": 430, "x2": -730, "y2": 530}}}
+    },
+    "angle_controller": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 160, "y1": 450, "x2": 260, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "pos_controller": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -420, "y1": 450, "x2": -320, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "gain": {
+      "Dyad": {"placement": {"diagram": {"x1": 300, "y1": 460, "x2": 380, "y2": 540}}}
+    },
+    "gain1": {
+      "Dyad": {"placement": {"diagram": {"x1": -260, "y1": 460, "x2": -180, "y2": 540}}}
+    },
+    "refgen": {
+      "Dyad": {"placement": {"diagram": {"x1": -680, "y1": 200, "x2": -560, "y2": 320}}}
+    },
+    "angle_ff": {
+      "Dyad": {"placement": {"diagram": {"x1": -520, "y1": 180, "x2": -440, "y2": 260}}}
+    },
+    "pos_ref": {
+      "Dyad": {"placement": {"diagram": {"x1": -520, "y1": 300, "x2": -440, "y2": 380}}}
+    },
+    "torque_ff": {
+      "Dyad": {"placement": {"diagram": {"x1": -520, "y1": 60, "x2": -440, "y2": 140}}}
+    },
+    "mux1": {
+      "Dyad": {"placement": {"diagram": {"x1": -750, "y1": 430, "x2": -690, "y2": 530}}}
+    },
+    "sampler_posref": {
+      "Dyad": {"placement": {"diagram": {"x1": -440, "y1": 330, "x2": -360, "y2": 410}}}
+    },
+    "sampler_angleff": {
+      "Dyad": {"placement": {"diagram": {"x1": -360, "y1": 180, "x2": -280, "y2": 260}}}
+    },
+    "sampler_torqueff": {
+      "Dyad": {"placement": {"diagram": {"x1": 100, "y1": 60, "x2": 180, "y2": 140}}}
+    },
+    "sampler_x": {
+      "Dyad": {"placement": {"diagram": {"x1": -380, "y1": 630, "x2": -480, "y2": 730}}}
+    },
+    "sampler_theta": {
+      "Dyad": {"placement": {"diagram": {"x1": 320, "y1": 630, "x2": 220, "y2": 730}}}
+    },
+    "add_angleref": {
+      "Dyad": {"placement": {"diagram": {"x1": -160, "y1": 450, "x2": -80, "y2": 530}}}
+    },
+    "add_torque": {
+      "Dyad": {"placement": {"diagram": {"x1": 180, "y1": 450, "x2": 260, "y2": 530}}}
+    },
+    "zoh": {
+      "Dyad": {"placement": {"diagram": {"x1": 400, "y1": 450, "x2": 480, "y2": 550}}}
+    },
+    "clock": {
+      "Dyad": {"placement": {"diagram": {"x1": 200, "y1": 760, "x2": 300, "y2": 860}}}
+    },
+    "id10": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id11": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id13": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id14": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id15": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id16": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id17": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id18": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 660, "y": 468},
+              {"x": 660, "y": 780},
+              {"x": -430, "y": 780},
+              {"x": -430, "y": 680}
+            ],
+            "E": 2
+          }
+        ]
+      }
+    },
+    "id19": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id20": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id21": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id22": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id23": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id24": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id25": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 640, "y": 492},
+              {"x": 640, "y": 720},
+              {"x": 270, "y": 720},
+              {"x": 270, "y": 680}
+            ],
+            "E": 2
+          }
+        ]
+      }
+    },
+    "id26": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id27": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id28": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id29": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id30": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id31": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}}
+  }
+}
+end

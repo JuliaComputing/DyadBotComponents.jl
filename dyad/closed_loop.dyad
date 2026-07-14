@@ -269,3 +269,289 @@ metadata {
   }
 }
 end
+
+"""
+Discrete-time version of `AngleControlledDyadBot`. The balancing robot is
+stabilized by a single sampled-data PID controller regulating the body tilt
+angle to zero. The tilt angle is sampled by a `Sampler`, the discrete
+`DiscretePIDStandard` computes the control action once per clock tick, and a
+`ZeroOrderHold` reconstructs the continuous motor torque. The sample interval
+is set by the top-level structural parameter `Ts` via a `PeriodicClock`.
+
+The controller gains are shared with the continuous `AngleControlledDyadBot`
+and can be tuned with the script `scripts/tune_angle_pid.jl`.
+"""
+component DiscreteAngleControlledDyadBot
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82) {^world}
+  plant = PlanarDyadBot(phi0 = phi0) {^plant}
+  angle_controller = DiscreteComponents.DiscretePIDStandard(final K = k_angle, final Ti = Ti_angle, final Td = Td_angle, Nd = 119.368, y_max = 0.1) {^angle_controller}
+  ref = BlockComponents.Sources.Constant(k = 0) {^ref}
+  gain = BlockComponents.Math.Gain(k = -1) {^gain}
+  sampler = DiscreteComponents.Sampler() {^sampler}
+  zoh = DiscreteComponents.ZeroOrderHold() {^zoh}
+  clock = DiscreteComponents.PeriodicClock(dt = Ts) {^clock}
+  "Proportional gain of the angle controller"
+  parameter k_angle::Real = 0.487401
+  "Integrator time constant of the angle controller"
+  parameter Ti_angle::Time = 0.0587352
+  "Derivative time constant of the angle controller"
+  parameter Td_angle::Time = 0.0420526
+  "Initial tilt angle of the body"
+  parameter phi0::Angle = 0.1
+  "Controller sample interval"
+  structural parameter Ts::Real = 0.005
+relations
+  connect(plant.theta, sampler.u) {^id7}
+  connect(sampler.y, angle_controller.measurement, clock.y) {^id8}
+  connect(ref.y, angle_controller.reference) {^id9}
+  connect(angle_controller.ctr_output, zoh.u) {^id10}
+  connect(zoh.y, gain.u) {^id11}
+  connect(gain.y, plant.torque) {^id12}
+metadata {
+  "Dyad": {
+    "tests": {"case1": {"stop": 5}},
+    "icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}
+  },
+  "_links": {
+    "world": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 200, "y1": 250, "x2": 100, "y2": 150, "rot": 180}
+        },
+        "tags": []
+      }
+    },
+    "plant": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 560, "y1": 400, "x2": 760, "y2": 600, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "angle_controller": {
+      "Dyad": {"placement": {"diagram": {"x1": 170, "y1": 450, "x2": 270, "y2": 550}}}
+    },
+    "ref": {
+      "Dyad": {"placement": {"diagram": {"x1": 10, "y1": 430, "x2": 110, "y2": 530}}}
+    },
+    "gain": {
+      "Dyad": {"placement": {"diagram": {"x1": 400, "y1": 460, "x2": 480, "y2": 540}}}
+    },
+    "sampler": {
+      "Dyad": {"placement": {"diagram": {"x1": 400, "y1": 630, "x2": 300, "y2": 730}}}
+    },
+    "zoh": {
+      "Dyad": {"placement": {"diagram": {"x1": 300, "y1": 450, "x2": 380, "y2": 550}}}
+    },
+    "clock": {
+      "Dyad": {"placement": {"diagram": {"x1": 300, "y1": 760, "x2": 400, "y2": 860}}}
+    },
+    "id7": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 800, "y": 492},
+              {"x": 800, "y": 680},
+              {"x": 350, "y": 680}
+            ],
+            "E": 2
+          }
+        ]
+      }
+    },
+    "id8": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id9": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id10": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id11": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}}
+  }
+}
+end
+
+"""
+Discrete-time version of `CascadeControlledDyadBot`. Both the inner
+tilt-angle loop and the outer position loop are realized with sampled-data
+`DiscretePIDStandard` controllers running on a common clock defined by the
+top-level structural parameter `Ts`.
+
+The continuous plant measurements (tilt angle and position) are sampled by
+`Sampler` blocks, the two discrete controllers run in cascade (the outer
+position controller produces the tilt-angle reference for the inner
+controller), and a `ZeroOrderHold` reconstructs the continuous motor torque.
+The square-wave position reference is smoothed by two continuous first-order
+filters before being sampled.
+
+The six controller gains are shared with the continuous
+`CascadeControlledDyadBot` and can be tuned with the scripts
+`scripts/tune_angle_pid.jl`, `scripts/tune_cascade_pid.jl`, or
+`scripts/tune_cascade_structured.jl`.
+"""
+component DiscreteCascadeControlledDyadBot
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82) {^world}
+  plant = PlanarDyadBot(phi0 = phi0) {^plant}
+  square = BlockComponents.Sources.Square(amplitude = 0.05, frequency = 1 / 10) {^square}
+  firstorder = BlockComponents.Continuous.FirstOrder(T = 0.1) {^firstorder}
+  firstorder1 = BlockComponents.Continuous.FirstOrder(T = 0.1) {^firstorder1}
+  angle_controller = DiscreteComponents.DiscretePIDStandard(final K = k_angle, final Ti = Ti_angle, final Td = Td_angle, Nd = 119.368, y_max = 0.1) {^angle_controller}
+  pos_controller = DiscreteComponents.DiscretePIDStandard(final K = k_pos, final Ti = Ti_pos, final Td = Td_pos, Nd = 4.76616, wd = 1, wp = 1, y_max = deg2rad(25.0)) {^pos_controller}
+  gain = BlockComponents.Math.Gain(k = -1) {^gain}
+  gain1 = BlockComponents.Math.Gain(k = -1) {^gain1}
+  sampler_theta = DiscreteComponents.Sampler() {^sampler_theta}
+  sampler_x = DiscreteComponents.Sampler() {^sampler_x}
+  sampler_ref = DiscreteComponents.Sampler() {^sampler_ref}
+  zoh = DiscreteComponents.ZeroOrderHold() {^zoh}
+  clock = DiscreteComponents.PeriodicClock(dt = Ts) {^clock}
+  "Proportional gain of the inner angle controller"
+  parameter k_angle::Real = 0.487401
+  "Integrator time constant of the inner angle controller"
+  parameter Ti_angle::Time = 0.0587352
+  "Derivative time constant of the inner angle controller"
+  parameter Td_angle::Time = 0.0420526
+  "Proportional gain of the outer position controller"
+  parameter k_pos::Real = 0.0666576
+  "Integrator time constant of the outer position controller"
+  parameter Ti_pos::Time = 5.25024
+  "Derivative time constant of the outer position controller"
+  parameter Td_pos::Time = 4.81393
+  "Initial tilt angle of the body"
+  parameter phi0::Angle = 0.1
+  "Controller sample interval"
+  structural parameter Ts::Real = 0.005
+relations
+  initial firstorder.x = 0.0
+  initial firstorder1.x = 0.0
+  connect(square.y, firstorder.u) {^id12}
+  connect(firstorder.y, firstorder1.u) {^id13}
+  connect(firstorder1.y, sampler_ref.u) {^id14}
+  connect(sampler_ref.y, pos_controller.reference) {^id15}
+  connect(plant.x, sampler_x.u) {^id16}
+  connect(sampler_x.y, pos_controller.measurement) {^id17}
+  connect(pos_controller.ctr_output, gain1.u) {^id18}
+  connect(gain1.y, angle_controller.reference) {^id19}
+  connect(plant.theta, sampler_theta.u) {^id20}
+  connect(sampler_theta.y, angle_controller.measurement, clock.y) {^id21}
+  connect(angle_controller.ctr_output, gain.u) {^id22}
+  connect(gain.y, zoh.u) {^id23}
+  connect(zoh.y, plant.torque) {^id24}
+metadata {
+  "Dyad": {
+    "tests": {"case1": {"stop": 20}},
+    "icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}
+  },
+  "_links": {
+    "world": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 110, "y1": 250, "x2": 10, "y2": 150, "rot": 180}
+        },
+        "tags": []
+      }
+    },
+    "plant": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 600, "y1": 400, "x2": 800, "y2": 600, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "square": {
+      "Dyad": {"placement": {"diagram": {"x1": -660, "y1": 430, "x2": -560, "y2": 530}}}
+    },
+    "firstorder": {
+      "Dyad": {"placement": {"diagram": {"x1": -510, "y1": 430, "x2": -410, "y2": 530}}}
+    },
+    "firstorder1": {
+      "Dyad": {"placement": {"diagram": {"x1": -350, "y1": 430, "x2": -250, "y2": 530}}}
+    },
+    "sampler_ref": {
+      "Dyad": {"placement": {"diagram": {"x1": -230, "y1": 430, "x2": -130, "y2": 530}}}
+    },
+    "angle_controller": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 160, "y1": 450, "x2": 260, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "pos_controller": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": -110, "y1": 450, "x2": -10, "y2": 550, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "gain": {
+      "Dyad": {"placement": {"diagram": {"x1": 420, "y1": 460, "x2": 500, "y2": 540}}}
+    },
+    "gain1": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 20, "y1": 460, "x2": 100, "y2": 540, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "sampler_x": {
+      "Dyad": {"placement": {"diagram": {"x1": -60, "y1": 630, "x2": -160, "y2": 730}}}
+    },
+    "sampler_theta": {
+      "Dyad": {"placement": {"diagram": {"x1": 320, "y1": 630, "x2": 220, "y2": 730}}}
+    },
+    "zoh": {
+      "Dyad": {"placement": {"diagram": {"x1": 300, "y1": 450, "x2": 380, "y2": 550}}}
+    },
+    "clock": {
+      "Dyad": {"placement": {"diagram": {"x1": 200, "y1": 760, "x2": 300, "y2": 860}}}
+    },
+    "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id13": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id14": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id15": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id16": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 840, "y": 468},
+              {"x": 840, "y": 760},
+              {"x": -110, "y": 760},
+              {"x": -110, "y": 680}
+            ],
+            "E": 2
+          }
+        ]
+      }
+    },
+    "id17": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id18": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id19": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id20": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 820, "y": 492},
+              {"x": 820, "y": 700},
+              {"x": 270, "y": 700},
+              {"x": 270, "y": 680}
+            ],
+            "E": 2
+          }
+        ]
+      }
+    },
+    "id21": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id22": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id23": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id24": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}}
+  }
+}
+end
