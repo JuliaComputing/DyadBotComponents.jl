@@ -26,7 +26,10 @@ component DyadBot3D
   "Small mass at the center of the axle"
   axis_body = MultibodyComponents.Body(m = 0.01, r_cm = [0, 0, 0]) {^axis_body}
   "Main body extending upward from the axle"
-  body = MultibodyComponents.BodyShape(m = body_mass, I_11 = 0.01 * 0.05 ^ 2, I_22 = 0.01 * 0.03 ^ 2, I_33 = 0.01 * 0.05 ^ 2, r = [0, body_height, 0]) {^body}
+  # A plain Body with an explicit r_cm is used instead of BodyShape, which
+  # places the center of mass at twice the requested r_cm offset
+  # (JuliaComputing/MultibodyComponents.jl issue 149).
+  body = MultibodyComponents.Body(m = body_mass, r_cm = [0, body_height, 0], I_11 = 0.01 * 0.05 ^ 2, I_22 = 0.01 * 0.03 ^ 2, I_33 = 0.01 * 0.05 ^ 2) {^body}
   damper_left = RotationalComponents.Components.Damper(d = d_wheel) {^damper_left}
   damper_right = RotationalComponents.Components.Damper(d = d_wheel) {^damper_right}
   "Use a compliant (elastic) vertical wheel-ground contact instead of a rigid contact constraint"
@@ -218,9 +221,9 @@ component RollingDyadBot3D
   wheels = MultibodyComponents.RollingWheelSet(radius = R, m_wheel = m / 2, I_axis = Iw / 2, I_long = Iw / 4, track = track) {^wheels}
   "Body tilt joint about the axle axis"
   pitch = MultibodyComponents.Revolute(n = [0, 0, 1]) {^pitch}
-  # A plain Body is used instead of BodyShape: BodyShape places its inner Body
-  # at translation_cm.frame_b and additionally passes r_cm on to it, so the
-  # center of mass would end up at twice the requested offset.
+  # A plain Body with an explicit r_cm is used instead of BodyShape, which
+  # places the center of mass at twice the requested r_cm offset
+  # (JuliaComputing/MultibodyComponents.jl issue 149).
   body = MultibodyComponents.Body(color = [0.2, 0.2, 0.2, 0.9], m = M, r_cm = [0, L, 0], I_11 = Ib, I_22 = Ib / 10, I_33 = Ib) {^body}
   "Splits the motor torque equally between the two wheels"
   gain_half = BlockComponents.Math.Gain(k = 0.5) {^gain_half}
