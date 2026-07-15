@@ -231,6 +231,79 @@ metadata {
 end
 
 """
+Three-dimensional version of `AngleControlledDyadBot`: the ideal-rolling 3D
+robot `RollingDyadBot3D` stabilized by the same `AngleController` with the
+same gains. The robot starts from a tilted initial configuration in the
+vertical plane and the controller recovers the upright pose; since the motion
+stays in the plane, the closed-loop response is identical to that of the
+planar model (verified by `test/test_stabilization.jl`).
+"""
+component AngleControlledDyadBot3D
+  world = MultibodyComponents.World(g = 9.82, nominal_length = 0.1) {^world}
+  plant = RollingDyadBot3D(phi0 = phi0) {^plant}
+  controller = AngleController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle) {^controller}
+  "Proportional gain of the angle controller"
+  parameter k_angle::Real = 0.487401
+  "Integrator time constant of the angle controller"
+  parameter Ti_angle::Time = 0.0587352
+  "Derivative time constant of the angle controller"
+  parameter Td_angle::Time = 0.0420526
+  "Initial tilt angle of the body"
+  parameter phi0::Angle = 0.1
+relations
+  connect(controller.torque, plant.torque) {^id4}
+  connect(plant.theta, controller.measurement) {^id5}
+metadata {
+  "Dyad": {
+    "tests": {"case1": {"stop": 5}},
+    "icons": {"default": "dyad://DyadBotComponents/DyadBot3D.svg"}
+  },
+  "_links": {
+    "world": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 200, "y1": 250, "x2": 100, "y2": 150, "rot": 180}
+        },
+        "tags": []
+      }
+    },
+    "plant": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 560, "y1": 400, "x2": 760, "y2": 600, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "controller": {
+      "Dyad": {"placement": {"diagram": {"x1": 270, "y1": 420, "x2": 420, "y2": 570}}}
+    },
+    "id4": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 503.75, "y": 495}, {"x": 503.75, "y": 500}], "E": 2}]
+      }
+    },
+    "id5": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 770, "y": 492},
+              {"x": 770, "y": 660},
+              {"x": 220, "y": 660},
+              {"x": 220, "y": 495}
+            ],
+            "E": 2
+          }
+        ]
+      }
+    }
+  }
+}
+end
+
+"""
 Discrete-time version of `AngleControlledDyadBot`. Identical to the continuous
 model except that the control system is a sampled-data `DiscreteAngleController`
 (`DiscretePIDStandard` with a `Sampler`, `ZeroOrderHold` and `PeriodicClock`).

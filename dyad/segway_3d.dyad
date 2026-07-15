@@ -189,3 +189,210 @@ metadata {
   }
 }
 end
+
+"""
+Three-dimensional model of a two-wheeled balancing robot with ideal rolling
+contact.
+
+The two wheels form an ideal no-slip rolling axle
+(`MultibodyComponents.RollingWheelSet`, which resolves the kinematic loop
+through the two wheels internally), and the inverted-pendulum body is mounted
+at the center of the axle through a revolute joint about the axle axis. The
+motor torque acts between the body and the two wheels: half the commanded
+torque drives each wheel and the reaction acts on the body. Viscous motor
+friction acts between the body and each wheel in the same split.
+
+For motion in the vertical plane the model is dynamically equivalent to
+`PlanarDyadBot`: the two wheels share the planar model's wheel mass `m`, spin
+inertia `Iw` and motor friction `d`, and the body parameters are identical.
+
+Inputs and outputs (same interface as `PlanarDyadBot`):
+- `torque`: torque applied by the motor between body and wheels
+- `x`, `x_dot`: position and velocity of the wheel axis along the ground
+- `theta`, `theta_dot`: tilt angle and tilt rate of the body (zero when upright)
+
+The model must be accompanied by a `MultibodyComponents.World` component in
+the top level of the enclosing model.
+"""
+component RollingDyadBot3D
+  wheels = MultibodyComponents.RollingWheelSet(radius = R, m_wheel = m / 2, I_axis = Iw / 2, I_long = Iw / 4, track = track) {^wheels}
+  "Body tilt joint about the axle axis"
+  pitch = MultibodyComponents.Revolute(n = [0, 0, 1]) {^pitch}
+  # A plain Body is used instead of BodyShape: BodyShape places its inner Body
+  # at translation_cm.frame_b and additionally passes r_cm on to it, so the
+  # center of mass would end up at twice the requested offset.
+  body = MultibodyComponents.Body(color = [0.2, 0.2, 0.2, 0.9], m = M, r_cm = [0, L, 0], I_11 = Ib, I_22 = Ib / 10, I_33 = Ib) {^body}
+  "Splits the motor torque equally between the two wheels"
+  gain_half = BlockComponents.Math.Gain(k = 0.5) {^gain_half}
+  torque_left = RotationalComponents.Sources.TorqueSource() {^torque_left}
+  torque_right = RotationalComponents.Sources.TorqueSource() {^torque_right}
+  damper_left = RotationalComponents.Components.Damper(d = d / 2) {^damper_left}
+  damper_right = RotationalComponents.Components.Damper(d = d / 2) {^damper_right}
+  "Motor torque command"
+  torque = Dyad.RealInput() {^torque}
+  "Position of the wheel axis"
+  x = Dyad.RealOutput() {^x}
+  "Body tilt angle"
+  theta = Dyad.RealOutput() {^theta}
+  "Velocity of the wheel axis"
+  x_dot = Dyad.RealOutput() {^x_dot}
+  "Body tilt rate"
+  theta_dot = Dyad.RealOutput() {^theta_dot}
+  "Body mass"
+  parameter M::Mass = 0.1
+  "Total wheel mass (split between the two wheels)"
+  parameter m::Mass = 0.05
+  "Wheel radius"
+  parameter R::Length = 0.04
+  "Distance from wheel axis to body center of mass"
+  parameter L::Length = 0.08
+  "Body moment of inertia about the axle axis"
+  parameter Ib::Inertia = 2.5e-4
+  "Total wheel + motor moment of inertia about the spin axis (split between the two wheels)"
+  parameter Iw::Inertia = 1e-4
+  "Motor viscous friction (split between the two wheels)"
+  parameter d::RotationalDampingConstant = 0.0001
+  "Initial tilt angle of the body"
+  parameter phi0::Angle = 0.0
+  "Distance between the wheels"
+  parameter track::Length = 0.13
+relations
+  initial pitch.phi = phi0
+  initial pitch.w = 0
+  connect(wheels.frame_middle, pitch.frame_a) {^id1}
+  connect(pitch.frame_b, body.frame_a) {^id2}
+  connect(torque, gain_half.u) {^id3}
+  connect(gain_half.y, torque_left.tau, torque_right.tau) {^id4}
+  connect(torque_left.spline, damper_left.spline_a, wheels.axis1) {^id5}
+  connect(torque_right.spline, damper_right.spline_a, wheels.axis2) {^id6}
+  connect(torque_left.support, torque_right.support, damper_left.spline_b, damper_right.spline_b, pitch.axis) {^id7}
+  x = wheels.x
+  theta = pitch.phi
+  x_dot = der(wheels.x)
+  theta_dot = pitch.w
+metadata {
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/DyadBot3D.svg"}},
+  "_links": {
+    "wheels": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 400, "y1": 620, "x2": 600, "y2": 820, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "pitch": {
+      "Dyad": {"placement": {"diagram": {"x1": 450, "y1": 480, "x2": 550, "y2": 580}}}
+    },
+    "body": {
+      "Dyad": {
+        "placement": {"diagram": {"x1": 350, "y1": 130, "x2": 650, "y2": 430, "rot": 270}}
+      }
+    },
+    "gain_half": {
+      "Dyad": {"placement": {"diagram": {"x1": 180, "y1": 460, "x2": 260, "y2": 540}}}
+    },
+    "torque_left": {
+      "Dyad": {"placement": {"diagram": {"x1": 150, "y1": 620, "x2": 250, "y2": 720}}}
+    },
+    "torque_right": {
+      "Dyad": {"placement": {"diagram": {"x1": 850, "y1": 620, "x2": 750, "y2": 720}}}
+    },
+    "damper_left": {
+      "Dyad": {"placement": {"diagram": {"x1": 150, "y1": 760, "x2": 250, "y2": 860}}}
+    },
+    "damper_right": {
+      "Dyad": {"placement": {"diagram": {"x1": 850, "y1": 760, "x2": 750, "y2": 860}}}
+    },
+    "torque": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 20, "y1": 460, "x2": 100, "y2": 540, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "x": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 300, "x2": 960, "y2": 380, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "theta": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 420, "x2": 960, "y2": 500, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "x_dot": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 540, "x2": 960, "y2": 620, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "theta_dot": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 660, "x2": 960, "y2": 740, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "id1": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id2": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id3": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id4": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [{"x": 200, "y": 670}], "E": 2},
+          {"S": 3, "M": [{"x": 800, "y": 670}], "E": -1}
+        ],
+        "junctions": [{"x": 300, "y": 560}],
+        "renderStyle": "standard"
+      }
+    },
+    "id5": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [], "E": 2},
+          {"S": 3, "M": [], "E": -1}
+        ],
+        "junctions": [{"x": 350, "y": 700}],
+        "renderStyle": "standard"
+      }
+    },
+    "id6": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [], "E": 2},
+          {"S": 3, "M": [], "E": -1}
+        ],
+        "junctions": [{"x": 650, "y": 700}],
+        "renderStyle": "standard"
+      }
+    },
+    "id7": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [], "E": 2},
+          {"S": 3, "M": [], "E": -1},
+          {"S": 4, "M": [], "E": -1},
+          {"S": 5, "M": [], "E": -1}
+        ],
+        "junctions": [{"x": 500, "y": 900}],
+        "renderStyle": "standard"
+      }
+    }
+  }
+}
+end

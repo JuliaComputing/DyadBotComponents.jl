@@ -13,6 +13,10 @@ Plant models:
   position/velocity/tilt/tilt-rate out.
 - `DyadBot3D`: three-dimensional model with two individually spinning wheels
   with slip-based ground contact, allowing the body to tilt.
+- `RollingDyadBot3D`: three-dimensional model with an ideal no-slip rolling
+  wheel axle (`MultibodyComponents.RollingWheelSet`). Same interface and
+  parameters as `PlanarDyadBot`; for motion in the vertical plane it is
+  dynamically equivalent to the planar model.
 
 Closed-loop models around the planar plant:
 
@@ -26,6 +30,13 @@ Closed-loop models around the planar plant:
 - `LQGControlledDyadBot`: LQG controller with reference feedforward and
   integral action (state-space system loaded from `data/lqg_*.csv`).
 - `LQGTuningDyadBot`: analysis model used by the LQG design script.
+
+Closed-loop models around the 3D plant:
+
+- `AngleControlledDyadBot3D`: `RollingDyadBot3D` stabilized by the same
+  `AngleController` as `AngleControlledDyadBot`; with in-plane motion the
+  closed-loop response is identical to the planar model
+  (`test/test_stabilization.jl` verifies this).
 
 ## Controller tuning scripts (`scripts/`)
 
