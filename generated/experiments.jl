@@ -9,6 +9,7 @@ if isfile(joinpath((@__DIR__) |> Base.dirname, "dyad", "experiments.jl"))
 end
 
 
+include("AngleControlledDyadBot3D_experiment.jl")
 include("AngleControlledDyadBot_experiment.jl")
 include("AngleController_experiment.jl")
 include("CascadeControlledDyadBot_experiment.jl")
@@ -27,4 +28,5 @@ include("LQGTuningDyadBot_experiment.jl")
 include("Mux1_experiment.jl")
 include("Mux6_experiment.jl")
 include("PlanarDyadBot_experiment.jl")
+include("RollingDyadBot3D_experiment.jl")
 include("SimpleMotor_experiment.jl")

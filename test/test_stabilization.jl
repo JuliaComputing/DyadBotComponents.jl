@@ -53,6 +53,7 @@ const POS_TRACK_TOL = 0.02
     @testset "$(nameof(ctor))" for ctor in (
         DyadBotComponents.AngleControlledDyadBot,
         DyadBotComponents.DiscreteAngleControlledDyadBot,
+        DyadBotComponents.AngleControlledDyadBot3D,
     )
         stop = 5.0
         m, sol = simulate_model(ctor; stop)
@@ -77,5 +78,21 @@ const POS_TRACK_TOL = 0.02
         # Outer loop reaches its setpoint: position tracks the reference at the
         # end of the run (the reference has been constant for the last 5 s).
         @test maxabs_error_window(sol, m.plant.x, reffun(m), stop - 1, stop) < POS_TRACK_TOL
+    end
+
+    # The ideal-rolling 3D robot moves in the vertical plane only, so its
+    # closed-loop response must be identical to the planar model's up to solver
+    # tolerance (observed max deviation ~2e-9 at the tolerances used here).
+    @testset "Planar/3D equivalence" begin
+        stop = 5.0
+        m2d, sol2d = simulate_model(DyadBotComponents.AngleControlledDyadBot; stop)
+        m3d, sol3d = simulate_model(DyadBotComponents.AngleControlledDyadBot3D; stop)
+        @test succeeded(sol2d)
+        @test succeeded(sol3d)
+        ts = range(0, stop; length = 501)
+        for (sig2d, sig3d) in ((m2d.plant.theta, m3d.plant.theta), (m2d.plant.x, m3d.plant.x))
+            dev = maximum(abs, sol2d(ts; idxs = sig2d).u .- sol3d(ts; idxs = sig3d).u)
+            @test dev < 1e-6
+        end
     end
 end

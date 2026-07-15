@@ -199,6 +199,7 @@ component.
 end
 
 
+include("AngleControlledDyadBot3D_definition.jl")
 include("AngleControlledDyadBot_definition.jl")
 include("AngleController_definition.jl")
 include("CascadeControlledDyadBot_definition.jl")
@@ -217,4 +218,5 @@ include("LQGTuningDyadBot_definition.jl")
 include("Mux1_definition.jl")
 include("Mux6_definition.jl")
 include("PlanarDyadBot_definition.jl")
+include("RollingDyadBot3D_definition.jl")
 include("SimpleMotor_definition.jl")

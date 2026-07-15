@@ -18,6 +18,7 @@ end
 include("test_internals.jl")
 
 @testset "`DyadBotComponents`" begin
+include("AngleControlledDyadBot3D_test.jl")
 include("AngleControlledDyadBot_test.jl")
 include("AngleController_test.jl")
 include("CascadeControlledDyadBot_test.jl")
@@ -36,5 +37,6 @@ include("LQGTuningDyadBot_test.jl")
 include("Mux1_test.jl")
 include("Mux6_test.jl")
 include("PlanarDyadBot_test.jl")
+include("RollingDyadBot3D_test.jl")
 include("SimpleMotor_test.jl")
 end
