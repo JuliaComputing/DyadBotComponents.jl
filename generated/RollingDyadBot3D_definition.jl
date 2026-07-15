@@ -136,9 +136,9 @@ the top level of the enclosing model.
   # Subcomponent pitch of type MultibodyComponents.Revolute
   pitch_overrides = __pop_subcomponent_overrides!(__overrides, "pitch")
   push!(__systems, @named pitch = MultibodyComponents.Revolute(; n=[Float64(0), Float64(0), Float64(1)], pitch_overrides...))
-  # Subcomponent body of type MultibodyComponents.Body
+  # Subcomponent body of type MultibodyComponents.BodyShape
   body_overrides = __pop_subcomponent_overrides!(__overrides, "body")
-  push!(__systems, @named body = MultibodyComponents.Body(; color=[0.2, 0.2, 0.2, 0.9], m=M, r_cm=[Float64(0), L, Float64(0)], I_11=Ib, I_22=Ib / 10, I_33=Ib, body_overrides...))
+  push!(__systems, @named body = MultibodyComponents.BodyShape(; color=[0.2, 0.2, 0.2, 0.9], m=M, r=[Float64(0), 2 * L, Float64(0)], r_cm=[Float64(0), L, Float64(0)], I_11=Ib, I_22=Ib / 10, I_33=Ib, radius=0.03, body_overrides...))
   # Subcomponent gain_half of type BlockComponents.Math.Gain
   gain_half_overrides = __pop_subcomponent_overrides!(__overrides, "gain_half")
   push!(__systems, @named gain_half = BlockComponents.Math.Gain(; k=0.5, gain_half_overrides...))

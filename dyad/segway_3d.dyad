@@ -25,11 +25,8 @@ component DyadBot3D
   rod_right = MultibodyComponents.FixedTranslation(r = [0, 0, -track / 2]) {^rod_right}
   "Small mass at the center of the axle"
   axis_body = MultibodyComponents.Body(m = 0.01, r_cm = [0, 0, 0]) {^axis_body}
-  "Main body extending upward from the axle"
-  # A plain Body with an explicit r_cm is used instead of BodyShape, which
-  # places the center of mass at twice the requested r_cm offset
-  # (JuliaComputing/MultibodyComponents.jl issue 149).
-  body = MultibodyComponents.Body(m = body_mass, r_cm = [0, body_height, 0], I_11 = 0.01 * 0.05 ^ 2, I_22 = 0.01 * 0.03 ^ 2, I_33 = 0.01 * 0.05 ^ 2) {^body}
+  "Main body extending upward from the axle, with its center of mass in the middle"
+  body = MultibodyComponents.BodyShape(m = body_mass, r = [0, 2 * body_height, 0], r_cm = [0, body_height, 0], I_11 = 0.01 * 0.05 ^ 2, I_22 = 0.01 * 0.03 ^ 2, I_33 = 0.01 * 0.05 ^ 2) {^body}
   damper_left = RotationalComponents.Components.Damper(d = d_wheel) {^damper_left}
   damper_right = RotationalComponents.Components.Damper(d = d_wheel) {^damper_right}
   "Use a compliant (elastic) vertical wheel-ground contact instead of a rigid contact constraint"
@@ -221,10 +218,7 @@ component RollingDyadBot3D
   wheels = MultibodyComponents.RollingWheelSet(radius = R, m_wheel = m / 2, I_axis = Iw / 2, I_long = Iw / 4, track = track) {^wheels}
   "Body tilt joint about the axle axis"
   pitch = MultibodyComponents.Revolute(n = [0, 0, 1]) {^pitch}
-  # A plain Body with an explicit r_cm is used instead of BodyShape, which
-  # places the center of mass at twice the requested r_cm offset
-  # (JuliaComputing/MultibodyComponents.jl issue 149).
-  body = MultibodyComponents.Body(color = [0.2, 0.2, 0.2, 0.9], m = M, r_cm = [0, L, 0], I_11 = Ib, I_22 = Ib / 10, I_33 = Ib) {^body}
+  body = MultibodyComponents.BodyShape(color = [0.2, 0.2, 0.2, 0.9], m = M, r = [0, 2 * L, 0], r_cm = [0, L, 0], I_11 = Ib, I_22 = Ib / 10, I_33 = Ib, radius = 0.03) {^body}
   "Splits the motor torque equally between the two wheels"
   gain_half = BlockComponents.Math.Gain(k = 0.5) {^gain_half}
   torque_left = RotationalComponents.Sources.TorqueSource() {^torque_left}

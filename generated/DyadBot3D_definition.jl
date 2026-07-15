@@ -130,9 +130,9 @@ stacks, with both rigid and compliant vertical contact.
   # Subcomponent axis_body of type MultibodyComponents.Body
   axis_body_overrides = __pop_subcomponent_overrides!(__overrides, "axis_body")
   push!(__systems, @named axis_body = MultibodyComponents.Body(; m=0.01, r_cm=[Float64(0), Float64(0), Float64(0)], axis_body_overrides...))
-  # Subcomponent body of type MultibodyComponents.Body
+  # Subcomponent body of type MultibodyComponents.BodyShape
   body_overrides = __pop_subcomponent_overrides!(__overrides, "body")
-  push!(__systems, @named body = MultibodyComponents.Body(; m=body_mass, r_cm=[Float64(0), body_height, Float64(0)], I_11=0.01 * 0.05 ^ 2, I_22=0.01 * 0.03 ^ 2, I_33=0.01 * 0.05 ^ 2, body_overrides...))
+  push!(__systems, @named body = MultibodyComponents.BodyShape(; m=body_mass, r=[Float64(0), 2 * body_height, Float64(0)], r_cm=[Float64(0), body_height, Float64(0)], I_11=0.01 * 0.05 ^ 2, I_22=0.01 * 0.03 ^ 2, I_33=0.01 * 0.05 ^ 2, body_overrides...))
   # Subcomponent damper_left of type RotationalComponents.Components.Damper
   damper_left_overrides = __pop_subcomponent_overrides!(__overrides, "damper_left")
   push!(__systems, @named damper_left = RotationalComponents.Components.Damper(; d=d_wheel, damper_left_overrides...))
