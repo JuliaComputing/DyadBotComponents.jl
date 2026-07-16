@@ -1,0 +1,49 @@
+"""
+Tuned parameters of the body tilt-angle PID controller.
+
+Single source of truth for the numerical values: every controller and
+closed-loop model that stabilizes the tilt angle extends this partial
+component instead of declaring its own copy of the parameters. Update the
+values here after retuning (see `scripts/tune_angle_pid.jl`).
+"""
+partial component AngleControllerParams
+  "Proportional gain of the angle controller"
+  parameter k_angle::Real = 0.487401
+  "Integrator time constant of the angle controller"
+  parameter Ti_angle::Time = 0.0587352
+  "Derivative time constant of the angle controller"
+  parameter Td_angle::Time = 0.0420526
+end
+
+"""
+Tuned parameters of the cascade controller: the tilt-angle parameters from
+`AngleControllerParams` plus the outer position-loop PID parameters.
+
+Single source of truth for the numerical values; update them here after
+retuning (see `scripts/tune_cascade_pid.jl` and
+`scripts/tune_cascade_structured.jl`).
+"""
+partial component CascadeControllerParams
+  extends AngleControllerParams
+  "Proportional gain of the outer position controller"
+  parameter k_pos::Real = 0.0666576
+  "Integrator time constant of the outer position controller"
+  parameter Ti_pos::Time = 5.25024
+  "Derivative time constant of the outer position controller"
+  parameter Td_pos::Time = 4.81393
+end
+
+"""
+Tuned parameters of the yaw (heading) PID controller.
+
+Single source of truth for the numerical values; update them here after
+retuning.
+"""
+partial component YawControllerParams
+  "Proportional gain of the yaw controller"
+  parameter k_yaw::Real = 0.005
+  "Integrator time constant of the yaw controller"
+  parameter Ti_yaw::Time = 10.0
+  "Derivative time constant of the yaw controller"
+  parameter Td_yaw::Time = 0.5
+end

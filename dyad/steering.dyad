@@ -52,6 +52,7 @@ The analysis points `y` (yaw measurement) and `u` (controller output) are
 exposed for loop-shaping and PID autotuning.
 """
 component YawController
+  extends YawControllerParams
   "Yaw (heading) reference"
   reference = Dyad.RealInput() {^reference}
   "Yaw (heading) measurement"
@@ -61,12 +62,6 @@ component YawController
   yaw_controller = BlockComponents.Continuous.LimPID(final k = k_yaw, final Ti = Ti_yaw, final Td = Td_yaw, Nd = 10, y_max = tau_max) {^yaw_controller}
   gain = BlockComponents.Math.Gain(k = 1) {^gain}
   constant_ff = BlockComponents.Sources.Constant(k = 0) {^constant_ff}
-  "Proportional gain of the yaw controller"
-  parameter k_yaw::Real = 0.005
-  "Integrator time constant of the yaw controller"
-  parameter Ti_yaw::Time = 10.0
-  "Derivative time constant of the yaw controller"
-  parameter Td_yaw::Time = 0.5
   "Differential torque limit"
   parameter tau_max::Real = 0.05
 relations
@@ -127,6 +122,8 @@ torque into the two wheel torque commands, so the robot spins to the new
 heading while staying upright and holding its position.
 """
 component YawControlledDyadBot3D
+  extends CascadeControllerParams
+  extends YawControllerParams
   world = MultibodyComponents.World(g = 9.82, nominal_length = 0.1) {^world}
   plant = RollingDyadBot3D(phi0 = phi0) {^plant}
   controller = CascadeController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle, k_pos = k_pos, Ti_pos = Ti_pos, Td_pos = Td_pos) {^controller}
@@ -136,24 +133,6 @@ component YawControlledDyadBot3D
   yaw_ref = BlockComponents.Sources.Step(height = yaw_step, start_time = step_time) {^yaw_ref}
   firstorder = BlockComponents.Continuous.FirstOrder(T = 0.1) {^firstorder}
   firstorder1 = BlockComponents.Continuous.FirstOrder(T = 0.1) {^firstorder1}
-  "Proportional gain of the inner angle controller"
-  parameter k_angle::Real = 0.487401
-  "Integrator time constant of the inner angle controller"
-  parameter Ti_angle::Time = 0.0587352
-  "Derivative time constant of the inner angle controller"
-  parameter Td_angle::Time = 0.0420526
-  "Proportional gain of the outer position controller"
-  parameter k_pos::Real = 0.0666576
-  "Integrator time constant of the outer position controller"
-  parameter Ti_pos::Time = 5.25024
-  "Derivative time constant of the outer position controller"
-  parameter Td_pos::Time = 4.81393
-  "Proportional gain of the yaw controller"
-  parameter k_yaw::Real = 0.005
-  "Integrator time constant of the yaw controller"
-  parameter Ti_yaw::Time = 10.0
-  "Derivative time constant of the yaw controller"
-  parameter Td_yaw::Time = 0.5
   "Initial tilt angle of the body"
   parameter phi0::Angle = 0.1
   "Height of the yaw reference step"
