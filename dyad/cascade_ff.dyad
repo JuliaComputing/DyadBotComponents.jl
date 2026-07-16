@@ -275,7 +275,7 @@ metadata {
       }
     },
     "zoh": {
-      "Dyad": {"placement": {"diagram": {"x1": 840, "y1": 450, "x2": 920, "y2": 550}}}
+      "Dyad": {"placement": {"diagram": {"x1": 830, "y1": 450, "x2": 930, "y2": 550}}}
     },
     "clock": {
       "Dyad": {"placement": {"diagram": {"x1": 410, "y1": 790, "x2": 510, "y2": 890}}}

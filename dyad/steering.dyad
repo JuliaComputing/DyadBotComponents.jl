@@ -22,6 +22,7 @@ relations
   left = (drive + yaw_torque) / 2
   right = (drive - yaw_torque) / 2
 metadata {
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/ControlMixer.svg"}},
   "_links": {
     "drive": {
       "Dyad": {"placement": {"diagram": {"x1": -100, "y1": 350, "x2": 0, "y2": 450}}}
@@ -77,6 +78,7 @@ relations
   connect(gain.y, torque) {^id4}
   connect(constant_ff.y, yaw_controller.u_ff) {^id5}
 metadata {
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/YawController.svg"}},
   "_links": {
     "reference": {
       "Dyad": {"placement": {"diagram": {"x1": -100, "y1": 350, "x2": 0, "y2": 450}}}
@@ -115,7 +117,7 @@ end
 Three-dimensional balancing robot with independent balance/position and yaw
 (heading) control.
 
-The differentially driven plant `SteerableDyadBot3D` is stabilized by the
+The differentially driven plant `RollingDyadBot3D` is stabilized by the
 same cascade controller as `CascadeControlledDyadBot` (inner tilt-angle loop,
 outer position loop; the position reference is held at zero so the robot
 balances in place). A separate `YawController` tracks the heading reference,
@@ -126,7 +128,7 @@ heading while staying upright and holding its position.
 """
 component YawControlledDyadBot3D
   world = MultibodyComponents.World(g = 9.82, nominal_length = 0.1) {^world}
-  plant = SteerableDyadBot3D(phi0 = phi0) {^plant}
+  plant = RollingDyadBot3D(phi0 = phi0) {^plant}
   controller = CascadeController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle, k_pos = k_pos, Ti_pos = Ti_pos, Td_pos = Td_pos) {^controller}
   yaw_controller = YawController(k_yaw = k_yaw, Ti_yaw = Ti_yaw, Td_yaw = Td_yaw) {^yaw_controller}
   mixer = ControlMixer() {^mixer}
@@ -162,7 +164,7 @@ relations
   initial firstorder.x = 0.0
   initial firstorder1.x = 0.0
   connect(plant.theta, controller.angle_measurement) {^id1}
-  connect(plant.pos, controller.pos_measurement) {^id2}
+  connect(plant.x, controller.pos_measurement) {^id2}
   connect(pos_ref.y, controller.pos_reference) {^id3}
   connect(controller.torque, mixer.drive) {^id4}
   connect(yaw_ref.y, firstorder.u) {^id5}
@@ -201,7 +203,7 @@ metadata {
       "Dyad": {"placement": {"diagram": {"x1": 260, "y1": 550, "x2": 410, "y2": 700}}}
     },
     "mixer": {
-      "Dyad": {"placement": {"diagram": {"x1": 500, "y1": 420, "x2": 620, "y2": 580}}}
+      "Dyad": {"placement": {"diagram": {"x1": 490, "y1": 425, "x2": 640, "y2": 575}}}
     },
     "pos_ref": {
       "Dyad": {"placement": {"diagram": {"x1": 20, "y1": 300, "x2": 120, "y2": 400}}}

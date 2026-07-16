@@ -288,7 +288,7 @@ metadata {
     "mux": {
       "Dyad": {
         "placement": {
-          "diagram": {"iconName": "default", "x1": 90, "y1": 450, "x2": 170, "y2": 550, "rot": 0}
+          "diagram": {"iconName": "default", "x1": 80, "y1": 450, "x2": 180, "y2": 550, "rot": 0}
         },
         "tags": []
       }

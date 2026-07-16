@@ -40,7 +40,6 @@ include("Mux6_test.jl")
 include("PlanarDyadBot_test.jl")
 include("RollingDyadBot3D_test.jl")
 include("SimpleMotor_test.jl")
-include("SteerableDyadBot3D_test.jl")
 include("YawControlledDyadBot3D_test.jl")
 include("YawController_test.jl")
 end

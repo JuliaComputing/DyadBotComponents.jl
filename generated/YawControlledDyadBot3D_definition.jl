@@ -12,7 +12,7 @@ import Moshi as __Ext__Moshi
 Three-dimensional balancing robot with independent balance/position and yaw
 (heading) control.
 
-The differentially driven plant `SteerableDyadBot3D` is stabilized by the
+The differentially driven plant `RollingDyadBot3D` is stabilized by the
 same cascade controller as `CascadeControlledDyadBot` (inner tilt-angle loop,
 outer position loop; the position reference is held at zero so the robot
 balances in place). A separate `YawController` tracks the heading reference,
@@ -121,9 +121,9 @@ heading while staying upright and holding its position.
   # Subcomponent world of type MultibodyComponents.World
   world_overrides = __pop_subcomponent_overrides!(__overrides, "world")
   push!(__systems, @named world = MultibodyComponents.World(; g=9.82, nominal_length=0.1, world_overrides...))
-  # Subcomponent plant of type DyadBotComponents.SteerableDyadBot3D
+  # Subcomponent plant of type DyadBotComponents.RollingDyadBot3D
   plant_overrides = __pop_subcomponent_overrides!(__overrides, "plant")
-  push!(__systems, @named plant = DyadBotComponents.SteerableDyadBot3D(; phi0=phi0, plant_overrides...))
+  push!(__systems, @named plant = DyadBotComponents.RollingDyadBot3D(; phi0=phi0, plant_overrides...))
   # Subcomponent controller of type DyadBotComponents.CascadeController
   controller_overrides = __pop_subcomponent_overrides!(__overrides, "controller")
   push!(__systems, @named controller = DyadBotComponents.CascadeController(; k_angle=k_angle, Ti_angle=Ti_angle, Td_angle=Td_angle, k_pos=k_pos, Ti_pos=Ti_pos, Td_pos=Td_pos, controller_overrides...))
@@ -160,7 +160,7 @@ heading while staying upright and holding its position.
 
   ### Equations
   push!(__eqs, connect(plant.theta, controller.angle_measurement))
-  push!(__eqs, connect(plant.pos, controller.pos_measurement))
+  push!(__eqs, connect(plant.x, controller.pos_measurement))
   push!(__eqs, connect(pos_ref.y, controller.pos_reference))
   push!(__eqs, connect(controller.torque, mixer.drive))
   push!(__eqs, connect(yaw_ref.y, firstorder.u))

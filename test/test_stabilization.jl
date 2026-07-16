@@ -108,7 +108,7 @@ const POS_TRACK_TOL = 0.02
         @test maxabs(sol, m.plant.theta) < THETA_BOUND
         @test maxabs_window(sol, m.plant.theta, stop - 1, stop) < THETA_SETTLE
         @test maxabs_window(sol, m.plant.yaw, 4.0, 5.0) < 0.01          # heading held before the step
-        @test maxabs_window(sol, m.plant.pos, stop - 1, stop) < POS_TRACK_TOL  # holds position while spinning
+        @test maxabs_window(sol, m.plant.x, stop - 1, stop) < POS_TRACK_TOL  # holds position while spinning
         ts = range(stop - 1, stop; length = 50)
         @test maximum(abs, sol(ts; idxs = m.plant.yaw).u .- yaw_step) < 0.02   # settles on the new heading
     end
