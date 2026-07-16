@@ -141,10 +141,10 @@ heading while staying upright and holding its position.
   push!(__systems, @named yaw_ref = BlockComponents.Sources.Step(; height=yaw_step, start_time=step_time, yaw_ref_overrides...))
   # Subcomponent firstorder of type BlockComponents.Continuous.FirstOrder
   firstorder_overrides = __pop_subcomponent_overrides!(__overrides, "firstorder")
-  push!(__systems, @named firstorder = BlockComponents.Continuous.FirstOrder(; T=0.1, firstorder_overrides...))
+  push!(__systems, @named firstorder = BlockComponents.Continuous.FirstOrder(; T=0.2, firstorder_overrides...))
   # Subcomponent firstorder1 of type BlockComponents.Continuous.FirstOrder
   firstorder1_overrides = __pop_subcomponent_overrides!(__overrides, "firstorder1")
-  push!(__systems, @named firstorder1 = BlockComponents.Continuous.FirstOrder(; T=0.1, firstorder1_overrides...))
+  push!(__systems, @named firstorder1 = BlockComponents.Continuous.FirstOrder(; T=0.2, firstorder1_overrides...))
 
   ### Check there are no unmatched overrides
   isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
@@ -161,15 +161,15 @@ heading while staying upright and holding its position.
   ### Equations
   push!(__eqs, connect(plant.theta, controller.angle_measurement))
   push!(__eqs, connect(plant.x, controller.pos_measurement))
-  push!(__eqs, connect(pos_ref.y, controller.pos_reference))
   push!(__eqs, connect(controller.torque, mixer.drive))
   push!(__eqs, connect(yaw_ref.y, firstorder.u))
   push!(__eqs, connect(firstorder.y, firstorder1.u))
-  push!(__eqs, connect(firstorder1.y, yaw_controller.reference))
   push!(__eqs, connect(plant.yaw, yaw_controller.measurement))
   push!(__eqs, connect(yaw_controller.torque, mixer.yaw_torque))
-  push!(__eqs, connect(mixer.left, plant.torque_left))
+  push!(__eqs, connect(pos_ref.y, controller.pos_reference))
   push!(__eqs, connect(mixer.right, plant.torque_right))
+  push!(__eqs, connect(mixer.left, plant.torque_left))
+  push!(__eqs, connect(firstorder1.y, yaw_controller.reference))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
