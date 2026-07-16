@@ -621,7 +621,7 @@ metadata {
     },
     "sampler_theta": {
       "Dyad": {
-        "placement": {"diagram": {"x1": 780, "y1": 730, "x2": 680, "y2": 830, "rot": 90}}
+        "placement": {"diagram": {"x1": 780, "y1": 710, "x2": 680, "y2": 810, "rot": 90}}
       }
     },
     "sampler_x": {
@@ -637,7 +637,7 @@ metadata {
     },
     "clock": {
       "Dyad": {
-        "placement": {"diagram": {"x1": 490, "y1": 740, "x2": 590, "y2": 840, "rot": 90}}
+        "placement": {"diagram": {"x1": 490, "y1": 710, "x2": 590, "y2": 810, "rot": 90}}
       }
     },
     "id14": {

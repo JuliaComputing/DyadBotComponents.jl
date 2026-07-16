@@ -256,17 +256,19 @@ component RollingDyadBot3D
 relations
   initial pitch.phi = phi0
   initial pitch.w = 0
-  connect(wheels.frame_middle, pitch.frame_a) {^id1}
-  connect(pitch.frame_b, body.frame_a) {^id2}
-  connect(torque, gain_half.u) {^id3}
-  connect(gain_half.y, torque_left.tau, torque_right.tau) {^id4}
-  connect(torque_left.spline, damper_left.spline_a, wheels.axis1) {^id5}
-  connect(torque_right.spline, damper_right.spline_a, wheels.axis2) {^id6}
-  connect(torque_left.support, torque_right.support, damper_left.spline_b, damper_right.spline_b, pitch.axis) {^id7}
   x = wheels.x
   theta = pitch.phi
   x_dot = der(wheels.x)
   theta_dot = pitch.w
+  connect(body.frame_a, pitch.frame_b) {^id14}
+  connect(pitch.frame_a, wheels.frame_middle) {^id15}
+  connect(torque_left.spline, wheels.axis1) {^id16}
+  connect(torque_right.spline, wheels.axis2) {^id17}
+  connect(damper_right.spline_b, wheels.axis2) {^id18}
+  connect(damper_left.spline_b, wheels.axis1) {^id19}
+  connect(torque_left.tau, torque_right.tau, gain_half.y) {^id20}
+  connect(torque, gain_half.u) {^id21}
+  connect(pitch.axis, torque_left.support, damper_left.spline_a, torque_right.support, damper_right.spline_a) {^id22}
 metadata {
   "Dyad": {"icons": {"default": "dyad://DyadBotComponents/DyadBot3D.svg"}},
   "_links": {
@@ -279,27 +281,35 @@ metadata {
       }
     },
     "pitch": {
-      "Dyad": {"placement": {"diagram": {"x1": 450, "y1": 480, "x2": 550, "y2": 580}}}
+      "Dyad": {
+        "placement": {"diagram": {"x1": 450, "y1": 320, "x2": 550, "y2": 420, "rot": 270}}
+      }
     },
     "body": {
       "Dyad": {
-        "placement": {"diagram": {"x1": 350, "y1": 130, "x2": 650, "y2": 430, "rot": 270}}
+        "placement": {"diagram": {"x1": 350, "y1": -10, "x2": 650, "y2": 290, "rot": 270}}
       }
     },
     "gain_half": {
-      "Dyad": {"placement": {"diagram": {"x1": 180, "y1": 460, "x2": 260, "y2": 540}}}
+      "Dyad": {
+        "placement": {"diagram": {"x1": 70, "y1": 650, "x2": 150, "y2": 730, "rot": 90}}
+      }
     },
     "torque_left": {
-      "Dyad": {"placement": {"diagram": {"x1": 150, "y1": 620, "x2": 250, "y2": 720}}}
+      "Dyad": {"placement": {"diagram": {"x1": 240, "y1": 670, "x2": 340, "y2": 570}}}
     },
     "torque_right": {
-      "Dyad": {"placement": {"diagram": {"x1": 850, "y1": 620, "x2": 750, "y2": 720}}}
+      "Dyad": {"placement": {"diagram": {"x1": 770, "y1": 670, "x2": 670, "y2": 570}}}
     },
     "damper_left": {
-      "Dyad": {"placement": {"diagram": {"x1": 150, "y1": 760, "x2": 250, "y2": 860}}}
+      "Dyad": {
+        "placement": {"diagram": {"x1": 350, "y1": 490, "x2": 450, "y2": 590, "rot": 90}}
+      }
     },
     "damper_right": {
-      "Dyad": {"placement": {"diagram": {"x1": 850, "y1": 760, "x2": 750, "y2": 860}}}
+      "Dyad": {
+        "placement": {"diagram": {"x1": 650, "y1": 490, "x2": 550, "y2": 590, "rot": 270}}
+      }
     },
     "torque": {
       "Dyad": {
@@ -341,53 +351,39 @@ metadata {
         "tags": []
       }
     },
-    "id1": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id2": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id3": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
-    "id4": {
+    "id14": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id15": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id16": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id17": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id18": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id19": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id20": {
       "Dyad": {
         "edges": [
-          {"S": 1, "M": [], "E": -1},
-          {"S": -1, "M": [{"x": 200, "y": 670}], "E": 2},
-          {"S": 3, "M": [{"x": 800, "y": 670}], "E": -1}
+          {"S": 1, "M": [{"x": 210, "y": 620}], "E": -1},
+          {
+            "S": -1,
+            "M": [{"x": 210, "y": 880}, {"x": 800, "y": 880}, {"x": 800, "y": 620}],
+            "E": 2
+          },
+          {"S": 3, "M": [{"x": 110, "y": 880}], "E": -1}
         ],
-        "junctions": [{"x": 300, "y": 560}],
-        "renderStyle": "standard"
+        "junctions": [{"x": 210, "y": 880}]
       }
     },
-    "id5": {
+    "id21": {"Dyad": {"edges": [{"S": 1, "M": [{"x": 110, "y": 500}], "E": 2}]}},
+    "id22": {
       "Dyad": {
         "edges": [
           {"S": 1, "M": [], "E": -1},
-          {"S": -1, "M": [], "E": 2},
-          {"S": 3, "M": [], "E": -1}
+          {"S": 2, "M": [{"x": 290, "y": 460}], "E": -2},
+          {"S": -2, "M": [], "E": -1},
+          {"S": 3, "M": [], "E": -2},
+          {"S": -1, "M": [], "E": -3},
+          {"S": -3, "M": [{"x": 720, "y": 460}], "E": 4},
+          {"S": 5, "M": [], "E": -3}
         ],
-        "junctions": [{"x": 350, "y": 700}],
-        "renderStyle": "standard"
-      }
-    },
-    "id6": {
-      "Dyad": {
-        "edges": [
-          {"S": 1, "M": [], "E": -1},
-          {"S": -1, "M": [], "E": 2},
-          {"S": 3, "M": [], "E": -1}
-        ],
-        "junctions": [{"x": 650, "y": 700}],
-        "renderStyle": "standard"
-      }
-    },
-    "id7": {
-      "Dyad": {
-        "edges": [
-          {"S": 1, "M": [], "E": -1},
-          {"S": -1, "M": [], "E": 2},
-          {"S": 3, "M": [], "E": -1},
-          {"S": 4, "M": [], "E": -1},
-          {"S": 5, "M": [], "E": -1}
-        ],
-        "junctions": [{"x": 500, "y": 900}],
-        "renderStyle": "standard"
+        "junctions": [{"x": 500, "y": 460}, {"x": 400, "y": 460}, {"x": 600, "y": 460}]
       }
     }
   }
