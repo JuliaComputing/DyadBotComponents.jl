@@ -90,6 +90,9 @@ planar model (verified by `test/test_stabilization.jl`).
   # Subcomponent controller of type DyadBotComponents.AngleController
   controller_overrides = __pop_subcomponent_overrides!(__overrides, "controller")
   push!(__systems, @named controller = DyadBotComponents.AngleController(; k_angle=k_angle, Ti_angle=Ti_angle, Td_angle=Td_angle, controller_overrides...))
+  # Subcomponent gain_half of type BlockComponents.Math.Gain
+  gain_half_overrides = __pop_subcomponent_overrides!(__overrides, "gain_half")
+  push!(__systems, @named gain_half = BlockComponents.Math.Gain(; k=0.5, gain_half_overrides...))
 
   ### Check there are no unmatched overrides
   isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
@@ -102,7 +105,8 @@ planar model (verified by `test/test_stabilization.jl`).
   __assertions = []
 
   ### Equations
-  push!(__eqs, connect(controller.torque, plant.torque))
+  push!(__eqs, connect(controller.torque, gain_half.u))
+  push!(__eqs, connect(gain_half.y, plant.torque_left, plant.torque_right))
   push!(__eqs, connect(plant.theta, controller.measurement))
 
   # Return completely constructed System

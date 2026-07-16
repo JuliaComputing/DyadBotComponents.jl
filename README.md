@@ -14,9 +14,11 @@ Plant models:
 - `DyadBot3D`: three-dimensional model with two individually spinning wheels
   with slip-based ground contact, allowing the body to tilt.
 - `RollingDyadBot3D`: three-dimensional model with an ideal no-slip rolling
-  wheel axle (`MultibodyComponents.RollingWheelSet`). Same interface and
-  parameters as `PlanarDyadBot`; for motion in the vertical plane it is
-  dynamically equivalent to the planar model.
+  wheel axle (`MultibodyComponents.RollingWheelSet`) and individually driven
+  wheels, so the robot can be steered by differential torque. Outputs
+  odometric path position/velocity, tilt angle/rate and yaw (heading)
+  angle/rate. With equal torque on both wheels it is dynamically equivalent
+  to `PlanarDyadBot`.
 
 Closed-loop models around the planar plant:
 
@@ -37,6 +39,11 @@ Closed-loop models around the 3D plant:
   `AngleController` as `AngleControlledDyadBot`; with in-plane motion the
   closed-loop response is identical to the planar model
   (`test/test_stabilization.jl` verifies this).
+- `YawControlledDyadBot3D`: `RollingDyadBot3D` with the balance/position
+  cascade (`CascadeController`, position reference held at zero) and a
+  separate `YawController` tracking a heading reference that steps at t = 5;
+  a `ControlMixer` combines drive and yaw torque into the two wheel torque
+  commands, so the robot spins in place to the new heading.
 
 ## Controller tuning scripts (`scripts/`)
 

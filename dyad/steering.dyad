@@ -1,0 +1,278 @@
+"""
+Control mixer for the differentially driven balancing robot.
+
+Combines the total drive torque from the balance/position controller with the
+differential torque from the yaw controller into individual wheel torque
+commands. The total drive torque is preserved (`left + right = drive`), and
+the differential component (`left - right = yaw_torque`) produces a yaw
+moment. Since positive wheel torque drives the robot toward negative x, a
+positive differential torque on the left wheel pushes the left side backward,
+turning the robot counterclockwise seen from above (positive yaw).
+"""
+component ControlMixer
+  "Total drive torque"
+  drive = Dyad.RealInput() {^drive}
+  "Differential (yaw) torque"
+  yaw_torque = Dyad.RealInput() {^yaw_torque}
+  "Left-wheel torque command"
+  left = Dyad.RealOutput() {^left}
+  "Right-wheel torque command"
+  right = Dyad.RealOutput() {^right}
+relations
+  left = (drive + yaw_torque) / 2
+  right = (drive - yaw_torque) / 2
+metadata {
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/ControlMixer.svg"}},
+  "_links": {
+    "drive": {
+      "Dyad": {"placement": {"diagram": {"x1": -100, "y1": 350, "x2": 0, "y2": 450}}}
+    },
+    "yaw_torque": {
+      "Dyad": {"placement": {"diagram": {"x1": -100, "y1": 550, "x2": 0, "y2": 650}}}
+    },
+    "left": {
+      "Dyad": {"placement": {"diagram": {"x1": 1000, "y1": 350, "x2": 1100, "y2": 450}}}
+    },
+    "right": {
+      "Dyad": {"placement": {"diagram": {"x1": 1000, "y1": 550, "x2": 1100, "y2": 650}}}
+    }
+  }
+}
+end
+
+"""
+Continuous-time yaw control system for the differentially driven balancing
+robot: a single PID controller (`BlockComponents.Continuous.LimPID`) tracking
+a heading reference, producing the differential (yaw) torque for the control
+mixer. The yaw dynamics seen through the mixer are approximately a double
+integrator, so the controller is dominated by its proportional and derivative
+actions.
+
+The analysis points `y` (yaw measurement) and `u` (controller output) are
+exposed for loop-shaping and PID autotuning.
+"""
+component YawController
+  "Yaw (heading) reference"
+  reference = Dyad.RealInput() {^reference}
+  "Yaw (heading) measurement"
+  measurement = Dyad.RealInput() {^measurement}
+  "Differential (yaw) torque command"
+  torque = Dyad.RealOutput() {^torque}
+  yaw_controller = BlockComponents.Continuous.LimPID(final k = k_yaw, final Ti = Ti_yaw, final Td = Td_yaw, Nd = 10, y_max = tau_max) {^yaw_controller}
+  gain = BlockComponents.Math.Gain(k = 1) {^gain}
+  constant_ff = BlockComponents.Sources.Constant(k = 0) {^constant_ff}
+  "Proportional gain of the yaw controller"
+  parameter k_yaw::Real = 0.005
+  "Integrator time constant of the yaw controller"
+  parameter Ti_yaw::Time = 10.0
+  "Derivative time constant of the yaw controller"
+  parameter Td_yaw::Time = 0.5
+  "Differential torque limit"
+  parameter tau_max::Real = 0.05
+relations
+  y: analysis_point(measurement, yaw_controller.u_m)
+  u: analysis_point(yaw_controller.y, gain.u)
+  connect(reference, yaw_controller.u_s) {^id1}
+  connect(measurement, yaw_controller.u_m) {^id2}
+  connect(yaw_controller.y, gain.u) {^id3}
+  connect(gain.y, torque) {^id4}
+  connect(constant_ff.y, yaw_controller.u_ff) {^id5}
+metadata {
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/YawController.svg"}},
+  "_links": {
+    "reference": {
+      "Dyad": {"placement": {"diagram": {"x1": -100, "y1": 350, "x2": 0, "y2": 450}}}
+    },
+    "measurement": {
+      "Dyad": {"placement": {"diagram": {"x1": -100, "y1": 550, "x2": 0, "y2": 650}}}
+    },
+    "torque": {
+      "Dyad": {"placement": {"diagram": {"x1": 1000, "y1": 450, "x2": 1100, "y2": 550}}}
+    },
+    "yaw_controller": {
+      "Dyad": {"placement": {"diagram": {"x1": 300, "y1": 450, "x2": 400, "y2": 550}}}
+    },
+    "gain": {
+      "Dyad": {"placement": {"diagram": {"x1": 500, "y1": 460, "x2": 580, "y2": 540}}}
+    },
+    "constant_ff": {
+      "Dyad": {
+        "placement": {"diagram": {"x1": 320, "y1": 330, "x2": 380, "y2": 390, "rot": 90}}
+      }
+    },
+    "id1": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 100, "y": 400}, {"x": 100, "y": 477}], "E": 2}]}
+    },
+    "id2": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 350, "y": 600}], "E": 2}]}
+    },
+    "id3": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id4": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id5": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}}
+  }
+}
+end
+
+"""
+Three-dimensional balancing robot with independent balance/position and yaw
+(heading) control.
+
+The differentially driven plant `RollingDyadBot3D` is stabilized by the
+same cascade controller as `CascadeControlledDyadBot` (inner tilt-angle loop,
+outer position loop; the position reference is held at zero so the robot
+balances in place). A separate `YawController` tracks the heading reference,
+which steps at `step_time` and is smoothed by two first-order filters. The
+`ControlMixer` combines the cascade drive torque and the yaw differential
+torque into the two wheel torque commands, so the robot spins to the new
+heading while staying upright and holding its position.
+"""
+component YawControlledDyadBot3D
+  world = MultibodyComponents.World(g = 9.82, nominal_length = 0.1) {^world}
+  plant = RollingDyadBot3D(phi0 = phi0) {^plant}
+  controller = CascadeController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle, k_pos = k_pos, Ti_pos = Ti_pos, Td_pos = Td_pos) {^controller}
+  yaw_controller = YawController(k_yaw = k_yaw, Ti_yaw = Ti_yaw, Td_yaw = Td_yaw) {^yaw_controller}
+  mixer = ControlMixer() {^mixer}
+  pos_ref = BlockComponents.Sources.Constant(k = 0) {^pos_ref}
+  yaw_ref = BlockComponents.Sources.Step(height = yaw_step, start_time = step_time) {^yaw_ref}
+  firstorder = BlockComponents.Continuous.FirstOrder(T = 0.1) {^firstorder}
+  firstorder1 = BlockComponents.Continuous.FirstOrder(T = 0.1) {^firstorder1}
+  "Proportional gain of the inner angle controller"
+  parameter k_angle::Real = 0.487401
+  "Integrator time constant of the inner angle controller"
+  parameter Ti_angle::Time = 0.0587352
+  "Derivative time constant of the inner angle controller"
+  parameter Td_angle::Time = 0.0420526
+  "Proportional gain of the outer position controller"
+  parameter k_pos::Real = 0.0666576
+  "Integrator time constant of the outer position controller"
+  parameter Ti_pos::Time = 5.25024
+  "Derivative time constant of the outer position controller"
+  parameter Td_pos::Time = 4.81393
+  "Proportional gain of the yaw controller"
+  parameter k_yaw::Real = 0.005
+  "Integrator time constant of the yaw controller"
+  parameter Ti_yaw::Time = 10.0
+  "Derivative time constant of the yaw controller"
+  parameter Td_yaw::Time = 0.5
+  "Initial tilt angle of the body"
+  parameter phi0::Angle = 0.1
+  "Height of the yaw reference step"
+  parameter yaw_step::Angle = 1.5707963267948966
+  "Time of the yaw reference step"
+  parameter step_time::Time = 5
+relations
+  initial firstorder.x = 0.0
+  initial firstorder1.x = 0.0
+  connect(plant.theta, controller.angle_measurement) {^id1}
+  connect(plant.x, controller.pos_measurement) {^id2}
+  connect(pos_ref.y, controller.pos_reference) {^id3}
+  connect(controller.torque, mixer.drive) {^id4}
+  connect(yaw_ref.y, firstorder.u) {^id5}
+  connect(firstorder.y, firstorder1.u) {^id6}
+  connect(firstorder1.y, yaw_controller.reference) {^id7}
+  connect(plant.yaw, yaw_controller.measurement) {^id8}
+  connect(yaw_controller.torque, mixer.yaw_torque) {^id9}
+  connect(mixer.left, plant.torque_left) {^id10}
+  connect(mixer.right, plant.torque_right) {^id11}
+metadata {
+  "Dyad": {
+    "tests": {"case1": {"stop": 15}},
+    "icons": {"default": "dyad://DyadBotComponents/DyadBot3D.svg"}
+  },
+  "_links": {
+    "world": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 110, "y1": 150, "x2": 10, "y2": 50, "rot": 180}
+        },
+        "tags": []
+      }
+    },
+    "plant": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 700, "y1": 400, "x2": 900, "y2": 600, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "controller": {
+      "Dyad": {"placement": {"diagram": {"x1": 260, "y1": 300, "x2": 410, "y2": 450}}}
+    },
+    "yaw_controller": {
+      "Dyad": {"placement": {"diagram": {"x1": 260, "y1": 550, "x2": 410, "y2": 700}}}
+    },
+    "mixer": {
+      "Dyad": {"placement": {"diagram": {"x1": 490, "y1": 425, "x2": 640, "y2": 575}}}
+    },
+    "pos_ref": {
+      "Dyad": {"placement": {"diagram": {"x1": 20, "y1": 300, "x2": 120, "y2": 400}}}
+    },
+    "yaw_ref": {
+      "Dyad": {"placement": {"diagram": {"x1": -160, "y1": 570, "x2": -60, "y2": 670}}}
+    },
+    "firstorder": {
+      "Dyad": {"placement": {"diagram": {"x1": -40, "y1": 570, "x2": 60, "y2": 670}}}
+    },
+    "firstorder1": {
+      "Dyad": {"placement": {"diagram": {"x1": 80, "y1": 570, "x2": 180, "y2": 670}}}
+    },
+    "id1": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 920, "y": 460},
+              {"x": 920, "y": 780},
+              {"x": 300, "y": 780},
+              {"x": 300, "y": 460}
+            ],
+            "E": 2
+          }
+        ]
+      }
+    },
+    "id2": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 940, "y": 430},
+              {"x": 940, "y": 800},
+              {"x": 280, "y": 800},
+              {"x": 280, "y": 460}
+            ],
+            "E": 2
+          }
+        ]
+      }
+    },
+    "id3": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id4": {"Dyad": {"edges": [{"S": 1, "M": [{"x": 460, "y": 375}, {"x": 460, "y": 460}], "E": 2}]}},
+    "id5": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id6": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id7": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id8": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 960, "y": 700},
+              {"x": 960, "y": 820},
+              {"x": 220, "y": 820},
+              {"x": 220, "y": 640}
+            ],
+            "E": 2
+          }
+        ]
+      }
+    },
+    "id9": {"Dyad": {"edges": [{"S": 1, "M": [{"x": 460, "y": 625}, {"x": 460, "y": 540}], "E": 2}]}},
+    "id10": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id11": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}}
+  }
+}
+end

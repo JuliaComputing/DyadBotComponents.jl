@@ -10,24 +10,27 @@ import Moshi as __Ext__Moshi
    RollingDyadBot3D(; name, M, m, R, L, Ib, Iw, d, phi0, track)
 
 Three-dimensional model of a two-wheeled balancing robot with ideal rolling
-contact.
+contact and individually driven wheels.
 
 The two wheels form an ideal no-slip rolling axle
 (`MultibodyComponents.RollingWheelSet`, which resolves the kinematic loop
 through the two wheels internally), and the inverted-pendulum body is mounted
-at the center of the axle through a revolute joint about the axle axis. The
-motor torque acts between the body and the two wheels: half the commanded
-torque drives each wheel and the reaction acts on the body. Viscous motor
-friction acts between the body and each wheel in the same split.
+at the center of the axle through a revolute joint about the axle axis. Each
+wheel has its own motor torque input, so the robot can be steered by applying
+a differential torque; each motor torque acts between the body and its wheel.
 
-For motion in the vertical plane the model is dynamically equivalent to
-`PlanarDyadBot`: the two wheels share the planar model's wheel mass `m`, spin
-inertia `Iw` and motor friction `d`, and the body parameters are identical.
+With the same torque applied to both wheels the robot moves in the vertical
+plane and is dynamically equivalent to `PlanarDyadBot`: the two wheels share
+the planar model's wheel mass `m`, spin inertia `Iw` and motor friction `d`,
+and the body parameters are identical.
 
-Inputs and outputs (same interface as `PlanarDyadBot`):
-- `torque`: torque applied by the motor between body and wheels
-- `x`, `x_dot`: position and velocity of the wheel axis along the ground
+Inputs and outputs:
+- `torque_left`, `torque_right`: motor torques applied between body and each wheel
+- `x`, `x_dot`: odometric path position and velocity (average wheel arc
+  length; equals the distance driven along the — possibly curved — path, and
+  coincides with the world-frame x coordinate when driving straight)
 - `theta`, `theta_dot`: tilt angle and tilt rate of the body (zero when upright)
+- `yaw`, `yaw_dot`: heading angle and rate (positive counterclockwise seen from above)
 
 The model must be accompanied by a `MultibodyComponents.World` component in
 the top level of the enclosing model.
@@ -48,11 +51,14 @@ the top level of the enclosing model.
 
 ## Connectors
 
- * `torque` - This connector represents a real signal as an input to a component ([`RealInput`](@ref))
+ * `torque_left` - This connector represents a real signal as an input to a component ([`RealInput`](@ref))
+ * `torque_right` - This connector represents a real signal as an input to a component ([`RealInput`](@ref))
  * `x` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
  * `theta` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
  * `x_dot` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
  * `theta_dot` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
+ * `yaw` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
+ * `yaw_dot` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
 """
 @component function RollingDyadBot3D(; name = nothing, M=0.1, m=0.05, R=0.04, L=0.08, Ib=0.00025, Iw=0.0001, d=0.0001, phi0=Float64(0.0), track=0.13, kwargs...)
   isnothing(name) && throw(ArgumentError("""
@@ -116,11 +122,14 @@ the top level of the enclosing model.
   ### Final Parameters (assignments)
 
   ### Final Path Parameters
-  append!(__vars, @variables (torque(t)::Real), [input = true])
+  append!(__vars, @variables (torque_left(t)::Real), [input = true])
+  append!(__vars, @variables (torque_right(t)::Real), [input = true])
   append!(__vars, @variables (x(t)::Real), [output = true])
   append!(__vars, @variables (theta(t)::Real), [output = true])
   append!(__vars, @variables (x_dot(t)::Real), [output = true])
   append!(__vars, @variables (theta_dot(t)::Real), [output = true])
+  append!(__vars, @variables (yaw(t)::Real), [output = true])
+  append!(__vars, @variables (yaw_dot(t)::Real), [output = true])
 
   ### Variables (declarations)
 
@@ -139,21 +148,18 @@ the top level of the enclosing model.
   # Subcomponent body of type MultibodyComponents.BodyShape
   body_overrides = __pop_subcomponent_overrides!(__overrides, "body")
   push!(__systems, @named body = MultibodyComponents.BodyShape(; color=[0.2, 0.2, 0.2, 0.9], m=M, r=[Float64(0), 2 * L, Float64(0)], r_cm=[Float64(0), L, Float64(0)], I_11=Ib, I_22=Ib / 10, I_33=Ib, radius=0.03, body_overrides...))
-  # Subcomponent gain_half of type BlockComponents.Math.Gain
-  gain_half_overrides = __pop_subcomponent_overrides!(__overrides, "gain_half")
-  push!(__systems, @named gain_half = BlockComponents.Math.Gain(; k=0.5, gain_half_overrides...))
-  # Subcomponent torque_left of type RotationalComponents.Sources.TorqueSource
-  torque_left_overrides = __pop_subcomponent_overrides!(__overrides, "torque_left")
-  push!(__systems, @named torque_left = RotationalComponents.Sources.TorqueSource(; torque_left_overrides...))
-  # Subcomponent torque_right of type RotationalComponents.Sources.TorqueSource
-  torque_right_overrides = __pop_subcomponent_overrides!(__overrides, "torque_right")
-  push!(__systems, @named torque_right = RotationalComponents.Sources.TorqueSource(; torque_right_overrides...))
-  # Subcomponent damper_left of type RotationalComponents.Components.Damper
-  damper_left_overrides = __pop_subcomponent_overrides!(__overrides, "damper_left")
-  push!(__systems, @named damper_left = RotationalComponents.Components.Damper(; d=d / 2, damper_left_overrides...))
-  # Subcomponent damper_right of type RotationalComponents.Components.Damper
-  damper_right_overrides = __pop_subcomponent_overrides!(__overrides, "damper_right")
-  push!(__systems, @named damper_right = RotationalComponents.Components.Damper(; d=d / 2, damper_right_overrides...))
+  # Subcomponent torquesource1 of type RotationalComponents.Sources.TorqueSource
+  torquesource1_overrides = __pop_subcomponent_overrides!(__overrides, "torquesource1")
+  push!(__systems, @named torquesource1 = RotationalComponents.Sources.TorqueSource(; torquesource1_overrides...))
+  # Subcomponent torquesource2 of type RotationalComponents.Sources.TorqueSource
+  torquesource2_overrides = __pop_subcomponent_overrides!(__overrides, "torquesource2")
+  push!(__systems, @named torquesource2 = RotationalComponents.Sources.TorqueSource(; torquesource2_overrides...))
+  # Subcomponent damper1 of type RotationalComponents.Components.Damper
+  damper1_overrides = __pop_subcomponent_overrides!(__overrides, "damper1")
+  push!(__systems, @named damper1 = RotationalComponents.Components.Damper(; d=d / 2, damper1_overrides...))
+  # Subcomponent damper2 of type RotationalComponents.Components.Damper
+  damper2_overrides = __pop_subcomponent_overrides!(__overrides, "damper2")
+  push!(__systems, @named damper2 = RotationalComponents.Components.Damper(; d=d / 2, damper2_overrides...))
 
   ### Check there are no unmatched overrides
   isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
@@ -168,19 +174,21 @@ the top level of the enclosing model.
   __assertions = []
 
   ### Equations
-  push!(__eqs, x ~ wheels.x)
+  push!(__eqs, x ~ -R * (wheels.theta1 + wheels.theta2) / 2)
+  push!(__eqs, x_dot ~ -R * (wheels.der_theta1 + wheels.der_theta2) / 2)
   push!(__eqs, theta ~ pitch.phi)
-  push!(__eqs, x_dot ~ ModelingToolkit.D_nounits(wheels.x))
   push!(__eqs, theta_dot ~ pitch.w)
+  push!(__eqs, yaw ~ wheels.phi)
+  push!(__eqs, yaw_dot ~ ModelingToolkit.D_nounits(wheels.phi))
   push!(__eqs, connect(body.frame_a, pitch.frame_b))
   push!(__eqs, connect(pitch.frame_a, wheels.frame_middle))
-  push!(__eqs, connect(torque_left.spline, wheels.axis1))
-  push!(__eqs, connect(torque_right.spline, wheels.axis2))
-  push!(__eqs, connect(damper_right.spline_b, wheels.axis2))
-  push!(__eqs, connect(damper_left.spline_b, wheels.axis1))
-  push!(__eqs, connect(gain_half.y, torque_left.tau, torque_right.tau))
-  push!(__eqs, connect(torque, gain_half.u))
-  push!(__eqs, connect(pitch.axis, torque_left.support, damper_left.spline_a, torque_right.support, damper_right.spline_a))
+  push!(__eqs, connect(torquesource1.spline, wheels.axis1))
+  push!(__eqs, connect(torquesource2.spline, wheels.axis2))
+  push!(__eqs, connect(damper2.spline_b, wheels.axis2))
+  push!(__eqs, connect(damper1.spline_b, wheels.axis1))
+  push!(__eqs, connect(torque_right, torquesource1.tau))
+  push!(__eqs, connect(torque_left, torquesource2.tau))
+  push!(__eqs, connect(pitch.axis, torquesource1.support, damper1.spline_a, torquesource2.support, damper2.spline_a))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)

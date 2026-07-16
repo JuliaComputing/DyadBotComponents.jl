@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <rect x="4" y="4" width="992" height="992" fill="#fff" stroke="#A1A1AA" stroke-width="8"/>
+  <!-- input lines -->
+  <path d="M60 320 H400" fill="none" stroke="#007fff" stroke-width="14" stroke-linecap="round"/>
+  <path d="M60 620 H400" fill="none" stroke="#007fff" stroke-width="14" stroke-linecap="round"/>
+  <!-- straight and crossed paths into the summing junctions -->
+  <path d="M400 320 H630" fill="none" stroke="#007fff" stroke-width="14" stroke-linecap="round"/>
+  <path d="M400 620 H630" fill="none" stroke="#007fff" stroke-width="14" stroke-linecap="round"/>
+  <path d="M400 320 L648 572" fill="none" stroke="#007fff" stroke-width="14" stroke-linecap="round"/>
+  <path d="M400 620 L648 368" fill="none" stroke="#007fff" stroke-width="14" stroke-linecap="round"/>
+  <!-- summing junctions -->
+  <circle cx="700" cy="320" r="70" fill="#fff" stroke="#131316" stroke-width="10"/>
+  <path d="M670 320 H730 M700 290 V350" fill="none" stroke="#131316" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="700" cy="620" r="70" fill="#fff" stroke="#131316" stroke-width="10"/>
+  <path d="M670 620 H730" fill="none" stroke="#131316" stroke-width="10" stroke-linecap="round"/>
+  <!-- output lines -->
+  <path d="M770 320 H940" fill="none" stroke="#007fff" stroke-width="14" stroke-linecap="round"/>
+  <path d="M770 620 H940" fill="none" stroke="#007fff" stroke-width="14" stroke-linecap="round"/>
+  <!-- label -->
+  <text x="500" y="905" font-family="Arial, Helvetica, sans-serif" font-size="150" font-weight="bold" fill="#131316" text-anchor="middle">mixer</text>
+</svg>

@@ -95,4 +95,21 @@ const POS_TRACK_TOL = 0.02
             @test dev < 1e-6
         end
     end
+
+    # Steerable 3D robot: the cascade holds the robot upright at position zero
+    # while the yaw controller turns it to the heading reference that steps at
+    # t = 5. The robot must stay balanced through the maneuver, hold its
+    # position, and settle on the new heading.
+    @testset "YawControlledDyadBot3D" begin
+        stop = 15.0
+        m, sol = simulate_model(DyadBotComponents.YawControlledDyadBot3D; stop)
+        yaw_step = pi / 2   # default value of the model's yaw_step parameter
+        @test succeeded(sol)
+        @test maxabs(sol, m.plant.theta) < THETA_BOUND
+        @test maxabs_window(sol, m.plant.theta, stop - 1, stop) < THETA_SETTLE
+        @test maxabs_window(sol, m.plant.yaw, 4.0, 5.0) < 0.01          # heading held before the step
+        @test maxabs_window(sol, m.plant.x, stop - 1, stop) < POS_TRACK_TOL  # holds position while spinning
+        ts = range(stop - 1, stop; length = 50)
+        @test maximum(abs, sol(ts; idxs = m.plant.yaw).u .- yaw_step) < 0.02   # settles on the new heading
+    end
 end

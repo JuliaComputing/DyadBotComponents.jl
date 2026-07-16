@@ -242,6 +242,8 @@ component AngleControlledDyadBot3D
   world = MultibodyComponents.World(g = 9.82, nominal_length = 0.1) {^world}
   plant = RollingDyadBot3D(phi0 = phi0) {^plant}
   controller = AngleController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle) {^controller}
+  "Splits the motor torque equally between the two wheels"
+  gain_half = BlockComponents.Math.Gain(k = 0.5) {^gain_half}
   "Proportional gain of the angle controller"
   parameter k_angle::Real = 0.487401
   "Integrator time constant of the angle controller"
@@ -251,7 +253,8 @@ component AngleControlledDyadBot3D
   "Initial tilt angle of the body"
   parameter phi0::Angle = 0.1
 relations
-  connect(controller.torque, plant.torque) {^id4}
+  connect(controller.torque, gain_half.u) {^id4}
+  connect(gain_half.y, plant.torque_left, plant.torque_right) {^id6}
   connect(plant.theta, controller.measurement) {^id5}
 metadata {
   "Dyad": {
@@ -278,9 +281,18 @@ metadata {
     "controller": {
       "Dyad": {"placement": {"diagram": {"x1": 270, "y1": 420, "x2": 420, "y2": 570}}}
     },
-    "id4": {
+    "gain_half": {
+      "Dyad": {"placement": {"diagram": {"x1": 450, "y1": 455, "x2": 530, "y2": 535}}}
+    },
+    "id4": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id6": {
       "Dyad": {
-        "edges": [{"S": 1, "M": [{"x": 503.75, "y": 495}, {"x": 503.75, "y": 500}], "E": 2}]
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [{"x": 545, "y": 460}], "E": 2},
+          {"S": 3, "M": [{"x": 545, "y": 530}], "E": -1}
+        ],
+        "junctions": [{"x": 545, "y": 495}]
       }
     },
     "id5": {
@@ -745,7 +757,7 @@ metadata {
       "Dyad": {"placement": {"diagram": {"x1": 60, "y1": 450, "x2": 160, "y2": 550}}}
     },
     "controller": {
-      "Dyad": {"placement": {"diagram": {"x1": 240, "y1": 410, "x2": 480, "y2": 600}}}
+      "Dyad": {"placement": {"diagram": {"x1": 265, "y1": 410, "x2": 455, "y2": 600}}}
     },
     "id7": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
     "id8": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
@@ -856,7 +868,7 @@ metadata {
       "Dyad": {"placement": {"diagram": {"x1": 120, "y1": 430, "x2": 220, "y2": 530}}}
     },
     "controller": {
-      "Dyad": {"placement": {"diagram": {"x1": 280, "y1": 390, "x2": 510, "y2": 570}}}
+      "Dyad": {"placement": {"diagram": {"x1": 305, "y1": 390, "x2": 485, "y2": 570}}}
     },
     "id7": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
     "id8": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
