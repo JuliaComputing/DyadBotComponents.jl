@@ -192,6 +192,212 @@ end
 
 """
 Three-dimensional model of a two-wheeled balancing robot with ideal rolling
+contact and individually driven wheels.
+
+Same mechanics as `RollingDyadBot3D` (ideal no-slip rolling axle with an
+inverted-pendulum body on a revolute joint about the axle axis), but each
+wheel has its own motor torque input, so the robot can be steered by applying
+a differential torque. Each motor torque acts between the body and its wheel.
+
+Inputs and outputs:
+- `torque_left`, `torque_right`: motor torques applied between body and each wheel
+- `pos`, `vel`: odometric path position and velocity (average wheel arc
+  length; equals the distance driven along the — possibly curved — path)
+- `theta`, `theta_dot`: tilt angle and tilt rate of the body (zero when upright)
+- `yaw`, `yaw_dot`: heading angle and rate (positive counterclockwise seen from above)
+
+The model must be accompanied by a `MultibodyComponents.World` component in
+the top level of the enclosing model.
+"""
+component SteerableDyadBot3D
+  wheels = MultibodyComponents.RollingWheelSet(radius = R, m_wheel = m / 2, I_axis = Iw / 2, I_long = Iw / 4, track = track) {^wheels}
+  "Body tilt joint about the axle axis"
+  pitch = MultibodyComponents.Revolute(n = [0, 0, 1]) {^pitch}
+  body = MultibodyComponents.BodyShape(color = [0.2, 0.2, 0.2, 0.9], m = M, r = [0, 2 * L, 0], r_cm = [0, L, 0], I_11 = Ib, I_22 = Ib / 10, I_33 = Ib, radius = 0.03) {^body}
+  # wheels.axis1 is the wheel on the +z side of the axle, which is the right
+  # wheel when facing the forward x direction with y up
+  torquesource_right = RotationalComponents.Sources.TorqueSource() {^torquesource_right}
+  torquesource_left = RotationalComponents.Sources.TorqueSource() {^torquesource_left}
+  damper_right = RotationalComponents.Components.Damper(d = d / 2) {^damper_right}
+  damper_left = RotationalComponents.Components.Damper(d = d / 2) {^damper_left}
+  "Left-wheel motor torque command"
+  torque_left = Dyad.RealInput() {^torque_left}
+  "Right-wheel motor torque command"
+  torque_right = Dyad.RealInput() {^torque_right}
+  "Odometric path position (average wheel arc length)"
+  pos = Dyad.RealOutput() {^pos}
+  "Body tilt angle"
+  theta = Dyad.RealOutput() {^theta}
+  "Odometric path velocity"
+  vel = Dyad.RealOutput() {^vel}
+  "Body tilt rate"
+  theta_dot = Dyad.RealOutput() {^theta_dot}
+  "Yaw (heading) angle"
+  yaw = Dyad.RealOutput() {^yaw}
+  "Yaw rate"
+  yaw_dot = Dyad.RealOutput() {^yaw_dot}
+  "Body mass"
+  parameter M::Mass = 0.1
+  "Total wheel mass (split between the two wheels)"
+  parameter m::Mass = 0.05
+  "Wheel radius"
+  parameter R::Length = 0.04
+  "Distance from wheel axis to body center of mass"
+  parameter L::Length = 0.08
+  "Body moment of inertia about the axle axis"
+  parameter Ib::Inertia = 2.5e-4
+  "Total wheel + motor moment of inertia about the spin axis (split between the two wheels)"
+  parameter Iw::Inertia = 1e-4
+  "Motor viscous friction (split between the two wheels)"
+  parameter d::RotationalDampingConstant = 0.0001
+  "Initial tilt angle of the body"
+  parameter phi0::Angle = 0.0
+  "Distance between the wheels"
+  parameter track::Length = 0.13
+relations
+  initial pitch.phi = phi0
+  initial pitch.w = 0
+  # Wheel spin theta and forward position have opposite signs (positive wheel
+  # torque drives the robot toward negative x, like in PlanarDyadBot)
+  pos = -R * (wheels.theta1 + wheels.theta2) / 2
+  vel = der(pos)
+  theta = pitch.phi
+  theta_dot = pitch.w
+  yaw = wheels.phi
+  yaw_dot = der(wheels.phi)
+  connect(body.frame_a, pitch.frame_b) {^id14}
+  connect(pitch.frame_a, wheels.frame_middle) {^id15}
+  connect(torquesource_right.spline, wheels.axis1) {^id16}
+  connect(torquesource_left.spline, wheels.axis2) {^id17}
+  connect(damper_left.spline_b, wheels.axis2) {^id18}
+  connect(damper_right.spline_b, wheels.axis1) {^id19}
+  connect(torque_right, torquesource_right.tau) {^id20}
+  connect(torque_left, torquesource_left.tau) {^id21}
+  connect(pitch.axis, torquesource_right.support, damper_right.spline_a, torquesource_left.support, damper_left.spline_a) {^id22}
+metadata {
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/DyadBot3D.svg"}},
+  "_links": {
+    "wheels": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 400, "y1": 620, "x2": 600, "y2": 820, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "pitch": {
+      "Dyad": {
+        "placement": {"diagram": {"x1": 450, "y1": 320, "x2": 550, "y2": 420, "rot": 270}}
+      }
+    },
+    "body": {
+      "Dyad": {
+        "placement": {"diagram": {"x1": 350, "y1": -10, "x2": 650, "y2": 290, "rot": 270}}
+      }
+    },
+    "torquesource_right": {
+      "Dyad": {"placement": {"diagram": {"x1": 150, "y1": 620, "x2": 250, "y2": 720}}}
+    },
+    "torquesource_left": {
+      "Dyad": {"placement": {"diagram": {"x1": 850, "y1": 620, "x2": 750, "y2": 720}}}
+    },
+    "damper_right": {
+      "Dyad": {"placement": {"diagram": {"x1": 150, "y1": 760, "x2": 250, "y2": 860}}}
+    },
+    "damper_left": {
+      "Dyad": {"placement": {"diagram": {"x1": 850, "y1": 760, "x2": 750, "y2": 860}}}
+    },
+    "torque_left": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 20, "y1": 560, "x2": 100, "y2": 640, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "torque_right": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 20, "y1": 440, "x2": 100, "y2": 520, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "pos": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 180, "x2": 960, "y2": 260, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "theta": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 300, "x2": 960, "y2": 380, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "vel": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 420, "x2": 960, "y2": 500, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "theta_dot": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 540, "x2": 960, "y2": 620, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "yaw": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 660, "x2": 960, "y2": 740, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "yaw_dot": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 780, "x2": 960, "y2": 860, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "id14": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id15": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id16": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id17": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id18": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id19": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id20": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id21": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id22": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [], "E": 2},
+          {"S": 3, "M": [], "E": -1},
+          {"S": 4, "M": [], "E": -1},
+          {"S": 5, "M": [], "E": -1}
+        ],
+        "junctions": [{"x": 500, "y": 900}],
+        "renderStyle": "standard"
+      }
+    }
+  }
+}
+end
+
+"""
+Three-dimensional model of a two-wheeled balancing robot with ideal rolling
 contact.
 
 The two wheels form an ideal no-slip rolling axle
