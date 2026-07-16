@@ -39,13 +39,38 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
 
-      - name: "Set up private JuliaHub registries"
-        uses: "JuliaComputing/set-up-private-juliahub-registries@2f465506027adbe8086afc41dd3514e9020d1577" # v2.0.0
+      # The JuliaComputing/set-up-private-juliahub-registries action lives in a
+      # private repository and cannot be resolved from this public repository,
+      # so the equivalent registry setup is spelled out here with the public
+      # actions it wraps.
+      - name: "Set up SSH agent for private Git dependencies"
+        uses: "webfactory/ssh-agent@e83874834305fe9a4a2997156cb26c5de65a8555" # v0.10.0
         with:
-          encoded-juliahub-token: "${{ secrets.JULIAHUB_TOKEN_ENCODED }}"
-          ssh-key: "${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}"
-          enable-JSMLComponents: "true"
-          enable-JuliaHubRegistry: "true"
+          ssh-private-key: "${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}"
+
+      - name: "Enable the JuliaHubRegistry registry"
+        uses: "PumasAI/add-private-registry@3ee6e5689774ff51631dd6b1fd35bae37b363ae3" # v1.0.1
+        with:
+          juliahub_token_encoded: "${{ secrets.JULIAHUB_TOKEN_ENCODED }}"
+          install_general_registry: "true"
+          private_registry_name: "JuliaHubRegistry"
+          private_registry_uuid: "de52bcdf-fcb2-40cf-a397-3d64b64f4d9c"
+
+      - name: "Enable the JuliaSimRegistry registry"
+        uses: "PumasAI/add-private-registry@3ee6e5689774ff51631dd6b1fd35bae37b363ae3" # v1.0.1
+        with:
+          juliahub_token_encoded: "${{ secrets.JULIAHUB_TOKEN_ENCODED }}"
+          install_general_registry: "false"
+          private_registry_name: "JuliaSimRegistry"
+          private_registry_uuid: "309a7822-a73e-4490-9504-7d1983f27685"
+
+      - name: "Enable the DyadRegistry registry"
+        uses: "PumasAI/add-private-registry@3ee6e5689774ff51631dd6b1fd35bae37b363ae3" # v1.0.1
+        with:
+          juliahub_token_encoded: "${{ secrets.JULIAHUB_TOKEN_ENCODED }}"
+          install_general_registry: "false"
+          private_registry_name: "DyadRegistry"
+          private_registry_uuid: "07e6f81e-a02a-4ea6-9289-c3820c24b8ed"
 
       # TEMPORARY: the 3D models require the BodyShape center-of-mass fix
       # (JuliaComputing/MultibodyComponents.jl#150), which is not yet in any
