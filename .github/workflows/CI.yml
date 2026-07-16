@@ -21,6 +21,11 @@ jobs:
 
     runs-on: self-hosted-4vcpu-8gb-public
 
+    env:
+      # The secrets context is not available in step-level `if` conditions,
+      # so the presence check is hoisted into a job-level env flag.
+      HAS_REGISTRY_SSH_KEY: ${{ secrets.JULIASIM_REGISTRY_SSH_KEY != '' }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -48,7 +53,7 @@ jobs:
       # ever added).
       - name: "Set up SSH agent for private Git dependencies"
         uses: "webfactory/ssh-agent@e83874834305fe9a4a2997156cb26c5de65a8555" # v0.10.0
-        if: ${{ secrets.JULIASIM_REGISTRY_SSH_KEY != '' }}
+        if: ${{ env.HAS_REGISTRY_SSH_KEY == 'true' }}
         with:
           ssh-private-key: "${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}"
 
