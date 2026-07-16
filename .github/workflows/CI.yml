@@ -43,8 +43,12 @@ jobs:
       # private repository and cannot be resolved from this public repository,
       # so the equivalent registry setup is spelled out here with the public
       # actions it wraps.
+      # All dependencies are registered, so an SSH identity is only set up when
+      # the secret is available (needed only if git-tracked dependencies are
+      # ever added).
       - name: "Set up SSH agent for private Git dependencies"
         uses: "webfactory/ssh-agent@e83874834305fe9a4a2997156cb26c5de65a8555" # v0.10.0
+        if: ${{ secrets.JULIASIM_REGISTRY_SSH_KEY != '' }}
         with:
           ssh-private-key: "${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}"
 
@@ -71,16 +75,6 @@ jobs:
           install_general_registry: "false"
           private_registry_name: "DyadRegistry"
           private_registry_uuid: "07e6f81e-a02a-4ea6-9289-c3820c24b8ed"
-
-      # TEMPORARY: the 3D models require the BodyShape center-of-mass fix
-      # (JuliaComputing/MultibodyComponents.jl#150), which is not yet in any
-      # registered MultibodyComponents release. Remove this step and bump the
-      # MultibodyComponents compat bound once a release containing the fix is
-      # registered.
-      - name: Use MultibodyComponents from main (pending release with BodyShape fix)
-        run: julia --project=. -e 'using Pkg; Pkg.add(url="git@github.com:JuliaComputing/MultibodyComponents.jl.git", rev="main")'
-        env:
-          JULIA_PKG_USE_CLI_GIT: "true"
 
       - uses: julia-actions/julia-buildpkg@e3eb439fad4f9aba7da2667e7510e4a46ebc46e1 # v1
 
