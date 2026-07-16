@@ -128,6 +128,7 @@ exposed for loop-shaping and PID autotuning.
   ### Equations
   push!(__eqs, connect(measurement, :y, yaw_controller.u_m))
   push!(__eqs, connect(yaw_controller.y, :u, gain.u))
+  push!(__eqs, connect(reference, :r, yaw_controller.u_s))
   push!(__eqs, connect(reference, yaw_controller.u_s))
   push!(__eqs, connect(measurement, yaw_controller.u_m))
   push!(__eqs, connect(yaw_controller.y, gain.u))

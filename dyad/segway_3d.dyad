@@ -206,13 +206,18 @@ plane and is dynamically equivalent to `PlanarDyadBot`: the two wheels share
 the planar model's wheel mass `m`, spin inertia `Iw` and motor friction `d`,
 and the body parameters are identical.
 
+All outputs are produced by ideal sensor components: encoders and speed
+sensors on the wheel joints, combined into odometric quantities, and
+angle/rate sensors on the body tilt joint.
+
 Inputs and outputs:
 - `torque_left`, `torque_right`: motor torques applied between body and each wheel
 - `x`, `x_dot`: odometric path position and velocity (average wheel arc
   length; equals the distance driven along the — possibly curved — path, and
   coincides with the world-frame x coordinate when driving straight)
 - `theta`, `theta_dot`: tilt angle and tilt rate of the body (zero when upright)
-- `yaw`, `yaw_dot`: heading angle and rate (positive counterclockwise seen from above)
+- `yaw`, `yaw_dot`: heading angle and rate from the wheel encoder difference
+  (exact under ideal rolling; positive counterclockwise seen from above)
 
 The model must be accompanied by a `MultibodyComponents.World` component in
 the top level of the enclosing model.
@@ -228,6 +233,28 @@ component RollingDyadBot3D
   torquesource2 = RotationalComponents.Sources.TorqueSource() {^torquesource2}
   damper1 = RotationalComponents.Components.Damper(d = d / 2) {^damper1}
   damper2 = RotationalComponents.Components.Damper(d = d / 2) {^damper2}
+  "Right-wheel encoder"
+  encoder1 = RotationalComponents.Sensors.AngleSensor() {^encoder1}
+  "Left-wheel encoder"
+  encoder2 = RotationalComponents.Sensors.AngleSensor() {^encoder2}
+  "Right-wheel speed sensor"
+  speedsensor1 = RotationalComponents.Sensors.VelocitySensor() {^speedsensor1}
+  "Left-wheel speed sensor"
+  speedsensor2 = RotationalComponents.Sensors.VelocitySensor() {^speedsensor2}
+  "Body tilt-angle sensor on the pitch joint"
+  tilt_sensor = RotationalComponents.Sensors.AngleSensor() {^tilt_sensor}
+  "Body tilt-rate sensor on the pitch joint"
+  tilt_rate_sensor = RotationalComponents.Sensors.VelocitySensor() {^tilt_rate_sensor}
+  # Wheel spin and forward position have opposite signs (positive wheel torque
+  # drives the robot toward negative x, like in PlanarDyadBot)
+  "Odometric path position from the average of the wheel encoders"
+  odometry_pos = BlockComponents.Math.Add(k1 = -R / 2, k2 = -R / 2) {^odometry_pos}
+  "Odometric path velocity from the average of the wheel speed sensors"
+  odometry_vel = BlockComponents.Math.Add(k1 = -R / 2, k2 = -R / 2) {^odometry_vel}
+  "Heading angle from the wheel encoder difference (exact under ideal rolling)"
+  odometry_yaw = BlockComponents.Math.Add(k1 = -R / track, k2 = R / track) {^odometry_yaw}
+  "Heading rate from the wheel speed-sensor difference"
+  odometry_yaw_rate = BlockComponents.Math.Add(k1 = -R / track, k2 = R / track) {^odometry_yaw_rate}
   "Left-wheel motor torque command"
   torque_left = Dyad.RealInput() {^torque_left}
   "Right-wheel motor torque command"
@@ -240,9 +267,9 @@ component RollingDyadBot3D
   x_dot = Dyad.RealOutput() {^x_dot}
   "Body tilt rate"
   theta_dot = Dyad.RealOutput() {^theta_dot}
-  "Yaw (heading) angle"
+  "Yaw (heading) angle, from the wheel encoder difference"
   yaw = Dyad.RealOutput() {^yaw}
-  "Yaw rate"
+  "Yaw rate, from the wheel speed-sensor difference"
   yaw_dot = Dyad.RealOutput() {^yaw_dot}
   "Body mass"
   parameter M::Mass = 0.1
@@ -265,23 +292,24 @@ component RollingDyadBot3D
 relations
   initial pitch.phi = phi0
   initial pitch.w = 0
-  # Wheel spin and forward position have opposite signs (positive wheel torque
-  # drives the robot toward negative x, like in PlanarDyadBot)
-  x = -R * (wheels.theta1 + wheels.theta2) / 2
-  x_dot = -R * (wheels.der_theta1 + wheels.der_theta2) / 2
-  theta = pitch.phi
-  theta_dot = pitch.w
-  yaw = wheels.phi
-  yaw_dot = der(wheels.phi)
-  connect(body.frame_a, pitch.frame_b) {^id14}
-  connect(pitch.frame_a, wheels.frame_middle) {^id15}
-  connect(torquesource1.spline, wheels.axis1) {^id16}
-  connect(torquesource2.spline, wheels.axis2) {^id17}
-  connect(damper2.spline_b, wheels.axis2) {^id18}
-  connect(damper1.spline_b, wheels.axis1) {^id19}
-  connect(torque_right, torquesource1.tau) {^id20}
-  connect(torque_left, torquesource2.tau) {^id21}
-  connect(pitch.axis, torquesource1.support, damper1.spline_a, torquesource2.support, damper2.spline_a) {^id22}
+  connect(body.frame_a, pitch.frame_b) {^id26}
+  connect(pitch.frame_a, wheels.frame_middle) {^id27}
+  connect(torquesource1.spline, wheels.axis1, encoder1.spline, speedsensor1.spline) {^id28}
+  connect(torquesource2.spline, wheels.axis2, encoder2.spline, speedsensor2.spline) {^id29}
+  connect(damper2.spline_b, wheels.axis2) {^id30}
+  connect(damper1.spline_b, wheels.axis1) {^id31}
+  connect(torque_right, torquesource1.tau) {^id32}
+  connect(torque_left, torquesource2.tau) {^id33}
+  connect(torquesource1.support, damper1.spline_a, torquesource2.support, damper2.spline_a, tilt_rate_sensor.spline, pitch.axis, tilt_sensor.spline) {^id34}
+  connect(encoder1.phi, odometry_yaw.u1, odometry_pos.u1) {^id35}
+  connect(encoder2.phi, odometry_pos.u2, odometry_yaw.u2) {^id36}
+  connect(speedsensor1.w, odometry_vel.u1, odometry_yaw_rate.u1) {^id37}
+  connect(speedsensor2.w, odometry_vel.u2, odometry_yaw_rate.u2) {^id38}
+  connect(tilt_sensor.phi, theta) {^id39}
+  connect(tilt_rate_sensor.w, theta_dot) {^id40}
+  connect(odometry_vel.y, x_dot) {^id41}
+  connect(odometry_pos.y, x) {^id42}
+  connect(odometry_yaw_rate.y, yaw_dot) {^id43}
 metadata {
   "Dyad": {"icons": {"default": "dyad://DyadBotComponents/DyadBot3D.svg"}},
   "_links": {
@@ -319,18 +347,64 @@ metadata {
         "placement": {"diagram": {"x1": 650, "y1": 490, "x2": 550, "y2": 590, "rot": 270}}
       }
     },
-    "torque_right": {
+    "encoder1": {
       "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 40, "y1": 580, "x2": 120, "y2": 660, "rot": 0}
-        },
-        "tags": []
+        "placement": {"diagram": {"x1": 220, "y1": 900, "x2": 320, "y2": 1000, "rot": 90}}
+      }
+    },
+    "encoder2": {
+      "Dyad": {
+        "placement": {"diagram": {"x1": 560, "y1": 900, "x2": 660, "y2": 1000, "rot": 90}}
+      }
+    },
+    "speedsensor1": {
+      "Dyad": {
+        "placement": {"diagram": {"x1": 340, "y1": 900, "x2": 440, "y2": 1000, "rot": 90}}
+      }
+    },
+    "speedsensor2": {
+      "Dyad": {
+        "placement": {"diagram": {"x1": 680, "y1": 900, "x2": 780, "y2": 1000, "rot": 90}}
+      }
+    },
+    "tilt_sensor": {
+      "Dyad": {"placement": {"diagram": {"x1": 640, "y1": 220, "x2": 740, "y2": 320}}}
+    },
+    "tilt_rate_sensor": {
+      "Dyad": {"placement": {"diagram": {"x1": 640, "y1": 350, "x2": 740, "y2": 450}}}
+    },
+    "odometry_pos": {
+      "Dyad": {
+        "placement": {"diagram": {"x1": 250, "y1": 1230, "x2": 350, "y2": 1130, "rot": 90}}
+      }
+    },
+    "odometry_vel": {
+      "Dyad": {
+        "placement": {"diagram": {"x1": 390, "y1": 1230, "x2": 490, "y2": 1130, "rot": 90}}
+      }
+    },
+    "odometry_yaw": {
+      "Dyad": {
+        "placement": {"diagram": {"x1": 530, "y1": 1230, "x2": 630, "y2": 1130, "rot": 90}}
+      }
+    },
+    "odometry_yaw_rate": {
+      "Dyad": {
+        "placement": {"diagram": {"x1": 680, "y1": 1230, "x2": 780, "y2": 1130, "rot": 90}}
       }
     },
     "torque_left": {
       "Dyad": {
         "placement": {
           "diagram": {"iconName": "default", "x1": 40, "y1": 720, "x2": 120, "y2": 800, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "torque_right": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 40, "y1": 580, "x2": 120, "y2": 660, "rot": 0}
         },
         "tags": []
       }
@@ -344,20 +418,10 @@ metadata {
       }
     },
     "theta": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 880, "y1": 420, "x2": 960, "y2": 500, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 880, "y1": 420, "x2": 960, "y2": 500}}}
     },
     "x_dot": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 880, "y1": 540, "x2": 960, "y2": 620, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 880, "y1": 560, "x2": 960, "y2": 640}}}
     },
     "theta_dot": {
       "Dyad": {
@@ -383,8 +447,8 @@ metadata {
         "tags": []
       }
     },
-    "id14": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id15": {
+    "id26": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id27": {
       "Dyad": {
         "edges": [
           {
@@ -400,20 +464,42 @@ metadata {
         ]
       }
     },
-    "id16": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id17": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id18": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id19": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id20": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id21": {
+    "id28": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [], "E": 2},
+          {"S": 3, "M": [{"x": 270, "y": 760}, {"x": 360, "y": 760}], "E": -2},
+          {"S": -2, "M": [], "E": -1},
+          {"S": 4, "M": [{"x": 390, "y": 760}], "E": -2}
+        ],
+        "junctions": [{"x": 360, "y": 620}, {"x": 360, "y": 760}]
+      }
+    },
+    "id29": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [], "E": 2},
+          {"S": 3, "M": [{"x": 610, "y": 760}], "E": -2},
+          {"S": -2, "M": [], "E": -1},
+          {"S": 4, "M": [{"x": 730, "y": 760}], "E": -2}
+        ],
+        "junctions": [{"x": 650, "y": 620}, {"x": 650, "y": 760}]
+      }
+    },
+    "id30": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id31": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id32": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id33": {
       "Dyad": {
         "edges": [
           {
             "S": 1,
             "M": [
               {"x": 160, "y": 760},
-              {"x": 160, "y": 900},
-              {"x": 820, "y": 900},
+              {"x": 160, "y": 860},
+              {"x": 820, "y": 860},
               {"x": 820, "y": 620}
             ],
             "E": 2
@@ -421,18 +507,107 @@ metadata {
         ]
       }
     },
-    "id22": {
+    "id34": {
       "Dyad": {
         "edges": [
-          {"S": 1, "M": [{"x": 550, "y": 370}], "E": -1},
-          {"S": 2, "M": [{"x": 290, "y": 460}], "E": -2},
-          {"S": -2, "M": [], "E": -1},
-          {"S": 3, "M": [], "E": -2},
-          {"S": -1, "M": [], "E": -3},
-          {"S": -3, "M": [{"x": 720, "y": 460}], "E": 4},
-          {"S": 5, "M": [], "E": -3}
+          {"S": 1, "M": [{"x": 290, "y": 460}], "E": -1},
+          {"S": -1, "M": [], "E": -2},
+          {"S": 2, "M": [], "E": -1},
+          {"S": -2, "M": [], "E": -3},
+          {"S": -3, "M": [{"x": 720, "y": 460}], "E": 3},
+          {"S": 4, "M": [], "E": -3},
+          {"S": -4, "M": [], "E": -2},
+          {"S": 5, "M": [], "E": -4},
+          {"S": 6, "M": [], "E": -5},
+          {"S": -5, "M": [], "E": -4},
+          {"S": 7, "M": [{"x": 550, "y": 270}], "E": -5}
         ],
-        "junctions": [{"x": 550, "y": 460}, {"x": 400, "y": 460}, {"x": 600, "y": 460}]
+        "junctions": [
+          {"x": 400, "y": 460},
+          {"x": 550, "y": 460},
+          {"x": 600, "y": 460},
+          {"x": 550, "y": 400},
+          {"x": 550, "y": 370}
+        ]
+      }
+    },
+    "id35": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [{"x": 550, "y": 1100}], "E": 2},
+          {"S": 3, "M": [], "E": -1}
+        ],
+        "junctions": [{"x": 270, "y": 1100}]
+      }
+    },
+    "id36": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [{"x": 330, "y": 1040}], "E": 2},
+          {"S": 3, "M": [], "E": -1}
+        ],
+        "junctions": [{"x": 610, "y": 1040}]
+      }
+    },
+    "id37": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [{"x": 390, "y": 1060}], "E": -1},
+          {"S": -1, "M": [], "E": 2},
+          {"S": 3, "M": [{"x": 700, "y": 1060}], "E": -1}
+        ],
+        "junctions": [{"x": 410, "y": 1060}]
+      }
+    },
+    "id38": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [{"x": 470, "y": 1080}], "E": 2},
+          {"S": 3, "M": [{"x": 760, "y": 1080}], "E": -1}
+        ],
+        "junctions": [{"x": 730, "y": 1080}]
+      }
+    },
+    "id39": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 860, "y": 270}, {"x": 860, "y": 460}], "E": 2}]}
+    },
+    "id40": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 850, "y": 400}, {"x": 850, "y": 700}], "E": 2}]}
+    },
+    "id41": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [{"x": 440, "y": 1290}, {"x": 1100, "y": 1290}, {"x": 1100, "y": 600}],
+            "E": 2
+          }
+        ]
+      }
+    },
+    "id42": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [{"x": 300, "y": 1320}, {"x": 1140, "y": 1320}, {"x": 1140, "y": 340}],
+            "E": 2
+          }
+        ]
+      }
+    },
+    "id43": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [{"x": 730, "y": 1260}, {"x": 1030, "y": 1260}, {"x": 1030, "y": 940}],
+            "E": 2
+          }
+        ]
       }
     }
   }
