@@ -24,13 +24,18 @@ plane and is dynamically equivalent to `PlanarDyadBot`: the two wheels share
 the planar model's wheel mass `m`, spin inertia `Iw` and motor friction `d`,
 and the body parameters are identical.
 
+All outputs are produced by ideal sensor components: encoders and speed
+sensors on the wheel joints, combined into odometric quantities, and
+angle/rate sensors on the body tilt joint.
+
 Inputs and outputs:
 - `torque_left`, `torque_right`: motor torques applied between body and each wheel
 - `x`, `x_dot`: odometric path position and velocity (average wheel arc
   length; equals the distance driven along the — possibly curved — path, and
   coincides with the world-frame x coordinate when driving straight)
 - `theta`, `theta_dot`: tilt angle and tilt rate of the body (zero when upright)
-- `yaw`, `yaw_dot`: heading angle and rate (positive counterclockwise seen from above)
+- `yaw`, `yaw_dot`: heading angle and rate from the wheel encoder difference
+  (exact under ideal rolling; positive counterclockwise seen from above)
 
 The model must be accompanied by a `MultibodyComponents.World` component in
 the top level of the enclosing model.
@@ -160,6 +165,36 @@ the top level of the enclosing model.
   # Subcomponent damper2 of type RotationalComponents.Components.Damper
   damper2_overrides = __pop_subcomponent_overrides!(__overrides, "damper2")
   push!(__systems, @named damper2 = RotationalComponents.Components.Damper(; d=d / 2, damper2_overrides...))
+  # Subcomponent encoder1 of type RotationalComponents.Sensors.AngleSensor
+  encoder1_overrides = __pop_subcomponent_overrides!(__overrides, "encoder1")
+  push!(__systems, @named encoder1 = RotationalComponents.Sensors.AngleSensor(; encoder1_overrides...))
+  # Subcomponent encoder2 of type RotationalComponents.Sensors.AngleSensor
+  encoder2_overrides = __pop_subcomponent_overrides!(__overrides, "encoder2")
+  push!(__systems, @named encoder2 = RotationalComponents.Sensors.AngleSensor(; encoder2_overrides...))
+  # Subcomponent speedsensor1 of type RotationalComponents.Sensors.VelocitySensor
+  speedsensor1_overrides = __pop_subcomponent_overrides!(__overrides, "speedsensor1")
+  push!(__systems, @named speedsensor1 = RotationalComponents.Sensors.VelocitySensor(; speedsensor1_overrides...))
+  # Subcomponent speedsensor2 of type RotationalComponents.Sensors.VelocitySensor
+  speedsensor2_overrides = __pop_subcomponent_overrides!(__overrides, "speedsensor2")
+  push!(__systems, @named speedsensor2 = RotationalComponents.Sensors.VelocitySensor(; speedsensor2_overrides...))
+  # Subcomponent tilt_sensor of type RotationalComponents.Sensors.AngleSensor
+  tilt_sensor_overrides = __pop_subcomponent_overrides!(__overrides, "tilt_sensor")
+  push!(__systems, @named tilt_sensor = RotationalComponents.Sensors.AngleSensor(; tilt_sensor_overrides...))
+  # Subcomponent tilt_rate_sensor of type RotationalComponents.Sensors.VelocitySensor
+  tilt_rate_sensor_overrides = __pop_subcomponent_overrides!(__overrides, "tilt_rate_sensor")
+  push!(__systems, @named tilt_rate_sensor = RotationalComponents.Sensors.VelocitySensor(; tilt_rate_sensor_overrides...))
+  # Subcomponent odometry_pos of type BlockComponents.Math.Add
+  odometry_pos_overrides = __pop_subcomponent_overrides!(__overrides, "odometry_pos")
+  push!(__systems, @named odometry_pos = BlockComponents.Math.Add(; k1=-R / 2, k2=-R / 2, odometry_pos_overrides...))
+  # Subcomponent odometry_vel of type BlockComponents.Math.Add
+  odometry_vel_overrides = __pop_subcomponent_overrides!(__overrides, "odometry_vel")
+  push!(__systems, @named odometry_vel = BlockComponents.Math.Add(; k1=-R / 2, k2=-R / 2, odometry_vel_overrides...))
+  # Subcomponent odometry_yaw of type BlockComponents.Math.Add
+  odometry_yaw_overrides = __pop_subcomponent_overrides!(__overrides, "odometry_yaw")
+  push!(__systems, @named odometry_yaw = BlockComponents.Math.Add(; k1=-R / track, k2=R / track, odometry_yaw_overrides...))
+  # Subcomponent odometry_yaw_rate of type BlockComponents.Math.Add
+  odometry_yaw_rate_overrides = __pop_subcomponent_overrides!(__overrides, "odometry_yaw_rate")
+  push!(__systems, @named odometry_yaw_rate = BlockComponents.Math.Add(; k1=-R / track, k2=R / track, odometry_yaw_rate_overrides...))
 
   ### Check there are no unmatched overrides
   isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
@@ -174,12 +209,6 @@ the top level of the enclosing model.
   __assertions = []
 
   ### Equations
-  push!(__eqs, x ~ -R * (wheels.theta1 + wheels.theta2) / 2)
-  push!(__eqs, x_dot ~ -R * (wheels.der_theta1 + wheels.der_theta2) / 2)
-  push!(__eqs, theta ~ pitch.phi)
-  push!(__eqs, theta_dot ~ pitch.w)
-  push!(__eqs, yaw ~ wheels.phi)
-  push!(__eqs, yaw_dot ~ ModelingToolkit.D_nounits(wheels.phi))
   push!(__eqs, connect(body.frame_a, pitch.frame_b))
   push!(__eqs, connect(pitch.frame_a, wheels.frame_middle))
   push!(__eqs, connect(torquesource1.spline, wheels.axis1))
@@ -189,6 +218,19 @@ the top level of the enclosing model.
   push!(__eqs, connect(torque_right, torquesource1.tau))
   push!(__eqs, connect(torque_left, torquesource2.tau))
   push!(__eqs, connect(pitch.axis, torquesource1.support, damper1.spline_a, torquesource2.support, damper2.spline_a))
+  push!(__eqs, connect(encoder1.spline, speedsensor1.spline, wheels.axis1))
+  push!(__eqs, connect(encoder2.spline, speedsensor2.spline, wheels.axis2))
+  push!(__eqs, connect(tilt_sensor.spline, tilt_rate_sensor.spline, pitch.axis))
+  push!(__eqs, connect(encoder1.phi, odometry_pos.u1, odometry_yaw.u1))
+  push!(__eqs, connect(encoder2.phi, odometry_pos.u2, odometry_yaw.u2))
+  push!(__eqs, connect(speedsensor1.w, odometry_vel.u1, odometry_yaw_rate.u1))
+  push!(__eqs, connect(speedsensor2.w, odometry_vel.u2, odometry_yaw_rate.u2))
+  push!(__eqs, connect(odometry_pos.y, x))
+  push!(__eqs, connect(odometry_vel.y, x_dot))
+  push!(__eqs, connect(odometry_yaw.y, yaw))
+  push!(__eqs, connect(odometry_yaw_rate.y, yaw_dot))
+  push!(__eqs, connect(tilt_sensor.phi, theta))
+  push!(__eqs, connect(tilt_rate_sensor.w, theta_dot))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
