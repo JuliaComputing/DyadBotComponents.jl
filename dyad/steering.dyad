@@ -22,7 +22,18 @@ relations
   left = (drive + yaw_torque) / 2
   right = (drive - yaw_torque) / 2
 metadata {
-  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/ControlMixer.svg"}},
+  "Dyad": {
+    "icons": {"default": "dyad://DyadBotComponents/ControlMixer.svg"},
+    "labels": [
+      {
+        "label": "mixer",
+        "x": 500,
+        "y": 905,
+        "rot": 0,
+        "attrs": {"font-size": "150", "font-weight": "bold"}
+      }
+    ]
+  },
   "_links": {
     "drive": {
       "Dyad": {"placement": {"diagram": {"x1": -100, "y1": 350, "x2": 0, "y2": 450}}}
@@ -74,7 +85,18 @@ relations
   connect(constant_ff.y, yaw_controller.u_ff) {^id11}
   r: analysis_point(reference, yaw_controller.u_s)
 metadata {
-  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/YawController.svg"}},
+  "Dyad": {
+    "icons": {"default": "dyad://DyadBotComponents/YawController.svg"},
+    "labels": [
+      {
+        "label": "yaw",
+        "x": 500,
+        "y": 905,
+        "rot": 0,
+        "attrs": {"font-size": "150", "font-weight": "bold"}
+      }
+    ]
+  },
   "_links": {
     "reference": {
       "Dyad": {"placement": {"diagram": {"x1": -100, "y1": 350, "x2": 0, "y2": 450}}}

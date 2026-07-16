@@ -29,7 +29,18 @@ relations
   connect(constant_ff.y, angle_controller.u_ff) {^id10}
   connect(ref.y, angle_controller.u_s) {^id11}
 metadata {
-  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/AngleController.svg"}},
+  "Dyad": {
+    "icons": {"default": "dyad://DyadBotComponents/AngleController.svg"},
+    "labels": [
+      {
+        "label": "angle",
+        "x": 500,
+        "y": 905,
+        "rot": 0,
+        "attrs": {"font-size": "150", "font-weight": "bold"}
+      }
+    ]
+  },
   "_links": {
     "measurement": {
       "Dyad": {"placement": {"diagram": {"x1": -100, "y1": 450, "x2": 0, "y2": 550}}}
@@ -94,7 +105,18 @@ relations
   connect(angle_controller.y, zoh.u) {^id13}
   connect(zoh.y, gain.u) {^id14}
 metadata {
-  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/DiscreteAngleController.svg"}},
+  "Dyad": {
+    "icons": {"default": "dyad://DyadBotComponents/DiscreteAngleController.svg"},
+    "labels": [
+      {
+        "label": "angle",
+        "x": 500,
+        "y": 905,
+        "rot": 0,
+        "attrs": {"font-size": "150", "font-weight": "bold"}
+      }
+    ]
+  },
   "_links": {
     "measurement": {
       "Dyad": {"placement": {"diagram": {"x1": -100, "y1": 450, "x2": 0, "y2": 550}}}
@@ -407,7 +429,18 @@ relations
   connect(constant2.y, angle_controller.u_ff) {^id18}
   connect(pos_reference, pos_controller.u_s) {^id19}
 metadata {
-  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/CascadeController.svg"}},
+  "Dyad": {
+    "icons": {"default": "dyad://DyadBotComponents/CascadeController.svg"},
+    "labels": [
+      {
+        "label": "cascade",
+        "x": 500,
+        "y": 905,
+        "rot": 0,
+        "attrs": {"font-size": "150", "font-weight": "bold"}
+      }
+    ]
+  },
   "_links": {
     "angle_measurement": {
       "Dyad": {
@@ -554,7 +587,18 @@ relations
   connect(sampler_theta.y, angle_controller.u_m, clock.y) {^id23}
   connect(pos_reference, sampler_ref.u) {^id24}
 metadata {
-  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/DiscreteCascadeController.svg"}},
+  "Dyad": {
+    "icons": {"default": "dyad://DyadBotComponents/DiscreteCascadeController.svg"},
+    "labels": [
+      {
+        "label": "cascade",
+        "x": 500,
+        "y": 905,
+        "rot": 0,
+        "attrs": {"font-size": "150", "font-weight": "bold"}
+      }
+    ]
+  },
   "_links": {
     "angle_measurement": {
       "Dyad": {

@@ -1,20 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
   <rect x="4" y="4" width="992" height="992" fill="#fff" stroke="#A1A1AA" stroke-width="8"/>
-  <!-- axes -->
-  <path d="M240 190 V710" fill="none" stroke="#8f8f8f" stroke-width="6"/>
-  <path d="M224 220 L240 176 L256 220 Z" fill="#8f8f8f"/>
-  <path d="M220 690 H830" fill="none" stroke="#8f8f8f" stroke-width="6"/>
-  <path d="M800 674 L844 690 L800 706 Z" fill="#8f8f8f"/>
-  <!-- setpoint -->
-  <path d="M280 300 H810" fill="none" stroke="#c33" stroke-width="5" stroke-dasharray="16,12"/>
-  <!-- inner (fast) loop, lighter -->
-  <path d="M280 690 H350 V470 H420 V360 H490 V325 H810" fill="none" stroke="#84bfed" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- outer (slow) loop, sampled staircase -->
-  <path d="M280 690 H370 V600 H460 V510 H550 V430 H640 V360 H730 V320 H810" fill="none" stroke="#007fff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- forward path -->
+  <path d="M30 420 H148" fill="none" stroke="#131316" stroke-width="10" stroke-linecap="round"/>
+  <!-- outer summing junction -->
+  <circle cx="190" cy="420" r="42" fill="#fff" stroke="#131316" stroke-width="10"/>
+  <path d="M168 420 H212 M190 398 V442" fill="none" stroke="#131316" stroke-width="10" stroke-linecap="round"/>
+  <path d="M232 420 H290" fill="none" stroke="#131316" stroke-width="10" stroke-linecap="round"/>
+  <!-- outer (position) controller block, sampled staircase -->
+  <rect x="290" y="330" width="180" height="180" fill="#fff" stroke="#131316" stroke-width="10"/>
+  <path d="M310 480 H345 V440 H380 V400 H415 V370 H450 V355" fill="none" stroke="#007fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M470 420 H548" fill="none" stroke="#131316" stroke-width="10" stroke-linecap="round"/>
+  <!-- inner summing junction -->
+  <circle cx="590" cy="420" r="42" fill="#fff" stroke="#131316" stroke-width="10"/>
+  <path d="M568 420 H612 M590 398 V442" fill="none" stroke="#131316" stroke-width="10" stroke-linecap="round"/>
+  <path d="M632 420 H690" fill="none" stroke="#131316" stroke-width="10" stroke-linecap="round"/>
+  <!-- inner (angle) controller block, sampled staircase -->
+  <rect x="690" y="330" width="180" height="180" fill="#fff" stroke="#131316" stroke-width="10"/>
+  <path d="M710 480 H740 V420 H770 V380 H800 V360 H850 V355" fill="none" stroke="#84bfed" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M870 420 H970" fill="none" stroke="#131316" stroke-width="10" stroke-linecap="round"/>
+  <!-- inner feedback -->
+  <path d="M912 420 V600 H590 V462" fill="none" stroke="#8f8f8f" stroke-width="8"/>
+  <!-- outer feedback -->
+  <path d="M945 420 V700 H190 V462" fill="none" stroke="#8f8f8f" stroke-width="8"/>
   <!-- clock: discrete-time indicator -->
   <circle cx="852" cy="150" r="64" fill="#fff" stroke="#131316" stroke-width="10"/>
   <path d="M852 150 V102" fill="none" stroke="#131316" stroke-width="10" stroke-linecap="round"/>
   <path d="M852 150 H890" fill="none" stroke="#131316" stroke-width="10" stroke-linecap="round"/>
-  <!-- label -->
-  <text x="500" y="905" font-family="Arial, Helvetica, sans-serif" font-size="150" font-weight="bold" fill="#131316" text-anchor="middle">cascade</text>
 </svg>

@@ -13,6 +13,4 @@
   <circle cx="660" cy="480" r="110" fill="none" stroke="#8f8f8f" stroke-width="6"/>
   <path d="M660 560 V430" fill="none" stroke="#131316" stroke-width="14" stroke-linecap="round"/>
   <path d="M630 450 L660 390 L690 450 Z" fill="#131316"/>
-  <!-- label -->
-  <text x="500" y="905" font-family="Arial, Helvetica, sans-serif" font-size="150" font-weight="bold" fill="#131316" text-anchor="middle">yaw</text>
 </svg>

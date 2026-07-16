@@ -19,6 +19,4 @@
   <circle cx="852" cy="150" r="64" fill="#fff" stroke="#131316" stroke-width="10"/>
   <path d="M852 150 V102" fill="none" stroke="#131316" stroke-width="10" stroke-linecap="round"/>
   <path d="M852 150 H890" fill="none" stroke="#131316" stroke-width="10" stroke-linecap="round"/>
-  <!-- label -->
-  <text x="500" y="905" font-family="Arial, Helvetica, sans-serif" font-size="150" font-weight="bold" fill="#131316" text-anchor="middle">angle</text>
 </svg>

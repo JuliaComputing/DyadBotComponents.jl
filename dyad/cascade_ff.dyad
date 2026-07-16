@@ -74,7 +74,18 @@ relations
   connect(torque_ff, angle_controller.u_ff) {^id20}
   connect(gain2.y, pos_controller.u_ff) {^id21}
 metadata {
-  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/CascadeFFController.svg"}},
+  "Dyad": {
+    "icons": {"default": "dyad://DyadBotComponents/CascadeFFController.svg"},
+    "labels": [
+      {
+        "label": "cascade + ff",
+        "x": 500,
+        "y": 905,
+        "rot": 0,
+        "attrs": {"font-size": "120", "font-weight": "bold"}
+      }
+    ]
+  },
   "_links": {
     "angle_measurement": {
       "Dyad": {
@@ -201,7 +212,16 @@ relations
   connect(zoh.y, torque) {^id32}
 metadata {
   "Dyad": {
-    "icons": {"default": "dyad://DyadBotComponents/DiscreteCascadeFFController.svg"}
+    "icons": {"default": "dyad://DyadBotComponents/DiscreteCascadeFFController.svg"},
+    "labels": [
+      {
+        "label": "cascade + ff",
+        "x": 500,
+        "y": 905,
+        "rot": 0,
+        "attrs": {"font-size": "120", "font-weight": "bold"}
+      }
+    ]
   },
   "_links": {
     "angle_measurement": {
