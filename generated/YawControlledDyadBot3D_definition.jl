@@ -25,9 +25,9 @@ heading while staying upright and holding its position.
 
 | Name         | Description                         | Units  |   Default value |
 | ------------ | ----------------------------------- | ------ | --------------- |
-| `k_angle`         | Proportional gain of the inner angle controller                         | --  |   0.487401 |
-| `Ti_angle`         | Integrator time constant of the inner angle controller                         | s  |   0.0587352 |
-| `Td_angle`         | Derivative time constant of the inner angle controller                         | s  |   0.0420526 |
+| `k_angle`         | Proportional gain of the angle controller                         | --  |   0.487401 |
+| `Ti_angle`         | Integrator time constant of the angle controller                         | s  |   0.0587352 |
+| `Td_angle`         | Derivative time constant of the angle controller                         | s  |   0.0420526 |
 | `k_pos`         | Proportional gain of the outer position controller                         | --  |   0.0666576 |
 | `Ti_pos`         | Integrator time constant of the outer position controller                         | s  |   5.25024 |
 | `Td_pos`         | Derivative time constant of the outer position controller                         | s  |   4.81393 |
@@ -70,13 +70,13 @@ heading while staying upright and holding its position.
 
   ### Symbolic Parameters
   __local__k_angle = k_angle
-  append!(__params, @parameters (k_angle::Real), [description = "Proportional gain of the inner angle controller"])
+  append!(__params, @parameters (k_angle::Real), [description = "Proportional gain of the angle controller"])
   __initial_conditions[k_angle] = __local__k_angle
   __local__Ti_angle = Ti_angle
-  append!(__params, @parameters (Ti_angle::Real), [description = "Integrator time constant of the inner angle controller"])
+  append!(__params, @parameters (Ti_angle::Real), [description = "Integrator time constant of the angle controller"])
   __initial_conditions[Ti_angle] = __local__Ti_angle
   __local__Td_angle = Td_angle
-  append!(__params, @parameters (Td_angle::Real), [description = "Derivative time constant of the inner angle controller"])
+  append!(__params, @parameters (Td_angle::Real), [description = "Derivative time constant of the angle controller"])
   __initial_conditions[Td_angle] = __local__Td_angle
   __local__k_pos = k_pos
   append!(__params, @parameters (k_pos::Real), [description = "Proportional gain of the outer position controller"])

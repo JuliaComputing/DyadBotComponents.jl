@@ -39,6 +39,7 @@ The control system has a purely continuous interface so it can be swapped for
 `DiscreteCascadeFFController` without any other change to the closed-loop model.
 """
 component CascadeFFController
+  extends CascadeControllerParams
   "Body tilt-angle measurement"
   angle_measurement = Dyad.RealInput() {^angle_measurement}
   "Wheel-axis position measurement"
@@ -51,8 +52,8 @@ component CascadeFFController
   torque_ff = Dyad.RealInput() {^torque_ff}
   "Motor torque command"
   torque = Dyad.RealOutput() {^torque}
-  angle_controller = BlockComponents.Continuous.LimPID(k = 0.487401, Ti = 0.0587352, Td = 0.0420526, Nd = 119.368, y_max = 0.1) {^angle_controller}
-  pos_controller = BlockComponents.Continuous.LimPID(k = 0.0666576, Ti = 5.25024, Td = 4.81393, Nd = 4.76616, wd = 1, wp = 1, y_max = deg2rad(25.0)) {^pos_controller}
+  angle_controller = BlockComponents.Continuous.LimPID(k = k_angle, Ti = Ti_angle, Td = Td_angle, Nd = 119.368, y_max = 0.1) {^angle_controller}
+  pos_controller = BlockComponents.Continuous.LimPID(k = k_pos, Ti = Ti_pos, Td = Td_pos, Nd = 4.76616, wd = 1, wp = 1, y_max = deg2rad(25.0)) {^pos_controller}
   gain = BlockComponents.Math.Gain(k = -1) {^gain}
   gain1 = BlockComponents.Math.Gain(k = -1) {^gain1}
   "This negative gain is required since we are providing the angle reference signal to the `u_ff` connector of the outer controller which sits behind the negative gain `gain1`. We are thus effectively negating `gain1` with this `gain2`."
@@ -156,6 +157,7 @@ controller, which replaces the explicit negating `gain2` of the continuous
 controller.
 """
 component DiscreteCascadeFFController
+  extends CascadeControllerParams
   "Body tilt-angle measurement"
   angle_measurement = Dyad.RealInput() {^angle_measurement}
   "Wheel-axis position measurement"
@@ -168,8 +170,8 @@ component DiscreteCascadeFFController
   torque_ff = Dyad.RealInput() {^torque_ff}
   "Motor torque command"
   torque = Dyad.RealOutput() {^torque}
-  angle_controller = DiscreteComponents.DiscretePIDStandard(with_ff = true, K = 0.487401, Ti = 0.0587352, Td = 0.0420526, Nd = 119.368, y_max = 0.1) {^angle_controller}
-  pos_controller = DiscreteComponents.DiscretePIDStandard(with_ff = true, k_ff = -1, K = 0.0666576, Ti = 5.25024, Td = 4.81393, Nd = 4.76616, wd = 1, wp = 1, y_max = deg2rad(25.0)) {^pos_controller}
+  angle_controller = DiscreteComponents.DiscretePIDStandard(with_ff = true, K = k_angle, Ti = Ti_angle, Td = Td_angle, Nd = 119.368, y_max = 0.1) {^angle_controller}
+  pos_controller = DiscreteComponents.DiscretePIDStandard(with_ff = true, k_ff = -1, K = k_pos, Ti = Ti_pos, Td = Td_pos, Nd = 4.76616, wd = 1, wp = 1, y_max = deg2rad(25.0)) {^pos_controller}
   gain = BlockComponents.Math.Gain(k = -1) {^gain}
   gain1 = BlockComponents.Math.Gain(k = -1) {^gain1}
   sampler_theta = DiscreteComponents.Sampler() {^sampler_theta}

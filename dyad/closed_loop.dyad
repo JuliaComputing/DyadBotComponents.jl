@@ -11,6 +11,7 @@ measurement) and `u` (controller output) are exposed for loop-shaping and
 PID autotuning.
 """
 component AngleController
+  extends AngleControllerParams
   "Body tilt-angle measurement"
   measurement = Dyad.RealInput() {^measurement}
   "Motor torque command"
@@ -19,12 +20,6 @@ component AngleController
   ref = BlockComponents.Sources.Constant(k = 0) {^ref}
   gain = BlockComponents.Math.Gain(k = -1) {^gain}
   constant_ff = BlockComponents.Sources.Constant(k = 0) {^constant_ff}
-  "Proportional gain of the angle controller"
-  parameter k_angle::Real = 0.487401
-  "Integrator time constant of the angle controller"
-  parameter Ti_angle::Time = 0.0587352
-  "Derivative time constant of the angle controller"
-  parameter Td_angle::Time = 0.0420526
 relations
   y: analysis_point(measurement, angle_controller.u_m)
   u: analysis_point(angle_controller.y, gain.u)
@@ -78,6 +73,7 @@ controller runs once per clock tick on a `PeriodicClock` with period `Ts`, and a
 `ZeroOrderHold` reconstructs the continuous torque.
 """
 component DiscreteAngleController
+  extends AngleControllerParams
   "Body tilt-angle measurement"
   measurement = Dyad.RealInput() {^measurement}
   "Motor torque command"
@@ -88,12 +84,6 @@ component DiscreteAngleController
   sampler = DiscreteComponents.Sampler() {^sampler}
   zoh = DiscreteComponents.ZeroOrderHold() {^zoh}
   clock = DiscreteComponents.PeriodicClock(dt = Ts) {^clock}
-  "Proportional gain of the angle controller"
-  parameter k_angle::Real = 0.487401
-  "Integrator time constant of the angle controller"
-  parameter Ti_angle::Time = 0.0587352
-  "Derivative time constant of the angle controller"
-  parameter Td_angle::Time = 0.0420526
   "Controller sample interval"
   structural parameter Ts::Real = 0.005
 relations
@@ -166,15 +156,10 @@ discrete-time model `DiscreteAngleControlledDyadBot` is identical except that
 The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
 """
 component AngleControlledDyadBot
+  extends AngleControllerParams
   world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
   plant = PlanarDyadBot(phi0 = phi0) {^plant}
   controller = AngleController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle) {^controller}
-  "Proportional gain of the angle controller"
-  parameter k_angle::Real = 0.487401
-  "Integrator time constant of the angle controller"
-  parameter Ti_angle::Time = 0.0587352
-  "Derivative time constant of the angle controller"
-  parameter Td_angle::Time = 0.0420526
   "Initial tilt angle of the body"
   parameter phi0::Angle = 0.1
 relations
@@ -239,17 +224,12 @@ stays in the plane, the closed-loop response is identical to that of the
 planar model (verified by `test/test_stabilization.jl`).
 """
 component AngleControlledDyadBot3D
+  extends AngleControllerParams
   world = MultibodyComponents.World(g = 9.82, nominal_length = 0.1) {^world}
   plant = RollingDyadBot3D(phi0 = phi0) {^plant}
   controller = AngleController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle) {^controller}
   "Splits the motor torque equally between the two wheels"
   gain_half = BlockComponents.Math.Gain(k = 0.5) {^gain_half}
-  "Proportional gain of the angle controller"
-  parameter k_angle::Real = 0.487401
-  "Integrator time constant of the angle controller"
-  parameter Ti_angle::Time = 0.0587352
-  "Derivative time constant of the angle controller"
-  parameter Td_angle::Time = 0.0420526
   "Initial tilt angle of the body"
   parameter phi0::Angle = 0.1
 relations
@@ -322,15 +302,10 @@ model except that the control system is a sampled-data `DiscreteAngleController`
 The sample interval is set by the top-level structural parameter `Ts`.
 """
 component DiscreteAngleControlledDyadBot
+  extends AngleControllerParams
   world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
   plant = PlanarDyadBot(phi0 = phi0) {^plant}
   controller = DiscreteAngleController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle, Ts = Ts) {^controller}
-  "Proportional gain of the angle controller"
-  parameter k_angle::Real = 0.487401
-  "Integrator time constant of the angle controller"
-  parameter Ti_angle::Time = 0.0587352
-  "Derivative time constant of the angle controller"
-  parameter Td_angle::Time = 0.0420526
   "Initial tilt angle of the body"
   parameter phi0::Angle = 0.1
   "Controller sample interval"
@@ -402,6 +377,7 @@ closed-loop model. Analysis points `y`/`u` (angle loop) and `y2`/`u2` (position
 loop) are exposed for tuning.
 """
 component CascadeController
+  extends CascadeControllerParams
   "Body tilt-angle measurement"
   angle_measurement = Dyad.RealInput() {^angle_measurement}
   "Wheel-axis position measurement"
@@ -416,18 +392,6 @@ component CascadeController
   gain1 = BlockComponents.Math.Gain(k = -1) {^gain1}
   constant1 = BlockComponents.Sources.Constant(k = 0) {^constant1}
   constant2 = BlockComponents.Sources.Constant(k = 0) {^constant2}
-  "Proportional gain of the inner angle controller"
-  parameter k_angle::Real = 0.487401
-  "Integrator time constant of the inner angle controller"
-  parameter Ti_angle::Time = 0.0587352
-  "Derivative time constant of the inner angle controller"
-  parameter Td_angle::Time = 0.0420526
-  "Proportional gain of the outer position controller"
-  parameter k_pos::Real = 0.0666576
-  "Integrator time constant of the outer position controller"
-  parameter Ti_pos::Time = 5.25024
-  "Derivative time constant of the outer position controller"
-  parameter Td_pos::Time = 4.81393
 relations
   y: analysis_point(angle_measurement, angle_controller.u_m)
   y2: analysis_point(pos_measurement, pos_controller.u_m)
@@ -557,6 +521,7 @@ sampled by `Sampler` blocks and a `ZeroOrderHold` reconstructs the continuous
 torque.
 """
 component DiscreteCascadeController
+  extends CascadeControllerParams
   "Body tilt-angle measurement"
   angle_measurement = Dyad.RealInput() {^angle_measurement}
   "Wheel-axis position measurement"
@@ -574,18 +539,6 @@ component DiscreteCascadeController
   sampler_ref = DiscreteComponents.Sampler() {^sampler_ref}
   zoh = DiscreteComponents.ZeroOrderHold() {^zoh}
   clock = DiscreteComponents.PeriodicClock(dt = Ts) {^clock}
-  "Proportional gain of the inner angle controller"
-  parameter k_angle::Real = 0.487401
-  "Integrator time constant of the inner angle controller"
-  parameter Ti_angle::Time = 0.0587352
-  "Derivative time constant of the inner angle controller"
-  parameter Td_angle::Time = 0.0420526
-  "Proportional gain of the outer position controller"
-  parameter k_pos::Real = 0.0666576
-  "Integrator time constant of the outer position controller"
-  parameter Ti_pos::Time = 5.25024
-  "Derivative time constant of the outer position controller"
-  parameter Td_pos::Time = 4.81393
   "Controller sample interval"
   structural parameter Ts::Real = 0.005
 relations
@@ -696,24 +649,13 @@ and `scripts/tune_cascade_pid.jl`, or all simultaneously with
 `scripts/tune_cascade_structured.jl`.
 """
 component CascadeControlledDyadBot
+  extends CascadeControllerParams
   world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
   plant = PlanarDyadBot(phi0 = phi0) {^plant}
   square = BlockComponents.Sources.Square(amplitude = 0.05, frequency = 1 / 10) {^square}
   firstorder = BlockComponents.Continuous.FirstOrder(T = 0.1) {^firstorder}
   firstorder1 = BlockComponents.Continuous.FirstOrder(T = 0.1) {^firstorder1}
   controller = CascadeController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle, k_pos = k_pos, Ti_pos = Ti_pos, Td_pos = Td_pos) {^controller}
-  "Proportional gain of the inner angle controller"
-  parameter k_angle::Real = 0.487401
-  "Integrator time constant of the inner angle controller"
-  parameter Ti_angle::Time = 0.0587352
-  "Derivative time constant of the inner angle controller"
-  parameter Td_angle::Time = 0.0420526
-  "Proportional gain of the outer position controller"
-  parameter k_pos::Real = 0.0666576
-  "Integrator time constant of the outer position controller"
-  parameter Ti_pos::Time = 5.25024
-  "Derivative time constant of the outer position controller"
-  parameter Td_pos::Time = 4.81393
   "Initial tilt angle of the body"
   parameter phi0::Angle = 0.1
 relations
@@ -805,24 +747,13 @@ model except that the control system is a sampled-data `DiscreteCascadeControlle
 running on a common clock with period `Ts`.
 """
 component DiscreteCascadeControlledDyadBot
+  extends CascadeControllerParams
   world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
   plant = PlanarDyadBot(phi0 = phi0) {^plant}
   square = BlockComponents.Sources.Square(amplitude = 0.05, frequency = 1 / 10) {^square}
   firstorder = BlockComponents.Continuous.FirstOrder(T = 0.1) {^firstorder}
   firstorder1 = BlockComponents.Continuous.FirstOrder(T = 0.1) {^firstorder1}
   controller = DiscreteCascadeController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle, k_pos = k_pos, Ti_pos = Ti_pos, Td_pos = Td_pos, Ts = Ts) {^controller}
-  "Proportional gain of the inner angle controller"
-  parameter k_angle::Real = 0.487401
-  "Integrator time constant of the inner angle controller"
-  parameter Ti_angle::Time = 0.0587352
-  "Derivative time constant of the inner angle controller"
-  parameter Td_angle::Time = 0.0420526
-  "Proportional gain of the outer position controller"
-  parameter k_pos::Real = 0.0666576
-  "Integrator time constant of the outer position controller"
-  parameter Ti_pos::Time = 5.25024
-  "Derivative time constant of the outer position controller"
-  parameter Td_pos::Time = 4.81393
   "Initial tilt angle of the body"
   parameter phi0::Angle = 0.1
   "Controller sample interval"
