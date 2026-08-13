@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "*"
+  pull_request:
+
+env:
+  JULIA_PKG_SERVER: internal.juliahub.com
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+
+    runs-on: self-hosted-4vcpu-8gb-public
+
+    env:
+      # The secrets context is not available in step-level `if` conditions,
+      # so the presence check is hoisted into a job-level env flag.
+      HAS_REGISTRY_SSH_KEY: ${{ secrets.JULIASIM_REGISTRY_SSH_KEY != '' }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - "1.12"
+        os:
+          - self-hosted
+        arch:
+          - x64
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: julia-actions/setup-julia@4c0cb0fce8556fdb04a90347310e5db8b1f98fb9 # v2.7.0
+        with:
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
+
+      # The JuliaComputing/set-up-private-juliahub-registries action lives in a
+      # private repository and cannot be resolved from this public repository,
+      # so the equivalent registry setup is spelled out here with the public
+      # actions it wraps.
+      # All dependencies are registered, so an SSH identity is only set up when
+      # the secret is available (needed only if git-tracked dependencies are
+      # ever added).
+      - name: "Set up SSH agent for private Git dependencies"
+        uses: "webfactory/ssh-agent@e83874834305fe9a4a2997156cb26c5de65a8555" # v0.10.0
+        if: ${{ env.HAS_REGISTRY_SSH_KEY == 'true' }}
+        with:
+          ssh-private-key: "${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}"
+
+      - name: "Enable the JuliaHubRegistry registry"
+        uses: "PumasAI/add-private-registry@3ee6e5689774ff51631dd6b1fd35bae37b363ae3" # v1.0.1
+        with:
+          juliahub_token_encoded: "${{ secrets.JULIAHUB_TOKEN_ENCODED }}"
+          install_general_registry: "true"
+          private_registry_name: "JuliaHubRegistry"
+          private_registry_uuid: "de52bcdf-fcb2-40cf-a397-3d64b64f4d9c"
+
+      - name: "Enable the JuliaSimRegistry registry"
+        uses: "PumasAI/add-private-registry@3ee6e5689774ff51631dd6b1fd35bae37b363ae3" # v1.0.1
+        with:
+          juliahub_token_encoded: "${{ secrets.JULIAHUB_TOKEN_ENCODED }}"
+          install_general_registry: "false"
+          private_registry_name: "JuliaSimRegistry"
+          private_registry_uuid: "309a7822-a73e-4490-9504-7d1983f27685"
+
+      - name: "Enable the DyadRegistry registry"
+        uses: "PumasAI/add-private-registry@3ee6e5689774ff51631dd6b1fd35bae37b363ae3" # v1.0.1
+        with:
+          juliahub_token_encoded: "${{ secrets.JULIAHUB_TOKEN_ENCODED }}"
+          install_general_registry: "false"
+          private_registry_name: "DyadRegistry"
+          private_registry_uuid: "07e6f81e-a02a-4ea6-9289-c3820c24b8ed"
+
+      - uses: julia-actions/julia-buildpkg@e3eb439fad4f9aba7da2667e7510e4a46ebc46e1 # v1
+
+      - name: Run tests with virtual display
+        run: DISPLAY=:0 xvfb-run --auto-servernum -s '-screen 0 1024x768x24' julia --project -e 'using Pkg; Pkg.test()'
