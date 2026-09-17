@@ -18,9 +18,14 @@ end
 
 import BlockComponents
 import DiscreteComponents
+import DyadData
 import DyadInterface
+import ElectricalComponents
+import HydraulicComponents
 import MultibodyComponents
 import RotationalComponents
+import ThermalComponents
+import TranslationalComponents
 @doc Markdown.doc"""
 This connector represents an electrical pin with voltage and current as the potential and flow variables, respectively.
 """
@@ -209,8 +214,10 @@ include("CascadeFFDyadBot_definition.jl")
 include("ControlMixer_definition.jl")
 include("DiscreteAngleControlledDyadBot_definition.jl")
 include("DiscreteAngleController_definition.jl")
+include("DiscreteCascadeControlledDyadBotAnalysis_definition.jl")
 include("DiscreteCascadeControlledDyadBot_definition.jl")
 include("DiscreteCascadeController_definition.jl")
+include("DiscreteCascadeCore_definition.jl")
 include("DiscreteCascadeFFController_definition.jl")
 include("DiscreteCascadeFFDyadBot_definition.jl")
 include("DyadBot3D_definition.jl")

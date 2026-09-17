@@ -89,7 +89,7 @@ component DiscreteAngleController
   measurement = Dyad.RealInput() {^measurement}
   "Motor torque command"
   torque = Dyad.RealOutput() {^torque}
-  angle_controller = DiscreteComponents.DiscretePIDStandard(final K = k_angle, final Ti = Ti_angle, final Td = Td_angle, Nd = 119.368, y_max = 0.1) {^angle_controller}
+  angle_controller = DiscreteComponents.DiscretePIDStandard(Ts = Ts, final K = k_angle, final Ti = Ti_angle, final Td = Td_angle, Nd = 119.368, y_max = 0.1) {^angle_controller}
   ref = BlockComponents.Sources.Constant(k = 0) {^ref}
   gain = BlockComponents.Math.Gain(k = -1) {^gain}
   sampler = DiscreteComponents.Sampler() {^sampler}
@@ -255,9 +255,9 @@ component AngleControlledDyadBot3D
   "Initial tilt angle of the body"
   parameter phi0::Angle = 0.1
 relations
-  connect(controller.torque, gain_half.u) {^id4}
+  connect(controller.torque, gain_half.u) {^id5}
   connect(gain_half.y, plant.torque_left, plant.torque_right) {^id6}
-  connect(plant.theta, controller.measurement) {^id5}
+  connect(plant.theta, controller.measurement) {^id7}
 metadata {
   "Dyad": {
     "tests": {"case1": {"stop": 5}},
@@ -286,7 +286,7 @@ metadata {
     "gain_half": {
       "Dyad": {"placement": {"diagram": {"x1": 450, "y1": 455, "x2": 530, "y2": 535}}}
     },
-    "id4": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id5": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
     "id6": {
       "Dyad": {
         "edges": [
@@ -297,7 +297,7 @@ metadata {
         "junctions": [{"x": 545, "y": 495}]
       }
     },
-    "id5": {
+    "id7": {
       "Dyad": {
         "edges": [
           {
@@ -563,8 +563,8 @@ component DiscreteCascadeController
   pos_reference = Dyad.RealInput() {^pos_reference}
   "Motor torque command"
   torque = Dyad.RealOutput() {^torque}
-  angle_controller = DiscreteComponents.DiscretePIDStandard(final K = k_angle, final Ti = Ti_angle, final Td = Td_angle, Nd = 119.368, y_max = 0.1) {^angle_controller}
-  pos_controller = DiscreteComponents.DiscretePIDStandard(final K = k_pos, final Ti = Ti_pos, final Td = Td_pos, Nd = 4.76616, wd = 1, wp = 1, y_max = deg2rad(25.0)) {^pos_controller}
+  angle_controller = DiscreteComponents.DiscretePIDStandard(Ts = Ts, final K = k_angle, final Ti = Ti_angle, final Td = Td_angle, Nd = 119.368, y_max = 0.1) {^angle_controller}
+  pos_controller = DiscreteComponents.DiscretePIDStandard(Ts = Ts, final K = k_pos, final Ti = Ti_pos, final Td = Td_pos, Nd = 4.76616, wd = 1, wp = 1, y_max = deg2rad(25.0)) {^pos_controller}
   gain = BlockComponents.Math.Gain(k = -1) {^gain}
   gain1 = BlockComponents.Math.Gain(k = -1) {^gain1}
   sampler_theta = DiscreteComponents.Sampler() {^sampler_theta}
@@ -575,16 +575,20 @@ component DiscreteCascadeController
   "Controller sample interval"
   structural parameter Ts::Real = 0.005
 relations
+  y: analysis_point(sampler_theta.y, angle_controller.u_m)
+  y2: analysis_point(sampler_x.y, pos_controller.u_m)
+  ysp: analysis_point(sampler_ref.y, pos_controller.u_s)
+  u: analysis_point(angle_controller.y, gain.u)
   connect(sampler_ref.y, pos_controller.u_s) {^id14}
   connect(pos_controller.y, gain1.u) {^id15}
-  connect(gain1.y, angle_controller.u_s) {^id16}
+  connect(gain1.y, angle_controller.u_s, clock.y) {^id16}
   connect(angle_controller.y, gain.u) {^id17}
   connect(gain.y, zoh.u) {^id18}
   connect(zoh.y, torque) {^id19}
   connect(sampler_theta.u, angle_measurement) {^id20}
   connect(pos_measurement, sampler_x.u) {^id21}
   connect(sampler_x.y, pos_controller.u_m) {^id22}
-  connect(sampler_theta.y, angle_controller.u_m, clock.y) {^id23}
+  connect(sampler_theta.y, angle_controller.u_m) {^id23}
   connect(pos_reference, sampler_ref.u) {^id24}
 metadata {
   "Dyad": {
@@ -880,6 +884,97 @@ metadata {
       }
     },
     "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}}
+  }
+}
+end
+
+"""
+Discrete cascade controller core: the 2 discrete PID blocks, the sign gain
+between them, and the output sign gain, with clocked ports and no sampler,
+hold, or clock of its own.
+
+`DiscreteCascadeController` wraps a controller of this shape together with its
+samplers, hold, and clock. This core exists for deployment: the sampling and
+the hold belong to the sensor and actuator devices, so the exported controller
+is exactly this component. The output `torque` carries the sign of the model
+torque port, so no caller has to flip a sign.
+
+The structural parameter `Ts` gives the sample interval to the 2 PID blocks.
+Set it equal to the period of the external clock. The PID blocks default to
+`SampleTime()`, but the ModelingToolkit version in Dyad kernel 3.3.0 cannot
+infer the clock of a `SampleTime()` term.
+"""
+component DiscreteCascadeCore@[input clk extends Discrete]
+  extends CascadeControllerParams
+  "Body tilt-angle measurement, rad"
+  angle_measurement = RealInput@[clk]() {^angle_measurement}
+  "Wheel-axis position measurement, m"
+  pos_measurement = RealInput@[clk]() {^pos_measurement}
+  "Position reference, m"
+  pos_reference = RealInput@[clk]() {^pos_reference}
+  "Motor torque command, N*m"
+  torque = RealOutput@[clk]() {^torque}
+  angle_controller = DiscreteComponents.DiscretePIDStandard(Ts = Ts, final K = k_angle, final Ti = Ti_angle, final Td = Td_angle, Nd = 119.368, y_max = 0.1) {^angle_controller}
+  pos_controller = DiscreteComponents.DiscretePIDStandard(Ts = Ts, final K = k_pos, final Ti = Ti_pos, final Td = Td_pos, Nd = 24.0, wd = 1, wp = 1, y_max = deg2rad(25.0)) {^pos_controller}
+  gain = BlockComponents.Math.Gain(k = -1) {^gain}
+  gain1 = BlockComponents.Math.Gain(k = -1) {^gain1}
+  "Controller sample interval, s. Set it equal to the period of the clock that drives `clk`."
+  structural parameter Ts::Real = 0.005
+relations
+  connect(pos_reference, pos_controller.u_s) {^id9}
+  connect(pos_measurement, pos_controller.u_m) {^id10}
+  connect(pos_controller.y, gain1.u) {^id11}
+  connect(gain1.y, angle_controller.u_s) {^id12}
+  connect(angle_measurement, angle_controller.u_m) {^id13}
+  connect(angle_controller.y, gain.u) {^id14}
+  connect(gain.y, torque) {^id15}
+metadata {
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/DiscreteCascadeController.svg"}},
+  "_links": {
+    "angle_measurement": {
+      "Dyad": {"placement": {"diagram": {"x1": 20, "x2": 120, "y1": 630, "y2": 730}}}
+    },
+    "pos_measurement": {
+      "Dyad": {"placement": {"diagram": {"x1": 20, "x2": 120, "y1": 880, "y2": 980}}}
+    },
+    "pos_reference": {"Dyad": {"placement": {"diagram": {"x1": 20, "x2": 120, "y1": 20, "y2": 120}}}},
+    "torque": {
+      "Dyad": {"placement": {"diagram": {"x1": 960, "x2": 1060, "y1": 360, "y2": 460}}}
+    },
+    "angle_controller": {
+      "Dyad": {"placement": {"diagram": {"x1": 430, "x2": 530, "y1": 76, "y2": 176}}}
+    },
+    "pos_controller": {
+      "Dyad": {"placement": {"diagram": {"x1": 150, "x2": 250, "y1": 48, "y2": 148}}}
+    },
+    "gain": {
+      "Dyad": {"placement": {"diagram": {"x1": 570, "x2": 670, "y1": 76, "y2": 176}}}
+    },
+    "gain1": {
+      "Dyad": {"placement": {"diagram": {"x1": 290, "x2": 390, "y1": 48, "y2": 148}}}
+    },
+    "id9": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "path": {}}},
+    "id10": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 130, "y": 930}, {"x": 130, "y": 122}], "E": 2}],
+        "path": {}
+      }
+    },
+    "id11": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "path": {}}},
+    "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "path": {}}},
+    "id13": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 410, "y": 680}, {"x": 410, "y": 150}], "E": 2}],
+        "path": {}
+      }
+    },
+    "id14": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "path": {}}},
+    "id15": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 712.5, "y": 126}, {"x": 712.5, "y": 410}], "E": 2}],
+        "path": {}
+      }
+    }
   }
 }
 end

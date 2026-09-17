@@ -7,35 +7,48 @@
 import Moshi as __Ext__Moshi
 
 @doc Markdown.doc"""
-   DiscreteAngleController(; name, Ts, k_angle, Ti_angle, Td_angle)
+   DiscreteCascadeCore(; name, Ts, k_angle, Ti_angle, Td_angle, k_pos, Ti_pos, Td_pos)
 
-Discrete-time angle control system for the balancing robot. Drop-in replacement
-for `AngleController`: same continuous interface (tilt-angle `measurement` in,
-motor `torque` out), but the control law is realized with a sampled-data
-`DiscretePIDStandard`. The measurement is sampled by a `Sampler`, the discrete
-controller runs once per clock tick on a `PeriodicClock` with period `Ts`, and a
-`ZeroOrderHold` reconstructs the continuous torque.
+Discrete cascade controller core: the 2 discrete PID blocks, the sign gain
+between them, and the output sign gain, with clocked ports and no sampler,
+hold, or clock of its own.
+
+`DiscreteCascadeController` wraps a controller of this shape together with its
+samplers, hold, and clock. This core exists for deployment: the sampling and
+the hold belong to the sensor and actuator devices, so the exported controller
+is exactly this component. The output `torque` carries the sign of the model
+torque port, so no caller has to flip a sign.
+
+The structural parameter `Ts` gives the sample interval to the 2 PID blocks.
+Set it equal to the period of the external clock. The PID blocks default to
+`SampleTime()`, but the ModelingToolkit version in Dyad kernel 3.3.0 cannot
+infer the clock of a `SampleTime()` term.
 
 ## Parameters:
 
 | Name         | Description                         | Units  |   Default value |
 | ------------ | ----------------------------------- | ------ | --------------- |
-| `Ts`         | Controller sample interval                         | --  |   0.005 |
+| `Ts`         | Controller sample interval, s. Set it equal to the period of the clock that drives `clk`.                         | --  |   0.005 |
 | `k_angle`         | Proportional gain of the angle controller                         | --  |   0.487401 |
 | `Ti_angle`         | Integrator time constant of the angle controller                         | s  |   0.0587352 |
 | `Td_angle`         | Derivative time constant of the angle controller                         | s  |   0.0420526 |
+| `k_pos`         | Proportional gain of the outer position controller                         | --  |   0.0666576 |
+| `Ti_pos`         | Integrator time constant of the outer position controller                         | s  |   5.25024 |
+| `Td_pos`         | Derivative time constant of the outer position controller                         | s  |   4.81393 |
 
 ## Connectors
 
- * `measurement` - This connector represents a real signal as an input to a component ([`RealInput`](@ref))
+ * `angle_measurement` - This connector represents a real signal as an input to a component ([`RealInput`](@ref))
+ * `pos_measurement` - This connector represents a real signal as an input to a component ([`RealInput`](@ref))
+ * `pos_reference` - This connector represents a real signal as an input to a component ([`RealInput`](@ref))
  * `torque` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
 """
-@component function DiscreteAngleController(; name = nothing, Ts=0.005, k_angle=0.487401, Ti_angle=0.0587352, Td_angle=0.0420526, kwargs...)
+@component function DiscreteCascadeCore(; name = nothing, Ts=0.005, k_angle=0.487401, Ti_angle=0.0587352, Td_angle=0.0420526, k_pos=0.0666576, Ti_pos=5.25024, Td_pos=4.81393, kwargs...)
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
   
-    @named model = DiscreteAngleController()
+    @named model = DiscreteCascadeCore()
   """))
 
   __overrides = __build_overrides(kwargs)
@@ -70,11 +83,22 @@ controller runs once per clock tick on a `PeriodicClock` with period `Ts`, and a
   __local__Td_angle = Td_angle
   append!(__params, @parameters (Td_angle::Real), [description = "Derivative time constant of the angle controller"])
   __initial_conditions[Td_angle] = __local__Td_angle
+  __local__k_pos = k_pos
+  append!(__params, @parameters (k_pos::Real), [description = "Proportional gain of the outer position controller"])
+  __initial_conditions[k_pos] = __local__k_pos
+  __local__Ti_pos = Ti_pos
+  append!(__params, @parameters (Ti_pos::Real), [description = "Integrator time constant of the outer position controller"])
+  __initial_conditions[Ti_pos] = __local__Ti_pos
+  __local__Td_pos = Td_pos
+  append!(__params, @parameters (Td_pos::Real), [description = "Derivative time constant of the outer position controller"])
+  __initial_conditions[Td_pos] = __local__Td_pos
 
   ### Final Parameters (assignments)
 
   ### Final Path Parameters
-  append!(__vars, @variables (measurement(t)::Real), [input = true])
+  append!(__vars, @variables (angle_measurement(t)::Real), [input = true])
+  append!(__vars, @variables (pos_measurement(t)::Real), [input = true])
+  append!(__vars, @variables (pos_reference(t)::Real), [input = true])
   append!(__vars, @variables (torque(t)::Real), [output = true])
 
   ### Variables (declarations)
@@ -100,21 +124,27 @@ controller runs once per clock tick on a `PeriodicClock` with period `Ts`, and a
   delete!(__angle_controller_ics, __angle_controller_Ti)
   __angle_controller_Td = Symbolics.unwrap(__no_namespace_angle_controller.Td)::Symbolics.SymbolicT
   delete!(__angle_controller_ics, __angle_controller_Td)
-  # Subcomponent ref of type BlockComponents.Sources.Constant
-  ref_overrides = __pop_subcomponent_overrides!(__overrides, "ref")
-  push!(__systems, @named ref = BlockComponents.Sources.Constant(; k=Float64(0), ref_overrides...))
+  # Subcomponent pos_controller of type DiscreteComponents.DiscretePIDStandard
+  pos_controller_overrides = __pop_subcomponent_overrides!(__overrides, "pos_controller")
+  push!(__systems, @named pos_controller = DiscreteComponents.DiscretePIDStandard(; Ts=Ts, Nd=Float64(24.0), wd=Float64(1), wp=Float64(1), y_max=deg2rad(25.0), pos_controller_overrides...))
+  __bindings[pos_controller.K] = k_pos
+  __bindings[pos_controller.Ti] = Ti_pos
+  __bindings[pos_controller.Td] = Td_pos
+  # Now remove initial conditions in pos_controller that correspond to the bindings just added
+  __pos_controller_ics = ModelingToolkit.get_initial_conditions(pos_controller)
+  __no_namespace_pos_controller = ModelingToolkit.toggle_namespacing(pos_controller, false)
+  __pos_controller_K = Symbolics.unwrap(__no_namespace_pos_controller.K)::Symbolics.SymbolicT
+  delete!(__pos_controller_ics, __pos_controller_K)
+  __pos_controller_Ti = Symbolics.unwrap(__no_namespace_pos_controller.Ti)::Symbolics.SymbolicT
+  delete!(__pos_controller_ics, __pos_controller_Ti)
+  __pos_controller_Td = Symbolics.unwrap(__no_namespace_pos_controller.Td)::Symbolics.SymbolicT
+  delete!(__pos_controller_ics, __pos_controller_Td)
   # Subcomponent gain of type BlockComponents.Math.Gain
   gain_overrides = __pop_subcomponent_overrides!(__overrides, "gain")
   push!(__systems, @named gain = BlockComponents.Math.Gain(; k=Float64(-1), gain_overrides...))
-  # Subcomponent sampler of type DiscreteComponents.Sampler
-  sampler_overrides = __pop_subcomponent_overrides!(__overrides, "sampler")
-  push!(__systems, @named sampler = DiscreteComponents.Sampler(; sampler_overrides...))
-  # Subcomponent zoh of type DiscreteComponents.ZeroOrderHold
-  zoh_overrides = __pop_subcomponent_overrides!(__overrides, "zoh")
-  push!(__systems, @named zoh = DiscreteComponents.ZeroOrderHold(; zoh_overrides...))
-  # Subcomponent clock of type DiscreteComponents.PeriodicClock
-  clock_overrides = __pop_subcomponent_overrides!(__overrides, "clock")
-  push!(__systems, @named clock = DiscreteComponents.PeriodicClock(; dt=Ts, clock_overrides...))
+  # Subcomponent gain1 of type BlockComponents.Math.Gain
+  gain1_overrides = __pop_subcomponent_overrides!(__overrides, "gain1")
+  push!(__systems, @named gain1 = BlockComponents.Math.Gain(; k=Float64(-1), gain1_overrides...))
 
   ### Check there are no unmatched overrides
   isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
@@ -127,14 +157,15 @@ controller runs once per clock tick on a `PeriodicClock` with period `Ts`, and a
   __assertions = []
 
   ### Equations
-  push!(__eqs, connect(measurement, sampler.u))
-  push!(__eqs, connect(sampler.y, angle_controller.u_m, clock.y))
-  push!(__eqs, connect(ref.y, angle_controller.u_s))
+  push!(__eqs, connect(pos_reference, pos_controller.u_s))
+  push!(__eqs, connect(pos_measurement, pos_controller.u_m))
+  push!(__eqs, connect(pos_controller.y, gain1.u))
+  push!(__eqs, connect(gain1.y, angle_controller.u_s))
+  push!(__eqs, connect(angle_measurement, angle_controller.u_m))
+  push!(__eqs, connect(angle_controller.y, gain.u))
   push!(__eqs, connect(gain.y, torque))
-  push!(__eqs, connect(angle_controller.y, zoh.u))
-  push!(__eqs, connect(zoh.y, gain.u))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
-export DiscreteAngleController
+export DiscreteCascadeCore

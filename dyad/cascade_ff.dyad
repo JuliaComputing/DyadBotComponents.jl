@@ -181,8 +181,8 @@ component DiscreteCascadeFFController
   torque_ff = Dyad.RealInput() {^torque_ff}
   "Motor torque command"
   torque = Dyad.RealOutput() {^torque}
-  angle_controller = DiscreteComponents.DiscretePIDStandard(with_ff = true, K = k_angle, Ti = Ti_angle, Td = Td_angle, Nd = 119.368, y_max = 0.1) {^angle_controller}
-  pos_controller = DiscreteComponents.DiscretePIDStandard(with_ff = true, k_ff = -1, K = k_pos, Ti = Ti_pos, Td = Td_pos, Nd = 4.76616, wd = 1, wp = 1, y_max = deg2rad(25.0)) {^pos_controller}
+  angle_controller = DiscreteComponents.DiscretePIDStandard(Ts = Ts, with_ff = true, K = k_angle, Ti = Ti_angle, Td = Td_angle, Nd = 119.368, y_max = 0.1) {^angle_controller}
+  pos_controller = DiscreteComponents.DiscretePIDStandard(Ts = Ts, with_ff = true, k_ff = -1, K = k_pos, Ti = Ti_pos, Td = Td_pos, Nd = 4.76616, wd = 1, wp = 1, y_max = deg2rad(25.0)) {^pos_controller}
   gain = BlockComponents.Math.Gain(k = -1) {^gain}
   gain1 = BlockComponents.Math.Gain(k = -1) {^gain1}
   sampler_theta = DiscreteComponents.Sampler() {^sampler_theta}
@@ -268,12 +268,7 @@ metadata {
       "Dyad": {"placement": {"diagram": {"x1": 720, "y1": 460, "x2": 800, "y2": 540}}}
     },
     "gain1": {
-      "Dyad": {
-        "placement": {
-          "diagram": {"iconName": "default", "x1": 420, "y1": 460, "x2": 500, "y2": 540, "rot": 0}
-        },
-        "tags": []
-      }
+      "Dyad": {"placement": {"diagram": {"x1": 390, "y1": 430, "x2": 470, "y2": 510}}}
     },
     "sampler_theta": {
       "Dyad": {
@@ -340,8 +335,18 @@ metadata {
         ]
       }
     },
-    "id24": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
-    "id25": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id24": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 380.5, "y": 500}, {"x": 380.5, "y": 470}], "E": 2}],
+        "path": {}
+      }
+    },
+    "id25": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 529.5, "y": 470}, {"x": 529.5, "y": 472}], "E": 2}],
+        "path": {}
+      }
+    },
     "id26": {
       "Dyad": {
         "edges": [
@@ -365,7 +370,8 @@ metadata {
             ],
             "E": 2
           }
-        ]
+        ],
+        "path": {}
       }
     },
     "id28": {

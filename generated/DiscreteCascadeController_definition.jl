@@ -103,7 +103,7 @@ torque.
   ### Components
   # Subcomponent angle_controller of type DiscreteComponents.DiscretePIDStandard
   angle_controller_overrides = __pop_subcomponent_overrides!(__overrides, "angle_controller")
-  push!(__systems, @named angle_controller = DiscreteComponents.DiscretePIDStandard(; Nd=119.368, y_max=0.1, angle_controller_overrides...))
+  push!(__systems, @named angle_controller = DiscreteComponents.DiscretePIDStandard(; Ts=Ts, Nd=119.368, y_max=0.1, angle_controller_overrides...))
   __bindings[angle_controller.K] = k_angle
   __bindings[angle_controller.Ti] = Ti_angle
   __bindings[angle_controller.Td] = Td_angle
@@ -118,7 +118,7 @@ torque.
   delete!(__angle_controller_ics, __angle_controller_Td)
   # Subcomponent pos_controller of type DiscreteComponents.DiscretePIDStandard
   pos_controller_overrides = __pop_subcomponent_overrides!(__overrides, "pos_controller")
-  push!(__systems, @named pos_controller = DiscreteComponents.DiscretePIDStandard(; Nd=4.76616, wd=Float64(1), wp=Float64(1), y_max=deg2rad(25.0), pos_controller_overrides...))
+  push!(__systems, @named pos_controller = DiscreteComponents.DiscretePIDStandard(; Ts=Ts, Nd=4.76616, wd=Float64(1), wp=Float64(1), y_max=deg2rad(25.0), pos_controller_overrides...))
   __bindings[pos_controller.K] = k_pos
   __bindings[pos_controller.Ti] = Ti_pos
   __bindings[pos_controller.Td] = Td_pos
@@ -164,16 +164,20 @@ torque.
   __assertions = []
 
   ### Equations
+  push!(__eqs, connect(sampler_theta.y, :y, angle_controller.u_m))
+  push!(__eqs, connect(sampler_x.y, :y2, pos_controller.u_m))
+  push!(__eqs, connect(sampler_ref.y, :ysp, pos_controller.u_s))
+  push!(__eqs, connect(angle_controller.y, :u, gain.u))
   push!(__eqs, connect(sampler_ref.y, pos_controller.u_s))
   push!(__eqs, connect(pos_controller.y, gain1.u))
-  push!(__eqs, connect(gain1.y, angle_controller.u_s))
+  push!(__eqs, connect(gain1.y, angle_controller.u_s, clock.y))
   push!(__eqs, connect(angle_controller.y, gain.u))
   push!(__eqs, connect(gain.y, zoh.u))
   push!(__eqs, connect(zoh.y, torque))
   push!(__eqs, connect(sampler_theta.u, angle_measurement))
   push!(__eqs, connect(pos_measurement, sampler_x.u))
   push!(__eqs, connect(sampler_x.y, pos_controller.u_m))
-  push!(__eqs, connect(sampler_theta.y, angle_controller.u_m, clock.y))
+  push!(__eqs, connect(sampler_theta.y, angle_controller.u_m))
   push!(__eqs, connect(pos_reference, sampler_ref.u))
 
   # Return completely constructed System

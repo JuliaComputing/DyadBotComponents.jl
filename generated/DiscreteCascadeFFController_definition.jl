@@ -112,10 +112,10 @@ controller.
   ### Components
   # Subcomponent angle_controller of type DiscreteComponents.DiscretePIDStandard
   angle_controller_overrides = __pop_subcomponent_overrides!(__overrides, "angle_controller")
-  push!(__systems, @named angle_controller = DiscreteComponents.DiscretePIDStandard(; with_ff=true, K=k_angle, Ti=Ti_angle, Td=Td_angle, Nd=119.368, y_max=0.1, angle_controller_overrides...))
+  push!(__systems, @named angle_controller = DiscreteComponents.DiscretePIDStandard(; Ts=Ts, with_ff=true, K=k_angle, Ti=Ti_angle, Td=Td_angle, Nd=119.368, y_max=0.1, angle_controller_overrides...))
   # Subcomponent pos_controller of type DiscreteComponents.DiscretePIDStandard
   pos_controller_overrides = __pop_subcomponent_overrides!(__overrides, "pos_controller")
-  push!(__systems, @named pos_controller = DiscreteComponents.DiscretePIDStandard(; with_ff=true, k_ff=Float64(-1), K=k_pos, Ti=Ti_pos, Td=Td_pos, Nd=4.76616, wd=Float64(1), wp=Float64(1), y_max=deg2rad(25.0), pos_controller_overrides...))
+  push!(__systems, @named pos_controller = DiscreteComponents.DiscretePIDStandard(; Ts=Ts, with_ff=true, k_ff=Float64(-1), K=k_pos, Ti=Ti_pos, Td=Td_pos, Nd=4.76616, wd=Float64(1), wp=Float64(1), y_max=deg2rad(25.0), pos_controller_overrides...))
   # Subcomponent gain of type BlockComponents.Math.Gain
   gain_overrides = __pop_subcomponent_overrides!(__overrides, "gain")
   push!(__systems, @named gain = BlockComponents.Math.Gain(; k=Float64(-1), gain_overrides...))

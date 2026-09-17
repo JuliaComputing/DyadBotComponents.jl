@@ -1,13 +1,16 @@
 name = "DyadBotComponents"
 uuid = "6baa8624-4e17-4d27-96ac-5a32f577bc5c"
-authors = ["Fredrik Bagge Carlson"]
 version = "0.2.0"
+authors = ["Fredrik Bagge Carlson"]
 
 [deps]
 BlockComponents = "1ef5d832-be8e-447f-9f2c-8b5d17d15fd3"
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 DiscreteComponents = "b5590941-51af-4a5a-9bca-5ae7cd448b75"
+DyadData = "cab12561-e36c-4498-ae70-c9a5e79fef2a"
 DyadInterface = "99806f68-afab-45ca-9d8c-ceff6bc61f54"
+ElectricalComponents = "3fc4c519-469d-4ff5-98c9-d4d06b1514a2"
+HydraulicComponents = "b6ec4bdb-baef-4449-8ab3-f7a9cc7f1342"
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 Moshi = "2e0e35c7-a2e4-4343-998d-7ef72827ed2d"
@@ -18,26 +21,33 @@ RotationalComponents = "824fa3ed-d7dc-4365-8bdf-ac77a1ac2011"
 RuntimeGeneratedFunctions = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+ThermalComponents = "084a29d9-4f48-4925-95b4-b7d4c79725f4"
+TranslationalComponents = "42acc370-819b-4877-bdd6-eb3294461f5d"
 
 [compat]
-BlockComponents = "4"
+BlockComponents = "4.5.1"
 DelimitedFiles = "1"
-DiscreteComponents = "0.2"
+DiscreteComponents = "0.2, 0.3"
+DyadData = "2.0.1"
 DyadInterface = "6, 7"
+ElectricalComponents = "2.2.1"
+HydraulicComponents = "2.0.3"
 Markdown = "1"
 ModelingToolkit = "11"
 Moshi = "0.3"
 MultibodyComponents = "0.2"
 OrdinaryDiffEqDefault = "1.12.0, 2"
 PrecompileTools = "1"
-RotationalComponents = "2"
+RotationalComponents = "2.5.4"
 RuntimeGeneratedFunctions = "0.5.17"
 StaticArrays = "1.9.15"
 Symbolics = "7"
-julia = "1.12"
+ThermalComponents = "2.0.5"
+TranslationalComponents = "2.5.0"
+julia = "=1.12.7"
 
 [dyad]
-kernel = "3.2.0"
+kernel = "3.3.0"
 
 [extras]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
