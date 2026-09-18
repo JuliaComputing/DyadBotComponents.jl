@@ -1,0 +1,177 @@
+# Motor models with a non-ideal actuator, for identifying the real robot.
+#
+# `SimpleMotor` applies the commanded torque exactly. The real drive does not:
+# it has a torque constant below the assumed one, a dead band that small
+# commands never leave, and a Coulomb friction. `NonidealTorque` carries those
+# 3 as fitted parameters, and the motors and closed loops below wrap it the same
+# way the ideal ones wrap `SimpleMotor`, so the two can be compared directly.
+#
+# The calibration scripts in calibration/ fit `k_scale`, `db` and `tau_c`
+# together with the plant's inertias and friction to a robot run.
+
+"""
+Stand-in for the real actuator, used to make synthetic training data until a
+robot log is available. The joint torque is
+
+`tau = k_scale * (tau_cmd - db * tanh(tau_cmd / db)) - tau_c * tanh(w / w_eps)`
+
+that is a torque-constant error `k_scale`, a smooth dead band of width `db`,
+and a Coulomb friction `tau_c` smoothed over `w_eps`.
+"""
+component NonidealTorque
+  tau_cmd = RealInput() {^tau_cmd}
+  w = RealInput() {^w}
+  tau = RealOutput() {^tau}
+  "Torque-constant error (1 = ideal)"
+  parameter k_scale::Real = 0.85
+  "Dead-band width, N*m"
+  parameter db::Real = 0.01
+  "Coulomb friction torque, N*m"
+  parameter tau_c::Real = 0.005
+  "Speed scale of the friction smoothing, rad/s"
+  parameter w_eps::Real = 0.5
+relations
+  tau = k_scale * (tau_cmd - db * tanh(tau_cmd / db)) - tau_c * tanh(w / w_eps)
+metadata {
+  "Dyad": {"icons": {"default": "dyad://BlockComponents/Gain.svg"}}
+}
+end
+
+"Planar motor with the `NonidealTorque` actuator model. Plays the real robot in the synthetic study."
+component NonidealMotor
+  extends MultibodyComponents.PlanarMechanics.PartialTwoFrames
+  torquesource = RotationalComponents.Sources.TorqueSource() {^torquesource}
+  motor_rotation = MultibodyComponents.PlanarMechanics.Revolute(render = false) {^motor_rotation}
+  damper = RotationalComponents.Components.Damper(d = d) {^damper}
+  fixed = RotationalComponents.Components.Fixed() {^fixed}
+  speed = RotationalComponents.Sensors.VelocitySensor() {^speed}
+  actuator = NonidealTorque(k_scale = k_scale, db = db, tau_c = tau_c, w_eps = w_eps) {^actuator}
+  "Torque command"
+  torqueinput = RealInput() {^torqueinput}
+  "Viscous friction coefficient"
+  parameter d::RotationalDampingConstant = 0.0
+  parameter k_scale::Real = 0.85
+  parameter db::Real = 0.01
+  parameter tau_c::Real = 0.005
+  parameter w_eps::Real = 0.5
+relations
+  connect(torquesource.spline, motor_rotation.flange_a, damper.spline_a, speed.spline) {^id1}
+  connect(frame_a, motor_rotation.frame_a) {^id2}
+  connect(motor_rotation.frame_b, frame_b) {^id3}
+  connect(torquesource.support, damper.spline_b, fixed.spline) {^id4}
+  connect(torqueinput, actuator.tau_cmd) {^id5}
+  connect(speed.w, actuator.w) {^id6}
+  connect(actuator.tau, torquesource.tau) {^id7}
+metadata {
+  "Dyad": {"icons": {"default": "dyad://MultibodyComponents/Revolute.svg"}}
+}
+end
+
+"`PlanarDyadBot` with the `NonidealMotor`: the synthetic 'real robot'."
+component NonidealPlanarDyadBot
+  wheelJoint = MultibodyComponents.PlanarMechanics.OneDOFRollingWheelJoint(radius = R) {^wheelJoint}
+  wheelinertia = MultibodyComponents.PlanarMechanics.Body(I = Iw, radius = 0.01, m = m, phi(initial = 0.0), w(initial = 0.0)) {^wheelinertia}
+  motor = NonidealMotor(d = d, k_scale = k_scale, db = db, tau_c = tau_c) {^motor}
+  body_mass = MultibodyComponents.PlanarMechanics.BodyShape(color = [0.2, 0.2, 0.2, 0.9], r = [0, 2 * L], r_cm = [0, L], m = M, I = Ib, radius = 0.03, body(w(initial = 0.0))) {^body_mass}
+  IMU = MultibodyComponents.PlanarMechanics.AbsolutePosition(resolve_in_frame = MultibodyComponents.ResolveInFrame.World()) {^IMU}
+  torque = RealInput() {^torque}
+  x = RealOutput() {^x}
+  theta = RealOutput() {^theta}
+  x_dot = RealOutput() {^x_dot}
+  theta_dot = RealOutput() {^theta_dot}
+  parameter M::Mass = 0.1
+  parameter m::Mass = 0.05
+  parameter R::Length = 0.04
+  parameter L::Length = 0.08
+  parameter Ib::Inertia = 2.5e-4
+  parameter Iw::Inertia = 1e-4
+  parameter d::RotationalDampingConstant = 0.0001
+  parameter phi0::Angle = 0.0
+  parameter k_scale::Real = 0.85
+  parameter db::Real = 0.01
+  parameter tau_c::Real = 0.005
+relations
+  initial body_mass.body.phi = phi0
+  connect(wheelinertia.frame_a, wheelJoint.frame_a) {^id11}
+  connect(motor.frame_b, wheelJoint.frame_a) {^id12}
+  connect(motor.frame_a, IMU.frame_a, body_mass.frame_a) {^id13}
+  connect(torque, motor.torqueinput) {^id14}
+  x = IMU.x
+  theta = IMU.phi
+  x_dot = wheelJoint.v
+  theta_dot = body_mass.body.w
+metadata {
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}}
+}
+end
+
+"""
+`DiscreteCascadeControlledDyadBot` with the nonideal plant.
+Makes the synthetic robot log: the 200 Hz controller balances the robot with
+the actuator defects it does not know about.
+"""
+component NonidealCascadeDyadBot
+  extends CascadeControllerParams
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
+  plant = NonidealPlanarDyadBot(phi0 = phi0) {^plant}
+  square = BlockComponents.Sources.Square(amplitude = 0.05, frequency = 1 / 10) {^square}
+  firstorder = BlockComponents.Continuous.FirstOrder(T = 0.1) {^firstorder}
+  firstorder1 = BlockComponents.Continuous.FirstOrder(T = 0.1) {^firstorder1}
+  controller = DiscreteCascadeController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle, k_pos = k_pos, Ti_pos = Ti_pos, Td_pos = Td_pos, Ts = Ts) {^controller}
+  parameter phi0::Angle = 0.1
+  structural parameter Ts::Real = 0.005
+relations
+  initial firstorder.x = 0.0
+  initial firstorder1.x = 0.0
+  connect(square.y, firstorder.u) {^id7}
+  connect(firstorder.y, firstorder1.u) {^id8}
+  connect(plant.x, controller.pos_measurement) {^id9}
+  connect(plant.theta, controller.angle_measurement) {^id10}
+  connect(plant.torque, controller.torque) {^id11}
+  connect(firstorder1.y, controller.pos_reference) {^id12}
+metadata {
+  "Dyad": {
+    "tests": {"case1": {"stop": 20}},
+    "icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}
+  }
+}
+end
+
+"Synthetic robot run: 20 s of the nonideal robot under the cascade controller, one square-wave period of the position reference."
+analysis NonidealCascadeDyadBotTransient
+  extends TransientAnalysis(stop = 20, abstol = 1e-8, reltol = 1e-8)
+  model = NonidealCascadeDyadBot()
+end
+
+"""
+Cascade-controlled robot with the nonideal actuator and the position reference as
+an input. Made for fitting the actuator to a robot run: drive `pos_reference` with
+the reference the robot logged, and fit `k_scale`, `db`, `tau_c` of the actuator
+together with the plant's inertias and friction, and `theta_bias`, the offset of
+the tilt estimate that the controller balances around (a bias makes the robot
+park at `theta_bias / k_pos` from the reference).
+"""
+component NonidealReferenceDyadBot
+  extends CascadeControllerParams
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
+  plant = NonidealPlanarDyadBot(phi0 = phi0) {^plant}
+  controller = CascadeController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle, k_pos = k_pos, Ti_pos = Ti_pos, Td_pos = Td_pos) {^controller}
+  "Adds the tilt-measurement bias to the true tilt"
+  tilt_sum = BlockComponents.Math.Add() {^tilt_sum}
+  bias_source = BlockComponents.Sources.Constant(k = theta_bias) {^bias_source}
+  "Position reference"
+  pos_reference = RealInput() {^pos_reference}
+  parameter phi0::Angle = 0.0
+  "Bias of the tilt that the controller sees, rad. Stands for the estimator offset from the gyro bias and the angle_zero error. Zero is a perfect measurement."
+  parameter theta_bias::Real = 0.0
+relations
+  connect(controller.torque, plant.torque) {^id1}
+  connect(plant.theta, tilt_sum.u1) {^id2}
+  connect(bias_source.y, tilt_sum.u2) {^id5}
+  connect(tilt_sum.y, controller.angle_measurement) {^id6}
+  connect(plant.x, controller.pos_measurement) {^id3}
+  connect(pos_reference, controller.pos_reference) {^id4}
+metadata {
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}}
+}
+end

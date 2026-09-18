@@ -1,0 +1,9 @@
+# Robot logs. One 3-minute run is about 5 MB and there are dozens; they are
+# raw measurements, not source, and they belong next to the notes rather than
+# in the library's history. The fitted parameters they produce ARE committed.
+data/*.arrow
+data/run_*.csv
+plots/
+# The bench data from scripts/drive_calibration.jl: 1.7 MB per motor, 1 kHz for
+# 3 minutes. Keep them, they are slow to re-measure and the fit reads them.
+!data/drive_calibration_*.csv

@@ -1,0 +1,9 @@
+# calibrate_constrained.jl on run_clean.arrow, 60.0 to 180.0 s.
+# Iw is DERIVED from d by the bench time constant Iw/d = 0.0473 s.
+Ib = 0.001090227951040949
+Iw = 6.976304703771418e-5
+d = 0.0014749058570341263
+k_scale = 1.1458926490400714
+db = 0.00018287933954454246
+tau_c = 1.0061682023318172e-6
+theta_bias = -0.0014573568557692434

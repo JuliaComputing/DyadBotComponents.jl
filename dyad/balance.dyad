@@ -1,0 +1,93 @@
+"""
+Balance-in-place robot: the cascade-controlled planar robot with a position
+reference of zero.
+
+This is what the robot does on the floor. `CascadeControlledDyadBot` drives the
+wheel position with a filtered square wave, which is a tracking test. Here the
+position reference is the constant 0, so the only excitation is the initial tilt
+`phi0`: the robot is released at an angle, the inner loop brings it upright, and
+the outer loop brings the wheel back to where it started.
+
+The plant parameters stay at their `PlanarDyadBot` defaults and keep their
+hierarchical names, so a calibration can measure some of them and fit others,
+for example `plant.M` fixed to a weighed mass and `plant.Ib` in the search space.
+"""
+component BalanceDyadBot
+  extends CascadeControllerParams
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
+  plant = PlanarDyadBot(phi0 = phi0) {^plant}
+  pos_ref = BlockComponents.Sources.Constant(k = 0) {^pos_ref}
+  controller = CascadeController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle, k_pos = k_pos, Ti_pos = Ti_pos, Td_pos = Td_pos) {^controller}
+  "Tilt angle at which the robot is released"
+  parameter phi0::Angle = 0.1
+relations
+  connect(controller.torque, plant.torque) {^id1}
+  connect(plant.theta, controller.angle_measurement) {^id2}
+  connect(plant.x, controller.pos_measurement) {^id3}
+  connect(pos_ref.y, controller.pos_reference) {^id4}
+metadata {
+  "Dyad": {
+    "tests": {"case1": {"stop": 5}},
+    "icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}
+  }
+}
+end
+
+"""
+Discrete-time `BalanceDyadBot`: identical except that the control system is the
+sampled-data `DiscreteCascadeController` with period `Ts`, which is what runs on
+the robot.
+"""
+component DiscreteBalanceDyadBot
+  extends CascadeControllerParams
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
+  plant = PlanarDyadBot(phi0 = phi0) {^plant}
+  pos_ref = BlockComponents.Sources.Constant(k = 0) {^pos_ref}
+  controller = DiscreteCascadeController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle, k_pos = k_pos, Ti_pos = Ti_pos, Td_pos = Td_pos, Ts = Ts) {^controller}
+  "Tilt angle at which the robot is released"
+  parameter phi0::Angle = 0.1
+  "Controller sample interval"
+  structural parameter Ts::Real = 0.005
+relations
+  connect(plant.torque, controller.torque) {^id1}
+  connect(plant.theta, controller.angle_measurement) {^id2}
+  connect(plant.x, controller.pos_measurement) {^id3}
+  connect(pos_ref.y, controller.pos_reference) {^id4}
+metadata {
+  "Dyad": {
+    "tests": {"case1": {"stop": 5}},
+    "icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}
+  }
+}
+end
+
+"""
+`BalanceDyadBot` with the position reference as an input instead of the constant
+0. Made for comparing the model with a robot run: drive `pos_reference` with the
+reference that the robot logged, and the model and the robot see the same
+excitation sample by sample.
+"""
+component ReferenceDyadBot
+  extends CascadeControllerParams
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
+  plant = PlanarDyadBot(phi0 = phi0) {^plant}
+  controller = CascadeController(k_angle = k_angle, Ti_angle = Ti_angle, Td_angle = Td_angle, k_pos = k_pos, Ti_pos = Ti_pos, Td_pos = Td_pos) {^controller}
+  "Position reference"
+  pos_reference = Dyad.RealInput() {^pos_reference}
+  "Initial tilt angle of the body"
+  parameter phi0::Angle = 0.0
+relations
+  connect(controller.torque, plant.torque) {^id1}
+  connect(plant.theta, controller.angle_measurement) {^id2}
+  connect(plant.x, controller.pos_measurement) {^id3}
+  connect(pos_reference, controller.pos_reference) {^id4}
+metadata {
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}}
+}
+end
+
+"Release the robot from a 0.1 rad tilt and let the cascade controller balance it in place."
+analysis BalanceDyadBotTransient
+  extends TransientAnalysis(stop = 5, abstol = 1e-8, reltol = 1e-8)
+  model = BalanceDyadBot()
+end
