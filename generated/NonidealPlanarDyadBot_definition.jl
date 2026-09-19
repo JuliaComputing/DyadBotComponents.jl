@@ -7,7 +7,7 @@
 import Moshi as __Ext__Moshi
 
 @doc Markdown.doc"""
-   NonidealPlanarDyadBot(; name, M, m, R, L, Ib, Iw, d, phi0, k_scale, db, tau_c)
+   NonidealPlanarDyadBot(; name, M, m, R, L, Ib, Iw, d, phi0, k_scale, db, tau_c, tau_s, w_s)
 
 `PlanarDyadBot` with the `NonidealMotor`: the synthetic 'real robot'.
 
@@ -26,6 +26,8 @@ import Moshi as __Ext__Moshi
 | `k_scale`         |                          | --  |   0.85 |
 | `db`         |                          | --  |   0.01 |
 | `tau_c`         |                          | --  |   0.005 |
+| `tau_s`         |                          | --  |   0.005 |
+| `w_s`         |                          | --  |   0.1 |
 
 ## Connectors
 
@@ -35,7 +37,7 @@ import Moshi as __Ext__Moshi
  * `x_dot` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
  * `theta_dot` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
 """
-@component function NonidealPlanarDyadBot(; name = nothing, M=0.1, m=0.05, R=0.04, L=0.08, Ib=0.00025, Iw=0.0001, d=0.0001, phi0=Float64(0.0), k_scale=0.85, db=0.01, tau_c=0.005, kwargs...)
+@component function NonidealPlanarDyadBot(; name = nothing, M=0.1, m=0.05, R=0.04, L=0.08, Ib=0.00025, Iw=0.0001, d=0.0001, phi0=Float64(0.0), k_scale=0.85, db=0.01, tau_c=0.005, tau_s=0.005, w_s=0.1, kwargs...)
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -99,6 +101,12 @@ import Moshi as __Ext__Moshi
   __local__tau_c = tau_c
   append!(__params, @parameters (tau_c::Real))
   __initial_conditions[tau_c] = __local__tau_c
+  __local__tau_s = tau_s
+  append!(__params, @parameters (tau_s::Real))
+  __initial_conditions[tau_s] = __local__tau_s
+  __local__w_s = w_s
+  append!(__params, @parameters (w_s::Real))
+  __initial_conditions[w_s] = __local__w_s
 
   ### Final Parameters (assignments)
 
@@ -125,7 +133,7 @@ import Moshi as __Ext__Moshi
   push!(__systems, @named wheelinertia = MultibodyComponents.PlanarMechanics.Body(; I=Iw, radius=0.01, m=m, phi__initial=0.0, w__initial=0.0, wheelinertia_overrides...))
   # Subcomponent motor of type DyadBotComponents.NonidealMotor
   motor_overrides = __pop_subcomponent_overrides!(__overrides, "motor")
-  push!(__systems, @named motor = DyadBotComponents.NonidealMotor(; d=d, k_scale=k_scale, db=db, tau_c=tau_c, motor_overrides...))
+  push!(__systems, @named motor = DyadBotComponents.NonidealMotor(; d=d, k_scale=k_scale, db=db, tau_c=tau_c, tau_s=tau_s, w_s=w_s, motor_overrides...))
   # Subcomponent body_mass of type MultibodyComponents.PlanarMechanics.BodyShape
   body_mass_overrides = __pop_subcomponent_overrides!(__overrides, "body_mass")
   push!(__systems, @named body_mass = MultibodyComponents.PlanarMechanics.BodyShape(; color=[0.2, 0.2, 0.2, 0.9], r=[Float64(0), 2 * L], r_cm=[Float64(0), L], m=M, I=Ib, radius=0.03, body.w__initial=0.0, body_mass_overrides...))

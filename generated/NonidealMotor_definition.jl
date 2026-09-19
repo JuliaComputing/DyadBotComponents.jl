@@ -7,7 +7,7 @@
 import Moshi as __Ext__Moshi
 
 @doc Markdown.doc"""
-   NonidealMotor(; name, d, k_scale, db, tau_c, w_eps)
+   NonidealMotor(; name, d, k_scale, db, tau_c, tau_s, w_s, w_eps)
 
 Planar motor with the `NonidealTorque` actuator model. Plays the real robot in the synthetic study.
 
@@ -19,6 +19,8 @@ Planar motor with the `NonidealTorque` actuator model. Plays the real robot in t
 | `k_scale`         |                          | --  |   0.85 |
 | `db`         |                          | --  |   0.01 |
 | `tau_c`         |                          | --  |   0.005 |
+| `tau_s`         |                          | --  |   0.005 |
+| `w_s`         |                          | --  |   0.1 |
 | `w_eps`         |                          | --  |   0.5 |
 
 ## Connectors
@@ -29,7 +31,7 @@ All variables are resolved in the planar world frame. ([`Frame2D`](@ref))
 All variables are resolved in the planar world frame. ([`Frame2D`](@ref))
  * `torqueinput` - This connector represents a real signal as an input to a component ([`RealInput`](@ref))
 """
-@component function NonidealMotor(; name = nothing, d=Float64(0.0), k_scale=0.85, db=0.01, tau_c=0.005, w_eps=0.5, kwargs...)
+@component function NonidealMotor(; name = nothing, d=Float64(0.0), k_scale=0.85, db=0.01, tau_c=0.005, tau_s=0.005, w_s=0.1, w_eps=0.5, kwargs...)
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -72,6 +74,12 @@ All variables are resolved in the planar world frame. ([`Frame2D`](@ref))
   __local__tau_c = tau_c
   append!(__params, @parameters (tau_c::Real))
   __initial_conditions[tau_c] = __local__tau_c
+  __local__tau_s = tau_s
+  append!(__params, @parameters (tau_s::Real))
+  __initial_conditions[tau_s] = __local__tau_s
+  __local__w_s = w_s
+  append!(__params, @parameters (w_s::Real))
+  __initial_conditions[w_s] = __local__w_s
   __local__w_eps = w_eps
   append!(__params, @parameters (w_eps::Real))
   __initial_conditions[w_eps] = __local__w_eps
@@ -108,7 +116,7 @@ All variables are resolved in the planar world frame. ([`Frame2D`](@ref))
   push!(__systems, @named speed = RotationalComponents.Sensors.VelocitySensor(; speed_overrides...))
   # Subcomponent actuator of type DyadBotComponents.NonidealTorque
   actuator_overrides = __pop_subcomponent_overrides!(__overrides, "actuator")
-  push!(__systems, @named actuator = DyadBotComponents.NonidealTorque(; k_scale=k_scale, db=db, tau_c=tau_c, w_eps=w_eps, actuator_overrides...))
+  push!(__systems, @named actuator = DyadBotComponents.NonidealTorque(; k_scale=k_scale, db=db, tau_c=tau_c, tau_s=tau_s, w_s=w_s, w_eps=w_eps, actuator_overrides...))
 
   ### Check there are no unmatched overrides
   isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))

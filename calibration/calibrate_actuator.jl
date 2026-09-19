@@ -63,13 +63,18 @@ ref_fun(tt) = REF_INTERP(tt)
 # Starting guesses for the actuator: full torque scale, a dead band of 0.005 N m
 # (the 0.05 duty that the feedforward leaves of the 0.1 dead band, at 0.1 N m per
 # unit duty), a small Coulomb friction. w_eps stays fixed.
-const ACT0 = (k_scale = 1.0, db = 0.005, tau_c = 0.002, theta_bias = 0.0)
+# tau_s starts at the bench break-away: 0.08 duty is 0.008 N m of command, and
+# k_scale of about 0.5 means the friction it has to beat is about half of that.
+# w_s = 0.1 rad/s is a wheel creeping at 3 mm/s, which is the speed at which the
+# robot stops looking stuck. w_eps is small so the holds look like holds: a
+# smooth tanh never truly sticks, it creeps.
+const ACT0 = (k_scale = 1.0, db = 0.005, tau_c = 0.002, tau_s = 0.004, w_s = 0.1, theta_bias = 0.0)
 "NonidealReferenceDyadBot with the measured plant, the robot's gains, the logged reference, and the logged initial state."
-function build_tracking(; phi0, x0, Ib = NOMINAL.Ib, Iw = NOMINAL.Iw, d = NOMINAL.d, k_scale = ACT0.k_scale, db = ACT0.db, tau_c = ACT0.tau_c, theta_bias = ACT0.theta_bias)
+function build_tracking(; phi0, x0, Ib = NOMINAL.Ib, Iw = NOMINAL.Iw, d = NOMINAL.d, k_scale = ACT0.k_scale, db = ACT0.db, tau_c = ACT0.tau_c, tau_s = ACT0.tau_s, w_s = ACT0.w_s, theta_bias = ACT0.theta_bias)
     @named model = DyadBotComponents.NonidealReferenceDyadBot(; phi0, theta_bias,
         plant__M = MEAS.M, plant__m = MEAS.m, plant__R = MEAS.R, plant__L = MEAS.L,
-        plant__Ib = Ib, plant__Iw = Iw, plant__d = d, plant__k_scale = k_scale, plant__db = db, plant__tau_c = tau_c,
-        plant__motor__w_eps = 0.3,
+        plant__Ib = Ib, plant__Iw = Iw, plant__d = d, plant__k_scale = k_scale, plant__db = db, plant__tau_c = tau_c, plant__tau_s = tau_s, plant__w_s = w_s,
+        plant__motor__w_eps = 0.05,
         plant__wheelinertia__phi__initial = -x0 / MEAS.R, GAINS...)
     @named top = System([model.pos_reference ~ ref_fun(t)], t; systems = [model])
     return mtkcompile(top)
@@ -86,7 +91,9 @@ end
 
 sys = build_tracking(; phi0 = win[1, "plant.theta"], x0 = win[1, "plant.x"])
 leaf = (Ib = sys.model.plant.body_mass.I, Iw = sys.model.plant.wheelinertia.I, d = sys.model.plant.motor.damper.d,
-        k_scale = sys.model.plant.motor.actuator.k_scale, db = sys.model.plant.motor.actuator.db, tau_c = sys.model.plant.motor.actuator.tau_c,
+        k_scale = sys.model.plant.motor.actuator.k_scale, db = sys.model.plant.motor.actuator.db,
+        tau_c = sys.model.plant.motor.actuator.tau_c, tau_s = sys.model.plant.motor.actuator.tau_s,
+        w_s = sys.model.plant.motor.actuator.w_s,
         theta_bias = sys.model.bias_source.k)
 START = merge(NOMINAL, ACT0)
 
@@ -99,14 +106,22 @@ invprob = InverseProblem(exp1, [
     leaf.d => (NOMINAL.d, 1e-5, 3e-3, :log10),
     leaf.k_scale => (ACT0.k_scale, 0.1, 3.0, :log10),
     leaf.db => (ACT0.db, 2e-4, 0.05, :log10),
-    leaf.tau_c => (ACT0.tau_c, 1e-5, 0.05, :log10),
+    leaf.tau_c => (ACT0.tau_c, 1e-6, 0.05, :log10),
+    # tau_s >= tau_c is the physics, but a bound cannot express that here; if
+    # the fit returns tau_s < tau_c the Stribeck term is inverted and the result
+    # is meaningless, so the check below rejects it.
+    leaf.tau_s => (ACT0.tau_s, 1e-5, 0.05, :log10),
+    leaf.w_s => (ACT0.w_s, 0.005, 2.0, :log10),
     leaf.theta_bias => (0.0, -0.03, 0.03),
 ])
 @time "calibrate" result = calibrate(invprob, SingleShooting(maxiters = 200))
-fitted = (Ib = result[1], Iw = result[2], d = result[3], k_scale = result[4], db = result[5], tau_c = result[6], theta_bias = result[7])
-all(1e-7 .< collect(fitted)[1:6] .< 10) || error("calibration returned values outside the search bounds: $fitted")
+fitted = (Ib = result[1], Iw = result[2], d = result[3], k_scale = result[4], db = result[5],
+          tau_c = result[6], tau_s = result[7], w_s = result[8], theta_bias = result[9])
+fitted.tau_s >= fitted.tau_c ||
+    @warn "tau_s < tau_c: the friction is LOWER at rest than in motion, which is not a Stribeck curve. Treat the result as a failed fit." fitted.tau_s fitted.tau_c
+all(1e-7 .< collect(fitted)[1:8] .< 10) || error("calibration returned values outside the search bounds: $fitted")
 println("\nparameter   start        fitted       fitted/start", synthetic ? "   true" : "")
-for k in (:Ib, :Iw, :d, :k_scale, :db, :tau_c)
+for k in (:Ib, :Iw, :d, :k_scale, :db, :tau_c, :tau_s, :w_s)
     f, n = getproperty(fitted, k), getproperty(START, k)
     print(rpad(k, 11), rpad(round(n, sigdigits = 4), 13), rpad(round(f, sigdigits = 4), 13), rpad(round(f / n, digits = 2), 15))
     synthetic ? println(round(getproperty(TRUTH, k), sigdigits = 4)) : println()
@@ -114,13 +129,13 @@ end
 println("theta_bias  0            ", round(rad2deg(fitted.theta_bias), digits = 3), " deg")
 open(joinpath(DATA, "calibrated_parameters_actuator.toml"), "w") do io
     println(io, "# Fitted by calibrate_actuator.jl on ", synthetic ? "synthetic data" : ARGS[1], ", window $t_start to $t_end s.")
-    for k in (:Ib, :Iw, :d, :k_scale, :db, :tau_c, :theta_bias); println(io, k, " = ", getproperty(fitted, k)); end
+    for k in (:Ib, :Iw, :d, :k_scale, :db, :tau_c, :tau_s, :w_s, :theta_bias); println(io, k, " = ", getproperty(fitted, k)); end
 end
 
 # ------------------------------------------------------------- compare ----
 run_model(pars) = solve(ODEProblem(sys, pars, (0.0, win.timestamp[end])), Rodas5P(); abstol = 1e-9, reltol = 1e-9)
 s_start = run_model([])
-s_fit = run_model([leaf.Ib => fitted.Ib, leaf.Iw => fitted.Iw, leaf.d => fitted.d, leaf.k_scale => fitted.k_scale, leaf.db => fitted.db, leaf.tau_c => fitted.tau_c, leaf.theta_bias => fitted.theta_bias])
+s_fit = run_model([leaf.Ib => fitted.Ib, leaf.Iw => fitted.Iw, leaf.d => fitted.d, leaf.k_scale => fitted.k_scale, leaf.db => fitted.db, leaf.tau_c => fitted.tau_c, leaf.tau_s => fitted.tau_s, leaf.w_s => fitted.w_s, leaf.theta_bias => fitted.theta_bias])
 ts = win.timestamp
 rms(a, b) = sqrt(sum(abs2, a .- b) / length(a))
 th_s, th_f = s_start(ts; idxs = sys.model.plant.theta).u, s_fit(ts; idxs = sys.model.plant.theta).u

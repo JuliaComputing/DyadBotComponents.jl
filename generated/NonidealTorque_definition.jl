@@ -7,15 +7,44 @@
 import Moshi as __Ext__Moshi
 
 @doc Markdown.doc"""
-   NonidealTorque(; name, k_scale, db, tau_c, w_eps)
+   NonidealTorque(; name, k_scale, db, tau_c, tau_s, w_s, w_eps)
 
-Stand-in for the real actuator, used to make synthetic training data until a
-robot log is available. The joint torque is
+The real actuator: a torque-constant error, a dead band, and a friction that is
+LARGER AT REST THAN IN MOTION.
 
-`tau = k_scale * (tau_cmd - db * tanh(tau_cmd / db)) - tau_c * tanh(w / w_eps)`
+`tau = k_scale * (tau_cmd - db * tanh(tau_cmd / db)) - f(w) * tanh(w / w_eps)`
 
-that is a torque-constant error `k_scale`, a smooth dead band of width `db`,
-and a Coulomb friction `tau_c` smoothed over `w_eps`.
+with the Stribeck friction
+
+`f(w) = tau_c + (tau_s - tau_c) * exp(-(w / w_s)^2)`
+
+so the friction is `tau_s` at rest and falls to `tau_c` once the wheel slides.
+
+WHY THE VELOCITY DEPENDENCE IS NECESSARY. With `tau_s = tau_c` this reduces to
+the earlier model, whose friction was the same at every speed. That model cannot
+fit the robot. Swept against a 165 s run on 2026-09-18, with everything else
+held at its fitted value:
+
+    db [duty]   position RMS [cm]   peak |x| [cm]   (robot 15.8)
+      0.010          1.230              16.0
+      0.030          1.849              16.7
+      0.050          2.978              17.8
+      0.077          4.463              19.1   <- the measured break-away
+      0.100          5.123              19.7
+
+Monotonic, with no minimum anywhere near the bench value of 0.077 to 0.122 duty.
+The direction gives the reason away: a stickier robot should fall SHORT, and
+this one sails FURTHER past. A friction that does not depend on speed charges
+the full static break-away while the wheel is spinning, so the model cannot
+brake. The fit escapes by choosing `db = 0.010 duty`, 8 times below the
+measured value, because most of the samples are in the sweep and not in the
+holds. That number is therefore not a measurement of the dead band; it is the
+least-damaging compromise available to a model of the wrong shape.
+
+What this still does NOT capture is true hysteresis: break-away depending on the
+history of approach, and presliding displacement. That needs an internal state,
+as in LuGre. `tanh(w / w_eps)` also means the wheel never quite sticks, it
+creeps very slowly, so `w_eps` must be small for the holds to look right.
 
 ## Parameters:
 
@@ -23,7 +52,9 @@ and a Coulomb friction `tau_c` smoothed over `w_eps`.
 | ------------ | ----------------------------------- | ------ | --------------- |
 | `k_scale`         | Torque-constant error (1 = ideal)                         | --  |   0.85 |
 | `db`         | Dead-band width, N*m                         | --  |   0.01 |
-| `tau_c`         | Coulomb friction torque, N*m                         | --  |   0.005 |
+| `tau_c`         | Coulomb friction torque in motion, N*m                         | --  |   0.005 |
+| `tau_s`         | Static friction torque at rest, N*m. Equal to tau_c disables the Stribeck term.                         | --  |   0.005 |
+| `w_s`         | Stribeck speed: how fast the friction falls from tau_s to tau_c, rad/s                         | --  |   0.1 |
 | `w_eps`         | Speed scale of the friction smoothing, rad/s                         | --  |   0.5 |
 
 ## Connectors
@@ -32,7 +63,7 @@ and a Coulomb friction `tau_c` smoothed over `w_eps`.
  * `w` - This connector represents a real signal as an input to a component ([`RealInput`](@ref))
  * `tau` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
 """
-@component function NonidealTorque(; name = nothing, k_scale=0.85, db=0.01, tau_c=0.005, w_eps=0.5, kwargs...)
+@component function NonidealTorque(; name = nothing, k_scale=0.85, db=0.01, tau_c=0.005, tau_s=0.005, w_s=0.1, w_eps=0.5, kwargs...)
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -70,8 +101,14 @@ and a Coulomb friction `tau_c` smoothed over `w_eps`.
   append!(__params, @parameters (db::Real), [description = "Dead-band width, N*m"])
   __initial_conditions[db] = __local__db
   __local__tau_c = tau_c
-  append!(__params, @parameters (tau_c::Real), [description = "Coulomb friction torque, N*m"])
+  append!(__params, @parameters (tau_c::Real), [description = "Coulomb friction torque in motion, N*m"])
   __initial_conditions[tau_c] = __local__tau_c
+  __local__tau_s = tau_s
+  append!(__params, @parameters (tau_s::Real), [description = "Static friction torque at rest, N*m. Equal to tau_c disables the Stribeck term."])
+  __initial_conditions[tau_s] = __local__tau_s
+  __local__w_s = w_s
+  append!(__params, @parameters (w_s::Real), [description = "Stribeck speed: how fast the friction falls from tau_s to tau_c, rad/s"])
+  __initial_conditions[w_s] = __local__w_s
   __local__w_eps = w_eps
   append!(__params, @parameters (w_eps::Real), [description = "Speed scale of the friction smoothing, rad/s"])
   __initial_conditions[w_eps] = __local__w_eps
@@ -103,7 +140,7 @@ and a Coulomb friction `tau_c` smoothed over `w_eps`.
   __assertions = []
 
   ### Equations
-  push!(__eqs, tau ~ k_scale * (tau_cmd - db * tanh(tau_cmd / db)) - tau_c * tanh(w / w_eps))
+  push!(__eqs, tau ~ k_scale * (tau_cmd - db * tanh(tau_cmd / db)) - (tau_c + (tau_s - tau_c) * exp(-(w / w_s) ^ 2)) * tanh(w / w_eps))
 
   # Return completely constructed System
   return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
