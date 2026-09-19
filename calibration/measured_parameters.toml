@@ -42,10 +42,19 @@ Td_angle = 0.02
 Nd_angle = 3.0
 # Set-point weight of the angle-loop derivative: 0 = derivative on the measurement only
 wd_angle = 0.0
-k_pos = 0.033
-Ti_pos = 10.0
+# THESE MUST MATCH THE RUN BEING FITTED. They changed several times on
+# 2026-09-18 and a fit against the wrong gains is worthless: the plant
+# parameters silently absorb the mismatch, and the twin then falls over at the
+# gains the robot actually runs. Values below are for run_amp10 onward.
+k_pos = 0.05
+Ti_pos = 6.0
 Td_pos = 6.0
 Nd_pos = 96.0
+# Output limit of the position loop, rad. The model's own default is 25 degrees,
+# which the robot has never used; it was lowered to 8 degrees on 2026-09-18 so
+# that the outer loop's anti-windup engages at a lean the inner loop can really
+# deliver. Gravity torque at 8 degrees is 0.098 N m against a 0.1 N m ceiling.
+y_max_pos = 0.14
 
 # ---------------------------------------------------------------------------
 # Fitted by calibrate_plant.jl, listed here for reference only:

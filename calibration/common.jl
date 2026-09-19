@@ -19,7 +19,12 @@ const GAINS = let c = CFG["controller"]
        controller__Ti_pos = c["Ti_pos"], controller__Td_pos = c["Td_pos"],
        controller__angle_controller__Nd = c["Nd_angle"],
        controller__angle_controller__wd = get(c, "wd_angle", 1.0),
-       controller__pos_controller__Nd = c["Nd_pos"])
+       controller__pos_controller__Nd = c["Nd_pos"],
+       # The model defaults to a 25 degree limit that the robot has never used.
+       # Leaving it out let the twin command 3 times the lean the robot can, and
+       # the sweep on 2026-09-18 diverged at the robot's own gains because of it.
+       controller__pos_controller__y_max = get(c, "y_max_pos", deg2rad(25.0)),
+       controller__pos_controller__y_min = -get(c, "y_max_pos", deg2rad(25.0)))
 end
 
 # Starting guesses for the three fitted parameters, from the measured geometry:
