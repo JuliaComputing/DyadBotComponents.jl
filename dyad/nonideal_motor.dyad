@@ -8,7 +8,6 @@
 #
 # The calibration scripts in calibration/ fit `k_scale`, `db` and `tau_c`
 # together with the plant's inertias and friction to a robot run.
-
 """
 The real actuator: a torque-constant error, a dead band, and a friction that is
 LARGER AT REST THAN IN MOTION.
@@ -64,9 +63,35 @@ component NonidealTorque
   "Speed scale of the friction smoothing, rad/s"
   parameter w_eps::Real = 0.5
 relations
-  tau = k_scale * (tau_cmd - db * tanh(tau_cmd / db)) - (tau_c + (tau_s - tau_c) * exp(-(w / w_s)^2)) * tanh(w / w_eps)
+  tau = k_scale * (tau_cmd - db * tanh(tau_cmd / db)) - (tau_c + (tau_s - tau_c) * exp(-(w / w_s) ^ 2)) * tanh(w / w_eps)
 metadata {
-  "Dyad": {"icons": {"default": "dyad://BlockComponents/Gain.svg"}}
+  "Dyad": {"icons": {"default": "dyad://BlockComponents/Gain.svg"}},
+  "_links": {
+    "tau_cmd": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 60, "y1": 300, "x2": 140, "y2": 380, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "w": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 60, "y1": 620, "x2": 140, "y2": 700, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "tau": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 860, "y1": 460, "x2": 940, "y2": 540, "rot": 0}
+        },
+        "tags": []
+      }
+    }
+  }
 }
 end
 
@@ -90,15 +115,136 @@ component NonidealMotor
   parameter w_s::Real = 0.1
   parameter w_eps::Real = 0.5
 relations
-  connect(torquesource.spline, motor_rotation.flange_a, damper.spline_a, speed.spline) {^id1}
-  connect(frame_a, motor_rotation.frame_a) {^id2}
-  connect(motor_rotation.frame_b, frame_b) {^id3}
-  connect(torquesource.support, damper.spline_b, fixed.spline) {^id4}
-  connect(torqueinput, actuator.tau_cmd) {^id5}
-  connect(speed.w, actuator.w) {^id6}
-  connect(actuator.tau, torquesource.tau) {^id7}
+  connect(torquesource.spline, motor_rotation.flange_a, damper.spline_a, speed.spline) {^id8}
+  connect(frame_a, motor_rotation.frame_a) {^id9}
+  connect(motor_rotation.frame_b, frame_b) {^id10}
+  connect(torquesource.support, damper.spline_b, fixed.spline) {^id11}
+  connect(torqueinput, actuator.tau_cmd) {^id12}
+  connect(speed.w, actuator.w) {^id13}
+  connect(actuator.tau, torquesource.tau) {^id14}
 metadata {
-  "Dyad": {"icons": {"default": "dyad://MultibodyComponents/Revolute.svg"}}
+  "Dyad": {"icons": {"default": "dyad://MultibodyComponents/Revolute.svg"}},
+  "_links": {
+    "torquesource": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 450, "y1": 590, "x2": 550, "y2": 690, "rot": 270}
+        },
+        "tags": []
+      }
+    },
+    "motor_rotation": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 450, "y1": 280, "x2": 550, "y2": 380, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "damper": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 560, "y1": 460, "x2": 660, "y2": 560, "rot": 90}
+        },
+        "tags": []
+      }
+    },
+    "fixed": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 670, "y1": 590, "x2": 770, "y2": 690, "rot": 270}
+        },
+        "tags": []
+      }
+    },
+    "speed": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 280, "y1": 330, "x2": 380, "y2": 430, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "actuator": {
+      "Dyad": {"placement": {"diagram": {"x1": 250, "y1": 710, "x2": 390, "y2": 850}}}
+    },
+    "torqueinput": {
+      "Dyad": {"placement": {"diagram": {"x1": 50, "y1": 720, "x2": 130, "y2": 800}}}
+    },
+    "id8": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [], "E": 2},
+          {"S": 3, "M": [{"x": 610, "y": 420}], "E": -1},
+          {
+            "S": 4,
+            "M": [
+              {"x": 300, "y": 380},
+              {"x": 300, "y": 490},
+              {"x": 460, "y": 490},
+              {"x": 460, "y": 420}
+            ],
+            "E": -1
+          }
+        ],
+        "junctions": [{"x": 500, "y": 420}],
+        "path": {}
+      }
+    },
+    "id9": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 280, "y": 500}, {"x": 280, "y": 330}], "E": 2}],
+        "renderStyle": "standard"
+      }
+    },
+    "id10": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 720, "y": 330}, {"x": 720, "y": 500}], "E": 2}],
+        "renderStyle": "standard"
+      }
+    },
+    "id11": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [{"x": 610, "y": 640}], "E": -1},
+          {"S": -1, "M": [], "E": 2},
+          {"S": 3, "M": [], "E": -1}
+        ],
+        "junctions": [{"x": 610, "y": 640}],
+        "renderStyle": "standard"
+      }
+    },
+    "id12": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 230, "y": 760}, {"x": 230, "y": 757.6}], "E": 2}],
+        "path": {}
+      }
+    },
+    "id13": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 380, "y": 420},
+              {"x": 200, "y": 420},
+              {"x": 200, "y": 790},
+              {"x": 264, "y": 790}
+            ],
+            "E": 2
+          }
+        ],
+        "path": {}
+      }
+    },
+    "id14": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 376, "y": 740}, {"x": 500, "y": 740}], "E": 2}],
+        "path": {}
+      }
+    }
+  }
 }
 end
 
@@ -138,7 +284,118 @@ relations
   x_dot = wheelJoint.v
   theta_dot = body_mass.body.w
 metadata {
-  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}}
+  "Dyad": {
+    "icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"},
+    "labels": [
+      {
+        "label": "$(instance)",
+        "x": 500,
+        "y": 1050,
+        "rot": 0,
+        "attrs": {"font-size": "120"}
+      }
+    ]
+  },
+  "_links": {
+    "wheelJoint": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 340, "y1": 620, "x2": 600, "y2": 880, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "wheelinertia": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 530, "y1": 600, "x2": 670, "y2": 740, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "motor": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 420, "y1": 480, "x2": 520, "y2": 580, "rot": 90}
+        },
+        "tags": []
+      }
+    },
+    "body_mass": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 320, "y1": 130, "x2": 620, "y2": 430, "rot": 270}
+        },
+        "tags": []
+      }
+    },
+    "IMU": {
+      "Dyad": {"placement": {"diagram": {"x1": 600, "y1": 410, "x2": 700, "y2": 510}}}
+    },
+    "torque": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 60, "y1": 460, "x2": 140, "y2": 540, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "x": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 300, "x2": 960, "y2": 380, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "theta": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 420, "x2": 960, "y2": 500, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "x_dot": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 540, "x2": 960, "y2": 620, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "theta_dot": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 660, "x2": 960, "y2": 740, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "id11": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 470, "y": 670}], "E": 2}],
+        "renderStyle": "standard"
+      }
+    },
+    "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id13": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [], "E": 2},
+          {"S": 3, "M": [], "E": -1}
+        ],
+        "junctions": [{"x": 470, "y": 460}]
+      }
+    },
+    "id14": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 404, "y": 500}, {"x": 404, "y": 489}], "E": 2}],
+        "path": {}
+      }
+    }
+  }
 }
 end
 
@@ -170,6 +427,71 @@ metadata {
   "Dyad": {
     "tests": {"case1": {"stop": 20}},
     "icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}
+  },
+  "_links": {
+    "world": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 110, "y1": 250, "x2": 10, "y2": 150, "rot": 180}
+        },
+        "tags": []
+      }
+    },
+    "plant": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 600, "y1": 400, "x2": 800, "y2": 600, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "square": {
+      "Dyad": {"placement": {"diagram": {"x1": -190, "y1": 430, "x2": -90, "y2": 530}}}
+    },
+    "firstorder": {
+      "Dyad": {"placement": {"diagram": {"x1": -40, "y1": 430, "x2": 60, "y2": 530}}}
+    },
+    "firstorder1": {
+      "Dyad": {"placement": {"diagram": {"x1": 120, "y1": 430, "x2": 220, "y2": 530}}}
+    },
+    "controller": {
+      "Dyad": {"placement": {"diagram": {"x1": 305, "y1": 390, "x2": 485, "y2": 570}}}
+    },
+    "id7": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id8": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id9": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [{"x": 840, "y": 468}, {"x": 840, "y": 760}, {"x": 346.7, "y": 760}],
+            "E": 2
+          }
+        ]
+      }
+    },
+    "id10": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [
+              {"x": 820, "y": 492},
+              {"x": 820, "y": 700},
+              {"x": 450, "y": 700},
+              {"x": 450, "y": 569.5}
+            ],
+            "E": 2
+          }
+        ]
+      }
+    },
+    "id11": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 549.75, "y": 500}, {"x": 549.75, "y": 480}], "E": 2}]
+      }
+    },
+    "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}}
   }
 }
 end
@@ -178,6 +500,7 @@ end
 analysis NonidealCascadeDyadBotTransient
   extends TransientAnalysis(stop = 20, abstol = 1e-8, reltol = 1e-8)
   model = NonidealCascadeDyadBot()
+relations
 end
 
 """
@@ -202,13 +525,73 @@ component NonidealReferenceDyadBot
   "Bias of the tilt that the controller sees, rad. Stands for the estimator offset from the gyro bias and the angle_zero error. Zero is a perfect measurement."
   parameter theta_bias::Real = 0.0
 relations
-  connect(controller.torque, plant.torque) {^id1}
-  connect(plant.theta, tilt_sum.u1) {^id2}
-  connect(bias_source.y, tilt_sum.u2) {^id5}
-  connect(tilt_sum.y, controller.angle_measurement) {^id6}
-  connect(plant.x, controller.pos_measurement) {^id3}
-  connect(pos_reference, controller.pos_reference) {^id4}
+  connect(controller.torque, plant.torque) {^id7}
+  connect(plant.theta, tilt_sum.u1) {^id8}
+  connect(bias_source.y, tilt_sum.u2) {^id9}
+  connect(tilt_sum.y, controller.angle_measurement) {^id10}
+  connect(plant.x, controller.pos_measurement) {^id11}
+  connect(pos_reference, controller.pos_reference) {^id12}
 metadata {
-  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}}
+  "Dyad": {"icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"}},
+  "_links": {
+    "world": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 110, "y1": 250, "x2": 10, "y2": 150, "rot": 180}
+        },
+        "tags": []
+      }
+    },
+    "plant": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 600, "y1": 400, "x2": 800, "y2": 600, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "controller": {
+      "Dyad": {"placement": {"diagram": {"x1": 300, "y1": 400, "x2": 490, "y2": 590}}}
+    },
+    "tilt_sum": {
+      "Dyad": {"placement": {"diagram": {"x1": 150, "y1": 640, "x2": 250, "y2": 740}}}
+    },
+    "bias_source": {
+      "Dyad": {
+        "placement": {"diagram": {"x1": 10, "y1": 700, "x2": 110, "y2": 800, "rot": 0}}
+      }
+    },
+    "pos_reference": {
+      "Dyad": {"placement": {"diagram": {"x1": 40, "y1": 440, "x2": 120, "y2": 520}}}
+    },
+    "id7": {
+      "Dyad": {"edges": [{"S": 1, "M": [{"x": 545, "y": 495}, {"x": 545, "y": 500}], "E": 2}]}
+    },
+    "id8": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [{"x": 840, "y": 492}, {"x": 840, "y": 790}, {"x": 120, "y": 790}],
+            "E": 2
+          }
+        ]
+      }
+    },
+    "id9": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id10": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}},
+    "id11": {
+      "Dyad": {
+        "edges": [
+          {
+            "S": 1,
+            "M": [{"x": 860, "y": 468}, {"x": 860, "y": 840}, {"x": 285, "y": 840}],
+            "E": 2
+          }
+        ]
+      }
+    },
+    "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}]}}
+  }
 }
 end

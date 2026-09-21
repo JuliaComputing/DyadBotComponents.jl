@@ -1,3 +1,4 @@
 Manifest.toml
 .migration-backups/
 .vscode/
+/agent_resources
