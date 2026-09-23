@@ -4,8 +4,6 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
    AngleControlledDyadBot3D(; name, k_angle, Ti_angle, Td_angle, phi0)
 

@@ -4,8 +4,6 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
    RollingDyadBot3D(; name, M, m, R, L, Ib, Iw, d, phi0, track)
 

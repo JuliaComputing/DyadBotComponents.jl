@@ -4,8 +4,6 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
    DiscreteCascadeCore(; name, Ts, k_angle, Ti_angle, Td_angle, k_pos, Ti_pos, Td_pos)
 

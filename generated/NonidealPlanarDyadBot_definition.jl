@@ -4,8 +4,6 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
    NonidealPlanarDyadBot(; name, M, m, R, L, Ib, Iw, d, phi0, k_scale, db, tau_c, tau_s, w_s)
 
@@ -136,7 +134,7 @@ import Moshi as __Ext__Moshi
   push!(__systems, @named motor = DyadBotComponents.NonidealMotor(; d=d, k_scale=k_scale, db=db, tau_c=tau_c, tau_s=tau_s, w_s=w_s, motor_overrides...))
   # Subcomponent body_mass of type MultibodyComponents.PlanarMechanics.BodyShape
   body_mass_overrides = __pop_subcomponent_overrides!(__overrides, "body_mass")
-  push!(__systems, @named body_mass = MultibodyComponents.PlanarMechanics.BodyShape(; color=[0.2, 0.2, 0.2, 0.9], r=[Float64(0), 2 * L], r_cm=[Float64(0), L], m=M, I=Ib, radius=0.03, body.w__initial=0.0, body_mass_overrides...))
+  push!(__systems, @named body_mass = MultibodyComponents.PlanarMechanics.BodyShape(; color=[0.2, 0.2, 0.2, 0.9], r=[Float64(0), 2 * L], r_cm=[Float64(0), L], m=M, I=Ib, radius=0.03, body__w__initial=0.0, body_mass_overrides...))
   # Subcomponent IMU of type MultibodyComponents.PlanarMechanics.AbsolutePosition
   IMU_overrides = __pop_subcomponent_overrides!(__overrides, "IMU")
   push!(__systems, @named IMU = MultibodyComponents.PlanarMechanics.AbsolutePosition(; resolve_in_frame=MultibodyComponents.ResolveInFrame.World(), IMU_overrides...))

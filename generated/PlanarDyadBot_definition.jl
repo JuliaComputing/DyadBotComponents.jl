@@ -4,8 +4,6 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
    PlanarDyadBot(; name, M, m, R, L, Ib, Iw, d, phi0)
 
@@ -130,7 +128,7 @@ component in the top level of the enclosing model.
   push!(__systems, @named simplemotor = DyadBotComponents.SimpleMotor(; d=d, simplemotor_overrides...))
   # Subcomponent body_mass of type MultibodyComponents.PlanarMechanics.BodyShape
   body_mass_overrides = __pop_subcomponent_overrides!(__overrides, "body_mass")
-  push!(__systems, @named body_mass = MultibodyComponents.PlanarMechanics.BodyShape(; color=[0.2, 0.2, 0.2, 0.9], r=[Float64(0), 2 * L], r_cm=[Float64(0), L], m=M, I=Ib, radius=0.03, body.w__initial=0.0, body_mass_overrides...))
+  push!(__systems, @named body_mass = MultibodyComponents.PlanarMechanics.BodyShape(; color=[0.2, 0.2, 0.2, 0.9], r=[Float64(0), 2 * L], r_cm=[Float64(0), L], m=M, I=Ib, radius=0.03, body__w__initial=0.0, body_mass_overrides...))
   # Subcomponent IMU of type MultibodyComponents.PlanarMechanics.AbsolutePosition
   IMU_overrides = __pop_subcomponent_overrides!(__overrides, "IMU")
   push!(__systems, @named IMU = MultibodyComponents.PlanarMechanics.AbsolutePosition(; resolve_in_frame=MultibodyComponents.ResolveInFrame.World(), IMU_overrides...))

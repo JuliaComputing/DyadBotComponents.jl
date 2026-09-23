@@ -4,8 +4,6 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
    DyadBot3D(; name, elastic_contact, track, body_height, wheel_radius, body_mass, wheel_mass, wheel_I_axis, wheel_I_long, d_wheel)
 

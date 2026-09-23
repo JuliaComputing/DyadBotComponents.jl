@@ -4,8 +4,6 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
    NonidealMotor(; name, d, k_scale, db, tau_c, tau_s, w_s, w_eps)
 
