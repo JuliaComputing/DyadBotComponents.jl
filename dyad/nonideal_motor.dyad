@@ -6,7 +6,7 @@
 # 3 as fitted parameters, and the motors and closed loops below wrap it the same
 # way the ideal ones wrap `SimpleMotor`, so the two can be compared directly.
 #
-# The calibration scripts in calibration/ fit `k_scale`, `db` and `tau_c`
+# The calibration scripts in BalansBotDeploy/calibration/ fit `k_scale`, `db` and `tau_c`
 # together with the plant's inertias and friction to a robot run.
 """
 The real actuator: a torque-constant error, a dead band, and a friction that is
