@@ -20,6 +20,18 @@ Plant models:
   angle/rate. With equal torque on both wheels it is dynamically equivalent
   to `PlanarDyadBot`.
 
+- `DCPlanarMotor` and `DCPlanarDyadBot` (`dyad/dc_motor.dyad`): the drive as an
+  ELECTRICAL machine instead of a torque source. The bridge applies
+  `duty * Vbus` across an R-L winding, the back EMF takes `Ke * w` away, and
+  the winding current makes the torque; the measured current comes out on a
+  port, so a controller can close a loop around it. `n_motors` lumps the
+  robot's 2 motors into one machine (`R/n`, `L/n`, the same `Kt = Ke`, `n`
+  times the friction) and the `current` port is the MEAN per-motor current,
+  which is what the robot measures. Fitted by `BalansBotDeploy/calibration/fit_current.jl` from
+  the 2026-09-22 bench at the measured 7.68 V bus.
+  `DCMotorBench` / `DCMotorBenchTransient` is one motor on a fixed mount with a
+  duty step, for checking L/R and the no-load speed.
+
 Closed-loop models around the planar plant:
 
 - `AngleControlledDyadBot`: single PID loop stabilizing the tilt angle.

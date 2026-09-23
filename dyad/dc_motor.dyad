@@ -1,0 +1,482 @@
+# The drive as an ELECTRICAL machine, for the current inner loop.
+#
+# `NonidealMotor` (dyad/nonideal_motor.dyad) is a torque source with a fitted
+# scale and a dead band: the command IS the torque, and the only thing between
+# them is arithmetic. That model cannot carry a current loop, because it has no
+# current. `DCPlanarMotor` puts the machine back: the H bridge applies
+# `duty * Vbus` across an R-L winding, the back EMF takes `Ke * w` away, and
+# the winding current makes the torque. The measured current comes out on a
+# port, so a controller can close a loop around it.
+#
+# WHAT THE BENCH OF 2026-09-22 MEASURED (BalansBotDeploy/calibration/data/drive_calibration_*.csv,
+# wheels free, fitted by BalansBotDeploy/calibration/fit_current.jl). Every number is a RATIO,
+# because the bus voltage was not measured:
+#
+#   quantity                           motor A         motor B
+#   stall current per duty  Vbus/R      2.456 A         2.107 A
+#   back EMF                Ke/Vbus     0.03721 /V      0.03771 /V
+#   Coulomb friction        tau_c/Kt    0.0650 A        0.0623 A
+#   viscous friction        d/Kt        0.00231 A s/rad 0.00267 A s/rad
+#   break-away friction     tau_s/Kt    0.1915 A        0.1203 A
+#   electrical constant     L/R         5.56 ms         5.40 ms
+#   mechanical constant     Iw/d_total  47.5 ms         56.7 ms
+#
+# so with a bus voltage `Vbus`:
+#
+#   Kt = Ke = Vbus * (Ke/Vbus)    R = Vbus / (stall per duty)    L = (L/R) * R
+#   tau_c = (tau_c/Kt) * Kt       d = (d/Kt) * Kt                tau_s = (tau_s/Kt) * Kt
+#   Iw    = (Iw/d_total) * (Kt * Ke / R + d)
+#
+# Ke is NOT the slope of the steady-speed line: that slope leaves the `i R` drop
+# in, which is 5 % of the bus at full duty and goes straight into Kt and Iw. It
+# comes from `Ke = (|duty| Vbus - i R) / |w|` at every level above |duty| = 0.3,
+# with R from the stalled part of the ramp-up. CHECKED against a meter: the DC
+# no-load current at duty 1.0 comes out 0.1239 A against the measured 0.1215 A
+# for motor A and 0.1287 against 0.1274 for motor B, and nothing was fitted to it.
+#
+# VBUS WAS MEASURED ON 2026-09-22: 7.68 V with a meter across the motor supply
+# during a full-duty hold of both motors, wheels free, on a 2S lithium pack at
+# mid charge. Every default below is that 7.68 V. A 2S pack swings 6.4 to 8.4 V
+# over a discharge and `Kt`, `R`, `L` and `Iw` are all PROPORTIONAL to it, so
+# refit or re-measure when it matters; a current loop tuned by the same formulas
+# keeps its bandwidth, because `K_i = 2 pi f L / Vbus` moves with `L` and `Vbus`
+# together.
+#
+# The old components stay exactly as they were, so every analysis that runs on
+# `NonidealMotor` and `NonidealPlanarDyadBot` keeps running.
+
+"""
+The velocity-dependent half of `NonidealTorque`, as a block of its own.
+
+`tau = -(tau_c + (tau_s - tau_c) * exp(-(w / w_s)^2)) * tanh(w / w_eps)`
+
+The friction is `tau_s` at rest and falls to `tau_c` once the shaft slides, and
+the sign follows the shaft. `NonidealTorque` carries the same expression with a
+dead band and a torque-constant error in front of it; those two belong to a
+drive that is commanded in torque, and `DCPlanarMotor` has neither, because the
+dead band IS the friction once the winding is modelled.
+
+`tanh(w / w_eps)` means the shaft never quite sticks, it creeps very slowly, so
+`w_eps` must be small for a hold to look right. True hysteresis (break-away that
+depends on the history of approach, presliding displacement) still needs an
+internal state, as in LuGre.
+"""
+component StribeckFriction
+  "Shaft speed, rad/s"
+  w = RealInput() {^w}
+  "Friction torque acting on the shaft, N*m"
+  tau = RealOutput() {^tau}
+  "Coulomb friction torque in motion, N*m"
+  parameter tau_c::Real = 0.0193
+  "Static friction torque at rest, N*m. Equal to tau_c disables the Stribeck term."
+  parameter tau_s::Real = 0.0552
+  "Stribeck speed: how fast the friction falls from tau_s to tau_c, rad/s"
+  parameter w_s::Real = 0.1
+  "Speed scale of the friction smoothing, rad/s"
+  parameter w_eps::Real = 0.5
+relations
+  tau = -(tau_c + (tau_s - tau_c) * exp(-(w / w_s) ^ 2)) * tanh(w / w_eps)
+metadata {
+  "Dyad": {"icons": {"default": "dyad://BlockComponents/Gain.svg"}},
+  "_links": {
+    "w": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 60, "y1": 460, "x2": 140, "y2": 540, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "tau": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 860, "y1": 460, "x2": 940, "y2": 540, "rot": 0}
+        },
+        "tags": []
+      }
+    }
+  }
+}
+end
+
+"""
+Planar motor driven by a PWM duty through a real DC machine.
+
+The sibling of `NonidealMotor`: the same `PartialTwoFrames` mechanics, the same
+revolute, damper, fixed support and speed sensor, and the same friction law.
+What changes is everything in front of the shaft. Instead of a torque source
+fed by an algebraic drive model there is a circuit:
+
+    duty --> Gain(Vbus) --> VoltageSource --- R --- L --- ammeter --- EMF(Kt)
+                                  |                                    |
+                                  +-------------- ground --------------+
+
+with the EMF rotor on the shaft. So
+
+    Vbus * duty = R * i + L * di/dt + Kt * w
+    tau_shaft   = Kt * i - d * w - friction(w)
+
+The H bridge is a DRV8411A and the runtime's PWM pattern alternates drive and
+brake, never coast except at exactly duty 0, so the average applied voltage IS
+`duty * Vbus` and no extra factor belongs here.
+
+N_MOTORS IN ONE MACHINE. The robot has 2 motors on one duty command and, in the
+planar model, on one wheel. `n_motors` lumps them exactly: `n` identical motors
+in parallel across the same bridge and rigid on the same shaft are one machine
+with `R/n`, `L/n`, the same `Kt = Ke`, and `n` times the friction. The circuit
+above then carries the TOTAL current, and `current` is the total divided by `n`,
+which is the MEAN per-motor current -- what the robot measures, since the runtime
+averages the 2 ADC channels. So `R`, `L`, `Kt`, `d`, `tau_c` and `tau_s` are all
+PER-MOTOR values straight out of the bench, and the wheel torque per ampere of
+`current` is `n_motors * Kt`, not `Kt`. A current loop must use the former.
+
+`current` is the SIGNED winding current in amperes, positive when the duty is
+positive. The robot's sensor is not signed: the DRV8411A IPROPI pin mirrors the
+low-side FET current, so the ADC reads a magnitude and reads 0 in coast. The
+runtime puts the sign back from the last applied duty; see
+`BalansRuntime/src/dyad_controller.jl`.
+
+Parameter defaults are the 2026-09-22 bench at the measured bus voltage of
+7.68 V. See the header of this file for the ratios they come from.
+"""
+component DCPlanarMotor
+  extends MultibodyComponents.PlanarMechanics.PartialTwoFrames
+  "PWM duty of the H bridge, -1 to 1"
+  duty = RealInput() {^duty}
+  "Winding current, signed, A"
+  current = RealOutput() {^current}
+  "Shaft speed relative to the housing, rad/s"
+  w = RealOutput() {^w}
+  bus = BlockComponents.Math.Gain(k = Vbus) {^bus}
+  source = ElectricalComponents.Analog.Sources.VoltageSource() {^source}
+  ground = ElectricalComponents.Analog.Basic.Ground() {^ground}
+  resistor = ElectricalComponents.Analog.Basic.Resistor(R = R / n_motors) {^resistor}
+  inductor = ElectricalComponents.Analog.Basic.Inductor(L = L / n_motors) {^inductor}
+  ammeter = ElectricalComponents.Analog.Sensors.CurrentSensor() {^ammeter}
+  mean_current = BlockComponents.Math.Gain(k = 1 / n_motors) {^mean_current}
+  emf = ElectricalComponents.Analog.Basic.RotationalEMF(k = Kt) {^emf}
+  motor_rotation = MultibodyComponents.PlanarMechanics.Revolute(render = false) {^motor_rotation}
+  damper = RotationalComponents.Components.Damper(d = n_motors * d) {^damper}
+  fixed = RotationalComponents.Components.Fixed() {^fixed}
+  speed = RotationalComponents.Sensors.VelocitySensor() {^speed}
+  friction = StribeckFriction(tau_c = n_motors * tau_c, tau_s = n_motors * tau_s, w_s = w_s, w_eps = w_eps) {^friction}
+  frictionsource = RotationalComponents.Sources.TorqueSource() {^frictionsource}
+  "How many identical motors share this command and this shaft. 2 on the robot."
+  structural parameter n_motors::Real = 2
+  "Bus voltage across the H bridge, V. Measured 7.68 V at full duty on 2026-09-22; a 2S pack swings 6.4 to 8.4 V over a discharge."
+  parameter Vbus::Real = 7.68
+  "Winding resistance of ONE motor, Ohm. Vbus / 2.28 from the stall current per duty."
+  parameter R::Real = 3.3864171
+  "Winding inductance of ONE motor, H. 0.00548 * R from the electrical time constant of the chirp."
+  parameter L::Real = 0.0185392
+  "Torque and back-EMF constant of ONE motor at the wheel, N*m/A. Vbus * Ke/Vbus, with the i R drop taken out level by level."
+  parameter Kt::Real = 0.2877012
+  "Viscous friction of ONE motor, N*m*s/rad. 0.00249 * Kt from the steady-speed line."
+  parameter d::Real = 7.1601e-4
+  "Coulomb friction torque of ONE motor in motion, N*m. 0.0637 * Kt from the steady-speed intercept."
+  parameter tau_c::Real = 0.0183125
+  "Static friction torque of ONE motor at rest, N*m. The break-away current times Kt."
+  parameter tau_s::Real = 0.0447701
+  "Stribeck speed, rad/s. Not measured; the shape between rest and sliding."
+  parameter w_s::Real = 0.1
+  "Speed scale of the friction smoothing, rad/s"
+  parameter w_eps::Real = 0.5
+relations
+  # The winding starts empty. Without it the initialization of any model that
+  # holds this motor is one equation short: the inductor current is a state and
+  # nothing else fixes it.
+  initial inductor.i = 0.0
+  connect(duty, bus.u) {^id1}
+  connect(bus.y, source.V) {^id2}
+  connect(source.p, resistor.p) {^id3}
+  connect(resistor.n, inductor.p) {^id4}
+  connect(inductor.n, ammeter.p) {^id5}
+  connect(ammeter.n, emf.p) {^id6}
+  connect(emf.n, source.n, ground.g) {^id7}
+  connect(ammeter.i, mean_current.u) {^id8}
+  connect(mean_current.y, current) {^id8b}
+  connect(emf.rotor, motor_rotation.flange_a, damper.spline_a, speed.spline, frictionsource.spline) {^id9}
+  connect(emf.housing, damper.spline_b, fixed.spline, frictionsource.support) {^id10}
+  connect(speed.w, friction.w, w) {^id11}
+  connect(friction.tau, frictionsource.tau) {^id12}
+  connect(frame_a, motor_rotation.frame_a) {^id13}
+  connect(motor_rotation.frame_b, frame_b) {^id14}
+metadata {
+  "Dyad": {"icons": {"default": "dyad://MultibodyComponents/Revolute.svg"}}
+}
+end
+
+"""
+`NonidealPlanarDyadBot` with the `DCPlanarMotor`: the robot a current loop can
+be closed around.
+
+The mechanics are identical, parameter for parameter, so a run of this model and
+a run of `NonidealPlanarDyadBot` differ only in the drive. The interface differs
+in two places: the input is a `duty` between -1 and 1 instead of a torque in
+N*m, and there is one more output, `current`, the signed winding current that
+`BalansBotDeploy.CurrentSensor` samples.
+
+The electrical names are `Rm`, `Lm` and `Kt`: `R` and `L` are already taken
+here by the wheel radius and the body length.
+
+One lumped motor still stands for both wheels, exactly as in the existing plant.
+The runtime averages the 2 encoders, commands one duty, and splits a yaw
+differential after the controller; the current loop sees the mean of the 2
+measured currents. `Iw` and `d` are therefore the LUMPED values.
+"""
+component DCPlanarDyadBot
+  wheelJoint = MultibodyComponents.PlanarMechanics.OneDOFRollingWheelJoint(radius = R) {^wheelJoint}
+  wheelinertia = MultibodyComponents.PlanarMechanics.Body(I = Iw, radius = 0.01, m = m, phi(initial = 0.0), w(initial = 0.0)) {^wheelinertia}
+  motor = DCPlanarMotor(n_motors = n_motors, Vbus = Vbus, R = Rm, L = Lm, Kt = Kt, d = d, tau_c = tau_c, tau_s = tau_s, w_s = w_s) {^motor}
+  body_mass = MultibodyComponents.PlanarMechanics.BodyShape(color = [0.2, 0.2, 0.2, 0.9], r = [0, 2 * L], r_cm = [0, L], m = M, I = Ib, radius = 0.03, body(w(initial = 0.0))) {^body_mass}
+  IMU = MultibodyComponents.PlanarMechanics.AbsolutePosition(resolve_in_frame = MultibodyComponents.ResolveInFrame.World()) {^IMU}
+  "PWM duty command, -1 to 1"
+  duty = RealInput() {^duty}
+  x = RealOutput() {^x}
+  theta = RealOutput() {^theta}
+  x_dot = RealOutput() {^x_dot}
+  theta_dot = RealOutput() {^theta_dot}
+  "Signed winding current, A"
+  current = RealOutput() {^current}
+  parameter M::Mass = 0.1
+  parameter m::Mass = 0.05
+  "Effective rolling radius, m"
+  parameter R::Length = 0.04
+  "Wheel axis to body centre of mass, m"
+  parameter L::Length = 0.08
+  parameter Ib::Inertia = 2.5e-4
+  "Wheel and reflected rotor inertia of BOTH wheels, kg m^2. n_motors * tau_mech * (Kt*Kt/Rm + d)."
+  parameter Iw::Inertia = 2.6220e-3
+  parameter phi0::Angle = 0.0
+  "How many identical motors share the one duty command. 2 on the robot."
+  structural parameter n_motors::Real = 2
+  "Bus voltage, V. Measured 7.68 V at full duty on 2026-09-22; a 2S pack swings 6.4 to 8.4 V over a discharge."
+  parameter Vbus::Real = 7.68
+  "Winding resistance of ONE motor, Ohm"
+  parameter Rm::Real = 3.3864171
+  "Winding inductance of ONE motor, H"
+  parameter Lm::Real = 0.0185392
+  "Torque and back-EMF constant of ONE motor at the wheel, N*m/A"
+  parameter Kt::Real = 0.2877012
+  "Viscous friction of ONE motor, N*m*s/rad"
+  parameter d::Real = 7.1601e-4
+  "Coulomb friction torque of ONE motor in motion, N*m"
+  parameter tau_c::Real = 0.0183125
+  "Static friction torque of ONE motor at rest, N*m"
+  parameter tau_s::Real = 0.0447701
+  "Stribeck speed, rad/s"
+  parameter w_s::Real = 0.1
+relations
+  initial body_mass.body.phi = phi0
+  connect(wheelinertia.frame_a, wheelJoint.frame_a) {^id11}
+  connect(motor.frame_b, wheelJoint.frame_a) {^id12}
+  connect(motor.frame_a, IMU.frame_a, body_mass.frame_a) {^id13}
+  connect(duty, motor.duty) {^id14}
+  connect(motor.current, current) {^id15}
+  x = IMU.x
+  theta = IMU.phi
+  x_dot = wheelJoint.v
+  theta_dot = body_mass.body.w
+metadata {
+  "Dyad": {
+    "icons": {"default": "dyad://DyadBotComponents/PlanarDyadBot.svg"},
+    "labels": [
+      {
+        "label": "$(instance)",
+        "x": 500,
+        "y": 1050,
+        "rot": 0,
+        "attrs": {"font-size": "120"}
+      }
+    ]
+  },
+  "_links": {
+    "wheelJoint": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 340, "y1": 620, "x2": 600, "y2": 880, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "wheelinertia": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 530, "y1": 600, "x2": 670, "y2": 740, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "motor": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 420, "y1": 480, "x2": 520, "y2": 580, "rot": 90}
+        },
+        "tags": []
+      }
+    },
+    "body_mass": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 320, "y1": 130, "x2": 620, "y2": 430, "rot": 270}
+        },
+        "tags": []
+      }
+    },
+    "IMU": {
+      "Dyad": {"placement": {"diagram": {"x1": 600, "y1": 410, "x2": 700, "y2": 510}}}
+    },
+    "duty": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 60, "y1": 460, "x2": 140, "y2": 540, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "x": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 300, "x2": 960, "y2": 380, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "theta": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 420, "x2": 960, "y2": 500, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "x_dot": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 540, "x2": 960, "y2": 620, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "theta_dot": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 660, "x2": 960, "y2": 740, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "current": {
+      "Dyad": {
+        "placement": {
+          "diagram": {"iconName": "default", "x1": 880, "y1": 780, "x2": 960, "y2": 860, "rot": 0}
+        },
+        "tags": []
+      }
+    },
+    "id11": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 470, "y": 670}], "E": 2}],
+        "renderStyle": "standard"
+      }
+    },
+    "id12": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "renderStyle": "standard"}},
+    "id13": {
+      "Dyad": {
+        "edges": [
+          {"S": 1, "M": [], "E": -1},
+          {"S": -1, "M": [], "E": 2},
+          {"S": 3, "M": [], "E": -1}
+        ],
+        "junctions": [{"x": 470, "y": 460}]
+      }
+    },
+    "id14": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 404, "y": 500}, {"x": 404, "y": 530}], "E": 2}],
+        "path": {}
+      }
+    },
+    "id15": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 800, "y": 530}, {"x": 800, "y": 820}], "E": 2}],
+        "path": {}
+      }
+    }
+  }
+}
+end
+
+"""
+The bare `DCPlanarMotor` on a fixed mount, for checking the drive on its own.
+
+The motor's `frame_a` is bolted to the world and `frame_b` carries a wheel
+inertia, so this is the bench: wheels free, nothing balancing. `duty` is a
+constant, and the outputs are the winding current and the shaft speed. The
+checks it answers:
+
+- a step of duty rises in current with the electrical time constant `Lm/Rm`,
+  about 6 ms
+- the speed settles at `Vbus/Kt * duty` less the friction, so at the placeholder
+  Vbus a duty of 0.6 gives about 24.9 * 0.6 = 14.9 rad/s
+- the speed rises with the mechanical time constant, about 47.5 ms
+"""
+component DCMotorBench
+  world = MultibodyComponents.PlanarMechanics.World(g = 9.82, nominal_length = 0.1) {^world}
+  mount = MultibodyComponents.PlanarMechanics.Fixed() {^mount}
+  motor = DCPlanarMotor(n_motors = n_motors, Vbus = Vbus, R = Rm, L = Lm, Kt = Kt, d = d, tau_c = tau_c, tau_s = tau_s, w_s = w_s) {^motor}
+  wheelinertia = MultibodyComponents.PlanarMechanics.Body(I = Iw, radius = 0.01, m = 0.04, phi(initial = 0.0), w(initial = 0.0)) {^wheelinertia}
+  command = BlockComponents.Sources.Step(height = duty, start_time = 0.05, offset = 0.0) {^command}
+  "Duty step height"
+  parameter duty::Real = 0.6
+  parameter Vbus::Real = 7.68
+  parameter Rm::Real = 3.3864171
+  parameter Lm::Real = 0.0185392
+  parameter Kt::Real = 0.2877012
+  parameter d::Real = 7.1601e-4
+  parameter tau_c::Real = 0.0183125
+  parameter tau_s::Real = 0.0447701
+  parameter w_s::Real = 0.1
+  "One motor only on the bench, so n_motors = 1 and Iw is one wheel and rotor."
+  structural parameter n_motors::Real = 1
+  parameter Iw::Inertia = 1.3110e-3
+relations
+  connect(mount.frame_b, motor.frame_a) {^id1}
+  connect(motor.frame_b, wheelinertia.frame_a) {^id2}
+  connect(command.y, motor.duty) {^id3}
+metadata {
+  "Dyad": {"tests": {"case1": {"stop": 0.5}}},
+  "_links": {
+    "world": {
+      "Dyad": {"placement": {"diagram": {"x1": 40, "y1": 40, "x2": 140, "y2": 140}}}
+    },
+    "mount": {
+      "Dyad": {"placement": {"diagram": {"x1": 200, "y1": 450, "x2": 300, "y2": 550}}}
+    },
+    "motor": {
+      "Dyad": {"placement": {"diagram": {"x1": 420, "y1": 450, "x2": 520, "y2": 550}}}
+    },
+    "wheelinertia": {
+      "Dyad": {"placement": {"diagram": {"x1": 660, "y1": 450, "x2": 760, "y2": 550}}}
+    },
+    "command": {
+      "Dyad": {"placement": {"diagram": {"x1": 240, "y1": 200, "x2": 340, "y2": 300}}}
+    },
+    "id1": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "path": {}}},
+    "id2": {"Dyad": {"edges": [{"S": 1, "M": [], "E": 2}], "path": {}}},
+    "id3": {
+      "Dyad": {
+        "edges": [{"S": 1, "M": [{"x": 380, "y": 250}, {"x": 380, "y": 500}], "E": 2}],
+        "path": {}
+      }
+    }
+  }
+}
+end
+
+"Open-loop bench of the DC drive: a duty step with the wheel free."
+analysis DCMotorBenchTransient
+  extends TransientAnalysis(stop = 0.5, abstol = 1e-9, reltol = 1e-9)
+  model = DCMotorBench()
+relations
+end
