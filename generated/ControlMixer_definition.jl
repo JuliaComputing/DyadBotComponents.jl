@@ -4,10 +4,8 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
-   ControlMixer(; name)
+   ControlMixer(; name, __overrides)
 
 Control mixer for the differentially driven balancing robot.
 
@@ -26,7 +24,7 @@ turning the robot counterclockwise seen from above (positive yaw).
  * `left` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
  * `right` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
 """
-@component function ControlMixer(; name = nothing, kwargs...)
+@component function ControlMixer(; name = nothing, __overrides = Dict{String, Any}())
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -34,7 +32,7 @@ turning the robot counterclockwise seen from above (positive yaw).
     @named model = ControlMixer()
   """))
 
-  __overrides = __build_overrides(kwargs)
+  __overrides = Dict{String, Any}(__overrides)
   __params = Symbolics.SymbolicT[]
   __vars = Symbolics.SymbolicT[]
   __systems = System[]
@@ -76,7 +74,7 @@ turning the robot counterclockwise seen from above (positive yaw).
   ### Components
 
   ### Check there are no unmatched overrides
-  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
+  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded. Override keys are dotted paths as written in Dyad source (e.g. inner.rate)."))
 
   ### Guesses
 
@@ -90,6 +88,6 @@ turning the robot counterclockwise seen from above (positive yaw).
   push!(__eqs, right ~ (drive - yaw_torque) / 2)
 
   # Return completely constructed System
-  return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
+  return System(__eqs, ModelingToolkit.t_nounits, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
 export ControlMixer

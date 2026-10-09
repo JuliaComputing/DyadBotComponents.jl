@@ -4,10 +4,8 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
-   AngleControlledDyadBot(; name, k_angle, Ti_angle, Td_angle, phi0)
+   AngleControlledDyadBot(; name, k_angle, Ti_angle, Td_angle, phi0, __overrides)
 
 Balancing robot stabilized by a single PID controller regulating the body
 tilt angle to zero. The robot starts from a tilted initial configuration and
@@ -29,7 +27,7 @@ The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
 | `Td_angle`         | Derivative time constant of the angle controller                         | s  |   0.0420526 |
 | `phi0`         | Initial tilt angle of the body                         | rad  |   0.1 |
 """
-@component function AngleControlledDyadBot(; name = nothing, k_angle=0.487401, Ti_angle=0.0587352, Td_angle=0.0420526, phi0=0.1, kwargs...)
+@component function AngleControlledDyadBot(; name = nothing, var"k_angle"=0.487401, var"Ti_angle"=0.0587352, var"Td_angle"=0.0420526, var"phi0"=0.1, __overrides = Dict{String, Any}())
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -37,7 +35,7 @@ The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
     @named model = AngleControlledDyadBot()
   """))
 
-  __overrides = __build_overrides(kwargs)
+  __overrides = Dict{String, Any}(__overrides)
   __params = Symbolics.SymbolicT[]
   __vars = Symbolics.SymbolicT[]
   __systems = System[]
@@ -46,6 +44,12 @@ The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
   __initialization_eqs = Equation[]
   __eqs = Equation[]
   __bindings = Dict{Symbolics.SymbolicT, Symbolics.SymbolicT}()
+
+  ### Keyword argument overrides
+  haskey(__overrides, "k_angle") && (k_angle = pop!(__overrides, "k_angle"))
+  haskey(__overrides, "Ti_angle") && (Ti_angle = pop!(__overrides, "Ti_angle"))
+  haskey(__overrides, "Td_angle") && (Td_angle = pop!(__overrides, "Td_angle"))
+  haskey(__overrides, "phi0") && (phi0 = pop!(__overrides, "phi0"))
 
   ### Structural Parameters (functions)
 
@@ -62,16 +66,16 @@ The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
   ### Symbolic Parameters
   __local__k_angle = k_angle
   append!(__params, @parameters (k_angle::Real), [description = "Proportional gain of the angle controller"])
-  __initial_conditions[k_angle] = __local__k_angle
+  __dyad_seed_parameter!(__initial_conditions, __bindings, k_angle, __local__k_angle)
   __local__Ti_angle = Ti_angle
   append!(__params, @parameters (Ti_angle::Real), [description = "Integrator time constant of the angle controller"])
-  __initial_conditions[Ti_angle] = __local__Ti_angle
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Ti_angle, __local__Ti_angle)
   __local__Td_angle = Td_angle
   append!(__params, @parameters (Td_angle::Real), [description = "Derivative time constant of the angle controller"])
-  __initial_conditions[Td_angle] = __local__Td_angle
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Td_angle, __local__Td_angle)
   __local__phi0 = phi0
   append!(__params, @parameters (phi0::Real), [description = "Initial tilt angle of the body"])
-  __initial_conditions[phi0] = __local__phi0
+  __dyad_seed_parameter!(__initial_conditions, __bindings, phi0, __local__phi0)
 
   ### Final Parameters (assignments)
 
@@ -87,16 +91,16 @@ The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
   ### Components
   # Subcomponent world of type MultibodyComponents.PlanarMechanics.World
   world_overrides = __pop_subcomponent_overrides!(__overrides, "world")
-  push!(__systems, @named world = MultibodyComponents.PlanarMechanics.World(; g=9.82, nominal_length=0.1, world_overrides...))
+  push!(__systems, @named world = MultibodyComponents.PlanarMechanics.World(; g=9.82, nominal_length=0.1, __symbol_overrides(world_overrides)...))
   # Subcomponent plant of type DyadBotComponents.PlanarDyadBot
   plant_overrides = __pop_subcomponent_overrides!(__overrides, "plant")
-  push!(__systems, @named plant = DyadBotComponents.PlanarDyadBot(; phi0=phi0, plant_overrides...))
+  push!(__systems, @named plant = DyadBotComponents.PlanarDyadBot(; phi0=phi0, __overrides = plant_overrides))
   # Subcomponent controller of type DyadBotComponents.AngleController
   controller_overrides = __pop_subcomponent_overrides!(__overrides, "controller")
-  push!(__systems, @named controller = DyadBotComponents.AngleController(; k_angle=k_angle, Ti_angle=Ti_angle, Td_angle=Td_angle, controller_overrides...))
+  push!(__systems, @named controller = DyadBotComponents.AngleController(; k_angle=k_angle, Ti_angle=Ti_angle, Td_angle=Td_angle, __overrides = controller_overrides))
 
   ### Check there are no unmatched overrides
-  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
+  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded. Override keys are dotted paths as written in Dyad source (e.g. inner.rate)."))
 
   ### Guesses
 
@@ -110,6 +114,6 @@ The controller gains can be tuned with the script `scripts/tune_angle_pid.jl`.
   push!(__eqs, connect(plant.theta, controller.measurement))
 
   # Return completely constructed System
-  return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
+  return System(__eqs, ModelingToolkit.t_nounits, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
 export AngleControlledDyadBot

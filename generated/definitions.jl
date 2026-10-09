@@ -6,7 +6,6 @@
 
 using ModelingToolkit
 import Markdown
-import Moshi
 using ModelingToolkit: t_nounits as t
 using OrdinaryDiffEqDefault
 using RuntimeGeneratedFunctions
@@ -17,10 +16,21 @@ if isfile(joinpath((@__DIR__) |> Base.dirname, "dyad", "definitions.jl"))
 end
 
 import BlockComponents
+let api = isdefined(BlockComponents, :__dyad_constructor_api) ? BlockComponents.__dyad_constructor_api : 1
+  api == 2 || error("BlockComponents was generated with Dyad constructor API version $api, but DyadBotComponents requires version 2 (the `__overrides` dict override channel). Regenerate BlockComponents with the same Dyad compiler that generated DyadBotComponents.")
+end
 import DiscreteComponents
-import DyadInterface
+let api = isdefined(DiscreteComponents, :__dyad_constructor_api) ? DiscreteComponents.__dyad_constructor_api : 1
+  api == 2 || error("DiscreteComponents was generated with Dyad constructor API version $api, but DyadBotComponents requires version 2 (the `__overrides` dict override channel). Regenerate DiscreteComponents with the same Dyad compiler that generated DyadBotComponents.")
+end
 import MultibodyComponents
+let api = isdefined(MultibodyComponents, :__dyad_constructor_api) ? MultibodyComponents.__dyad_constructor_api : 1
+  api == 2 || error("MultibodyComponents was generated with Dyad constructor API version $api, but DyadBotComponents requires version 2 (the `__overrides` dict override channel). Regenerate MultibodyComponents with the same Dyad compiler that generated DyadBotComponents.")
+end
 import RotationalComponents
+let api = isdefined(RotationalComponents, :__dyad_constructor_api) ? RotationalComponents.__dyad_constructor_api : 1
+  api == 2 || error("RotationalComponents was generated with Dyad constructor API version $api, but DyadBotComponents requires version 2 (the `__overrides` dict override channel). Regenerate RotationalComponents with the same Dyad compiler that generated DyadBotComponents.")
+end
 @doc Markdown.doc"""
 This connector represents an electrical pin with voltage and current as the potential and flow variables, respectively.
 """

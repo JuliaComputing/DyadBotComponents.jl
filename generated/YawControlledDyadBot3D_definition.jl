@@ -4,10 +4,8 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
-   YawControlledDyadBot3D(; name, k_angle, Ti_angle, Td_angle, k_pos, Ti_pos, Td_pos, k_yaw, Ti_yaw, Td_yaw, phi0, yaw_step, step_time)
+   YawControlledDyadBot3D(; name, k_angle, Ti_angle, Td_angle, k_pos, Ti_pos, Td_pos, k_yaw, Ti_yaw, Td_yaw, phi0, yaw_step, step_time, __overrides)
 
 Three-dimensional balancing robot with independent balance/position and yaw
 (heading) control.
@@ -38,7 +36,7 @@ heading while staying upright and holding its position.
 | `yaw_step`         | Height of the yaw reference step                         | rad  |   1.5707963267948966 |
 | `step_time`         | Time of the yaw reference step                         | s  |   5 |
 """
-@component function YawControlledDyadBot3D(; name = nothing, k_angle=0.487401, Ti_angle=0.0587352, Td_angle=0.0420526, k_pos=0.0666576, Ti_pos=5.25024, Td_pos=4.81393, k_yaw=0.005, Ti_yaw=Float64(10.0), Td_yaw=0.5, phi0=0.1, yaw_step=1.5707963267948966, step_time=Float64(5), kwargs...)
+@component function YawControlledDyadBot3D(; name = nothing, var"k_angle"=0.487401, var"Ti_angle"=0.0587352, var"Td_angle"=0.0420526, var"k_pos"=0.0666576, var"Ti_pos"=5.25024, var"Td_pos"=4.81393, var"k_yaw"=0.005, var"Ti_yaw"=Float64(10.0), var"Td_yaw"=0.5, var"phi0"=0.1, var"yaw_step"=1.5707963267948966, var"step_time"=Float64(5), __overrides = Dict{String, Any}())
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -46,7 +44,7 @@ heading while staying upright and holding its position.
     @named model = YawControlledDyadBot3D()
   """))
 
-  __overrides = __build_overrides(kwargs)
+  __overrides = Dict{String, Any}(__overrides)
   __params = Symbolics.SymbolicT[]
   __vars = Symbolics.SymbolicT[]
   __systems = System[]
@@ -55,6 +53,20 @@ heading while staying upright and holding its position.
   __initialization_eqs = Equation[]
   __eqs = Equation[]
   __bindings = Dict{Symbolics.SymbolicT, Symbolics.SymbolicT}()
+
+  ### Keyword argument overrides
+  haskey(__overrides, "k_angle") && (k_angle = pop!(__overrides, "k_angle"))
+  haskey(__overrides, "Ti_angle") && (Ti_angle = pop!(__overrides, "Ti_angle"))
+  haskey(__overrides, "Td_angle") && (Td_angle = pop!(__overrides, "Td_angle"))
+  haskey(__overrides, "k_pos") && (k_pos = pop!(__overrides, "k_pos"))
+  haskey(__overrides, "Ti_pos") && (Ti_pos = pop!(__overrides, "Ti_pos"))
+  haskey(__overrides, "Td_pos") && (Td_pos = pop!(__overrides, "Td_pos"))
+  haskey(__overrides, "k_yaw") && (k_yaw = pop!(__overrides, "k_yaw"))
+  haskey(__overrides, "Ti_yaw") && (Ti_yaw = pop!(__overrides, "Ti_yaw"))
+  haskey(__overrides, "Td_yaw") && (Td_yaw = pop!(__overrides, "Td_yaw"))
+  haskey(__overrides, "phi0") && (phi0 = pop!(__overrides, "phi0"))
+  haskey(__overrides, "yaw_step") && (yaw_step = pop!(__overrides, "yaw_step"))
+  haskey(__overrides, "step_time") && (step_time = pop!(__overrides, "step_time"))
 
   ### Structural Parameters (functions)
 
@@ -71,40 +83,40 @@ heading while staying upright and holding its position.
   ### Symbolic Parameters
   __local__k_angle = k_angle
   append!(__params, @parameters (k_angle::Real), [description = "Proportional gain of the angle controller"])
-  __initial_conditions[k_angle] = __local__k_angle
+  __dyad_seed_parameter!(__initial_conditions, __bindings, k_angle, __local__k_angle)
   __local__Ti_angle = Ti_angle
   append!(__params, @parameters (Ti_angle::Real), [description = "Integrator time constant of the angle controller"])
-  __initial_conditions[Ti_angle] = __local__Ti_angle
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Ti_angle, __local__Ti_angle)
   __local__Td_angle = Td_angle
   append!(__params, @parameters (Td_angle::Real), [description = "Derivative time constant of the angle controller"])
-  __initial_conditions[Td_angle] = __local__Td_angle
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Td_angle, __local__Td_angle)
   __local__k_pos = k_pos
   append!(__params, @parameters (k_pos::Real), [description = "Proportional gain of the outer position controller"])
-  __initial_conditions[k_pos] = __local__k_pos
+  __dyad_seed_parameter!(__initial_conditions, __bindings, k_pos, __local__k_pos)
   __local__Ti_pos = Ti_pos
   append!(__params, @parameters (Ti_pos::Real), [description = "Integrator time constant of the outer position controller"])
-  __initial_conditions[Ti_pos] = __local__Ti_pos
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Ti_pos, __local__Ti_pos)
   __local__Td_pos = Td_pos
   append!(__params, @parameters (Td_pos::Real), [description = "Derivative time constant of the outer position controller"])
-  __initial_conditions[Td_pos] = __local__Td_pos
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Td_pos, __local__Td_pos)
   __local__k_yaw = k_yaw
   append!(__params, @parameters (k_yaw::Real), [description = "Proportional gain of the yaw controller"])
-  __initial_conditions[k_yaw] = __local__k_yaw
+  __dyad_seed_parameter!(__initial_conditions, __bindings, k_yaw, __local__k_yaw)
   __local__Ti_yaw = Ti_yaw
   append!(__params, @parameters (Ti_yaw::Real), [description = "Integrator time constant of the yaw controller"])
-  __initial_conditions[Ti_yaw] = __local__Ti_yaw
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Ti_yaw, __local__Ti_yaw)
   __local__Td_yaw = Td_yaw
   append!(__params, @parameters (Td_yaw::Real), [description = "Derivative time constant of the yaw controller"])
-  __initial_conditions[Td_yaw] = __local__Td_yaw
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Td_yaw, __local__Td_yaw)
   __local__phi0 = phi0
   append!(__params, @parameters (phi0::Real), [description = "Initial tilt angle of the body"])
-  __initial_conditions[phi0] = __local__phi0
+  __dyad_seed_parameter!(__initial_conditions, __bindings, phi0, __local__phi0)
   __local__yaw_step = yaw_step
   append!(__params, @parameters (yaw_step::Real), [description = "Height of the yaw reference step"])
-  __initial_conditions[yaw_step] = __local__yaw_step
+  __dyad_seed_parameter!(__initial_conditions, __bindings, yaw_step, __local__yaw_step)
   __local__step_time = step_time
   append!(__params, @parameters (step_time::Real), [description = "Time of the yaw reference step"])
-  __initial_conditions[step_time] = __local__step_time
+  __dyad_seed_parameter!(__initial_conditions, __bindings, step_time, __local__step_time)
 
   ### Final Parameters (assignments)
 
@@ -120,34 +132,34 @@ heading while staying upright and holding its position.
   ### Components
   # Subcomponent world of type MultibodyComponents.World
   world_overrides = __pop_subcomponent_overrides!(__overrides, "world")
-  push!(__systems, @named world = MultibodyComponents.World(; g=9.82, nominal_length=0.1, world_overrides...))
+  push!(__systems, @named world = MultibodyComponents.World(; g=9.82, nominal_length=0.1, __symbol_overrides(world_overrides)...))
   # Subcomponent plant of type DyadBotComponents.RollingDyadBot3D
   plant_overrides = __pop_subcomponent_overrides!(__overrides, "plant")
-  push!(__systems, @named plant = DyadBotComponents.RollingDyadBot3D(; phi0=phi0, plant_overrides...))
+  push!(__systems, @named plant = DyadBotComponents.RollingDyadBot3D(; phi0=phi0, __overrides = plant_overrides))
   # Subcomponent controller of type DyadBotComponents.CascadeController
   controller_overrides = __pop_subcomponent_overrides!(__overrides, "controller")
-  push!(__systems, @named controller = DyadBotComponents.CascadeController(; k_angle=k_angle, Ti_angle=Ti_angle, Td_angle=Td_angle, k_pos=k_pos, Ti_pos=Ti_pos, Td_pos=Td_pos, controller_overrides...))
+  push!(__systems, @named controller = DyadBotComponents.CascadeController(; k_angle=k_angle, Ti_angle=Ti_angle, Td_angle=Td_angle, k_pos=k_pos, Ti_pos=Ti_pos, Td_pos=Td_pos, __overrides = controller_overrides))
   # Subcomponent yaw_controller of type DyadBotComponents.YawController
   yaw_controller_overrides = __pop_subcomponent_overrides!(__overrides, "yaw_controller")
-  push!(__systems, @named yaw_controller = DyadBotComponents.YawController(; k_yaw=k_yaw, Ti_yaw=Ti_yaw, Td_yaw=Td_yaw, yaw_controller_overrides...))
+  push!(__systems, @named yaw_controller = DyadBotComponents.YawController(; k_yaw=k_yaw, Ti_yaw=Ti_yaw, Td_yaw=Td_yaw, __overrides = yaw_controller_overrides))
   # Subcomponent mixer of type DyadBotComponents.ControlMixer
   mixer_overrides = __pop_subcomponent_overrides!(__overrides, "mixer")
-  push!(__systems, @named mixer = DyadBotComponents.ControlMixer(; mixer_overrides...))
+  push!(__systems, @named mixer = DyadBotComponents.ControlMixer(; __overrides = mixer_overrides))
   # Subcomponent pos_ref of type BlockComponents.Sources.Constant
   pos_ref_overrides = __pop_subcomponent_overrides!(__overrides, "pos_ref")
-  push!(__systems, @named pos_ref = BlockComponents.Sources.Constant(; k=Float64(0), pos_ref_overrides...))
+  push!(__systems, @named pos_ref = BlockComponents.Sources.Constant(; k=Float64(0), __overrides = pos_ref_overrides))
   # Subcomponent yaw_ref of type BlockComponents.Sources.Step
   yaw_ref_overrides = __pop_subcomponent_overrides!(__overrides, "yaw_ref")
-  push!(__systems, @named yaw_ref = BlockComponents.Sources.Step(; height=yaw_step, start_time=step_time, yaw_ref_overrides...))
+  push!(__systems, @named yaw_ref = BlockComponents.Sources.Step(; height=yaw_step, start_time=step_time, __overrides = yaw_ref_overrides))
   # Subcomponent firstorder of type BlockComponents.Continuous.FirstOrder
   firstorder_overrides = __pop_subcomponent_overrides!(__overrides, "firstorder")
-  push!(__systems, @named firstorder = BlockComponents.Continuous.FirstOrder(; T=0.2, firstorder_overrides...))
+  push!(__systems, @named firstorder = BlockComponents.Continuous.FirstOrder(; T=0.2, __overrides = firstorder_overrides))
   # Subcomponent firstorder1 of type BlockComponents.Continuous.FirstOrder
   firstorder1_overrides = __pop_subcomponent_overrides!(__overrides, "firstorder1")
-  push!(__systems, @named firstorder1 = BlockComponents.Continuous.FirstOrder(; T=0.2, firstorder1_overrides...))
+  push!(__systems, @named firstorder1 = BlockComponents.Continuous.FirstOrder(; T=0.2, __overrides = firstorder1_overrides))
 
   ### Check there are no unmatched overrides
-  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
+  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded. Override keys are dotted paths as written in Dyad source (e.g. inner.rate)."))
 
   ### Guesses
 
@@ -172,6 +184,6 @@ heading while staying upright and holding its position.
   push!(__eqs, connect(firstorder1.y, yaw_controller.reference))
 
   # Return completely constructed System
-  return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
+  return System(__eqs, ModelingToolkit.t_nounits, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
 export YawControlledDyadBot3D

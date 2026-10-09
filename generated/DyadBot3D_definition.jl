@@ -4,10 +4,8 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
-   DyadBot3D(; name, elastic_contact, track, body_height, wheel_radius, body_mass, wheel_mass, wheel_I_axis, wheel_I_long, d_wheel)
+   DyadBot3D(; name, elastic_contact, track, body_height, wheel_radius, body_mass, wheel_mass, wheel_I_axis, wheel_I_long, d_wheel, __overrides)
 
 Three-dimensional model of a two-wheeled balancing robot.
 
@@ -38,7 +36,7 @@ stacks, with both rigid and compliant vertical contact.
 | `wheel_I_long`         | Moment of inertia of a wheel perpendicular to its spin axis                         | kg.m2  |   1e-5 |
 | `d_wheel`         | Wheel rotational damping coefficient                         | N.m.s/rad  |   0.1 |
 """
-@component function DyadBot3D(; name = nothing, elastic_contact=false, track=0.13, body_height=0.1, wheel_radius=0.04, body_mass=0.1, wheel_mass=0.05, wheel_I_axis=0.00005, wheel_I_long=0.00001, d_wheel=0.1, kwargs...)
+@component function DyadBot3D(; name = nothing, var"elastic_contact"=false, var"track"=0.13, var"body_height"=0.1, var"wheel_radius"=0.04, var"body_mass"=0.1, var"wheel_mass"=0.05, var"wheel_I_axis"=0.00005, var"wheel_I_long"=0.00001, var"d_wheel"=0.1, __overrides = Dict{String, Any}())
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -46,7 +44,7 @@ stacks, with both rigid and compliant vertical contact.
     @named model = DyadBot3D()
   """))
 
-  __overrides = __build_overrides(kwargs)
+  __overrides = Dict{String, Any}(__overrides)
   __params = Symbolics.SymbolicT[]
   __vars = Symbolics.SymbolicT[]
   __systems = System[]
@@ -55,6 +53,17 @@ stacks, with both rigid and compliant vertical contact.
   __initialization_eqs = Equation[]
   __eqs = Equation[]
   __bindings = Dict{Symbolics.SymbolicT, Symbolics.SymbolicT}()
+
+  ### Keyword argument overrides
+  haskey(__overrides, "elastic_contact") && (elastic_contact = pop!(__overrides, "elastic_contact"))
+  haskey(__overrides, "track") && (track = pop!(__overrides, "track"))
+  haskey(__overrides, "body_height") && (body_height = pop!(__overrides, "body_height"))
+  haskey(__overrides, "wheel_radius") && (wheel_radius = pop!(__overrides, "wheel_radius"))
+  haskey(__overrides, "body_mass") && (body_mass = pop!(__overrides, "body_mass"))
+  haskey(__overrides, "wheel_mass") && (wheel_mass = pop!(__overrides, "wheel_mass"))
+  haskey(__overrides, "wheel_I_axis") && (wheel_I_axis = pop!(__overrides, "wheel_I_axis"))
+  haskey(__overrides, "wheel_I_long") && (wheel_I_long = pop!(__overrides, "wheel_I_long"))
+  haskey(__overrides, "d_wheel") && (d_wheel = pop!(__overrides, "d_wheel"))
 
   ### Structural Parameters (functions)
 
@@ -71,28 +80,28 @@ stacks, with both rigid and compliant vertical contact.
   ### Symbolic Parameters
   __local__track = track
   append!(__params, @parameters (track::Real), [description = "Distance between the wheels"])
-  __initial_conditions[track] = __local__track
+  __dyad_seed_parameter!(__initial_conditions, __bindings, track, __local__track)
   __local__body_height = body_height
   append!(__params, @parameters (body_height::Real), [description = "Height of the body center of mass above the wheel axle"])
-  __initial_conditions[body_height] = __local__body_height
+  __dyad_seed_parameter!(__initial_conditions, __bindings, body_height, __local__body_height)
   __local__wheel_radius = wheel_radius
   append!(__params, @parameters (wheel_radius::Real), [description = "Wheel radius"])
-  __initial_conditions[wheel_radius] = __local__wheel_radius
+  __dyad_seed_parameter!(__initial_conditions, __bindings, wheel_radius, __local__wheel_radius)
   __local__body_mass = body_mass
   append!(__params, @parameters (body_mass::Real), [description = "Body mass", bounds = (0, Inf)])
-  __initial_conditions[body_mass] = __local__body_mass
+  __dyad_seed_parameter!(__initial_conditions, __bindings, body_mass, __local__body_mass)
   __local__wheel_mass = wheel_mass
   append!(__params, @parameters (wheel_mass::Real), [description = "Wheel mass", bounds = (0, Inf)])
-  __initial_conditions[wheel_mass] = __local__wheel_mass
+  __dyad_seed_parameter!(__initial_conditions, __bindings, wheel_mass, __local__wheel_mass)
   __local__wheel_I_axis = wheel_I_axis
   append!(__params, @parameters (wheel_I_axis::Real), [description = "Moment of inertia of a wheel about its spin axis"])
-  __initial_conditions[wheel_I_axis] = __local__wheel_I_axis
+  __dyad_seed_parameter!(__initial_conditions, __bindings, wheel_I_axis, __local__wheel_I_axis)
   __local__wheel_I_long = wheel_I_long
   append!(__params, @parameters (wheel_I_long::Real), [description = "Moment of inertia of a wheel perpendicular to its spin axis"])
-  __initial_conditions[wheel_I_long] = __local__wheel_I_long
+  __dyad_seed_parameter!(__initial_conditions, __bindings, wheel_I_long, __local__wheel_I_long)
   __local__d_wheel = d_wheel
   append!(__params, @parameters (d_wheel::Real), [description = "Wheel rotational damping coefficient"])
-  __initial_conditions[d_wheel] = __local__d_wheel
+  __dyad_seed_parameter!(__initial_conditions, __bindings, d_wheel, __local__d_wheel)
 
   ### Final Parameters (assignments)
 
@@ -108,40 +117,40 @@ stacks, with both rigid and compliant vertical contact.
   ### Components
   # Subcomponent world of type MultibodyComponents.World
   world_overrides = __pop_subcomponent_overrides!(__overrides, "world")
-  push!(__systems, @named world = MultibodyComponents.World(; world_overrides...))
+  push!(__systems, @named world = MultibodyComponents.World(; __symbol_overrides(world_overrides)...))
   # Subcomponent wheel_left of type MultibodyComponents.SlippingWheel
   wheel_left_overrides = __pop_subcomponent_overrides!(__overrides, "wheel_left")
-  push!(__systems, @named wheel_left = MultibodyComponents.SlippingWheel(; radius=wheel_radius, m=wheel_mass, I_axis=wheel_I_axis, I_long=wheel_I_long, angular_state=false, elastic_contact=elastic_contact, wheel_left_overrides...))
+  push!(__systems, @named wheel_left = MultibodyComponents.SlippingWheel(; radius=wheel_radius, m=wheel_mass, I_axis=wheel_I_axis, I_long=wheel_I_long, angular_state=false, elastic_contact=elastic_contact, __overrides = wheel_left_overrides))
   # Subcomponent wheel_right of type MultibodyComponents.SlippingWheel
   wheel_right_overrides = __pop_subcomponent_overrides!(__overrides, "wheel_right")
-  push!(__systems, @named wheel_right = MultibodyComponents.SlippingWheel(; radius=wheel_radius, m=wheel_mass, I_axis=wheel_I_axis, I_long=wheel_I_long, angular_state=true, elastic_contact=elastic_contact, wheel_right_overrides...))
+  push!(__systems, @named wheel_right = MultibodyComponents.SlippingWheel(; radius=wheel_radius, m=wheel_mass, I_axis=wheel_I_axis, I_long=wheel_I_long, angular_state=true, elastic_contact=elastic_contact, __overrides = wheel_right_overrides))
   # Subcomponent revolute_left of type MultibodyComponents.Revolute
   revolute_left_overrides = __pop_subcomponent_overrides!(__overrides, "revolute_left")
-  push!(__systems, @named revolute_left = MultibodyComponents.Revolute(; n=[Float64(0), Float64(0), Float64(1)], revolute_left_overrides...))
+  push!(__systems, @named revolute_left = MultibodyComponents.Revolute(; n=[Float64(0), Float64(0), Float64(1)], __overrides = revolute_left_overrides))
   # Subcomponent revolute_right of type MultibodyComponents.Revolute
   revolute_right_overrides = __pop_subcomponent_overrides!(__overrides, "revolute_right")
-  push!(__systems, @named revolute_right = MultibodyComponents.Revolute(; n=[Float64(0), Float64(0), Float64(1)], revolute_right_overrides...))
+  push!(__systems, @named revolute_right = MultibodyComponents.Revolute(; n=[Float64(0), Float64(0), Float64(1)], __overrides = revolute_right_overrides))
   # Subcomponent rod_left of type MultibodyComponents.FixedTranslation
   rod_left_overrides = __pop_subcomponent_overrides!(__overrides, "rod_left")
-  push!(__systems, @named rod_left = MultibodyComponents.FixedTranslation(; r=[Float64(0), Float64(0), track / 2], rod_left_overrides...))
+  push!(__systems, @named rod_left = MultibodyComponents.FixedTranslation(; r=[Float64(0), Float64(0), track / 2], __overrides = rod_left_overrides))
   # Subcomponent rod_right of type MultibodyComponents.FixedTranslation
   rod_right_overrides = __pop_subcomponent_overrides!(__overrides, "rod_right")
-  push!(__systems, @named rod_right = MultibodyComponents.FixedTranslation(; r=[Float64(0), Float64(0), -track / 2], rod_right_overrides...))
+  push!(__systems, @named rod_right = MultibodyComponents.FixedTranslation(; r=[Float64(0), Float64(0), -track / 2], __overrides = rod_right_overrides))
   # Subcomponent axis_body of type MultibodyComponents.Body
   axis_body_overrides = __pop_subcomponent_overrides!(__overrides, "axis_body")
-  push!(__systems, @named axis_body = MultibodyComponents.Body(; m=0.01, r_cm=[Float64(0), Float64(0), Float64(0)], axis_body_overrides...))
+  push!(__systems, @named axis_body = MultibodyComponents.Body(; m=0.01, r_cm=[Float64(0), Float64(0), Float64(0)], __overrides = axis_body_overrides))
   # Subcomponent body of type MultibodyComponents.BodyShape
   body_overrides = __pop_subcomponent_overrides!(__overrides, "body")
-  push!(__systems, @named body = MultibodyComponents.BodyShape(; m=body_mass, r=[Float64(0), 2 * body_height, Float64(0)], r_cm=[Float64(0), body_height, Float64(0)], I_11=0.01 * 0.05 ^ 2, I_22=0.01 * 0.03 ^ 2, I_33=0.01 * 0.05 ^ 2, body_overrides...))
+  push!(__systems, @named body = MultibodyComponents.BodyShape(; m=body_mass, r=[Float64(0), 2 * body_height, Float64(0)], r_cm=[Float64(0), body_height, Float64(0)], I_11=0.01 * 0.05 ^ 2, I_22=0.01 * 0.03 ^ 2, I_33=0.01 * 0.05 ^ 2, __overrides = body_overrides))
   # Subcomponent damper_left of type RotationalComponents.Components.Damper
   damper_left_overrides = __pop_subcomponent_overrides!(__overrides, "damper_left")
-  push!(__systems, @named damper_left = RotationalComponents.Components.Damper(; d=d_wheel, damper_left_overrides...))
+  push!(__systems, @named damper_left = RotationalComponents.Components.Damper(; d=d_wheel, __overrides = damper_left_overrides))
   # Subcomponent damper_right of type RotationalComponents.Components.Damper
   damper_right_overrides = __pop_subcomponent_overrides!(__overrides, "damper_right")
-  push!(__systems, @named damper_right = RotationalComponents.Components.Damper(; d=d_wheel, damper_right_overrides...))
+  push!(__systems, @named damper_right = RotationalComponents.Components.Damper(; d=d_wheel, __overrides = damper_right_overrides))
 
   ### Check there are no unmatched overrides
-  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
+  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded. Override keys are dotted paths as written in Dyad source (e.g. inner.rate)."))
 
   ### Guesses
 
@@ -169,6 +178,6 @@ stacks, with both rigid and compliant vertical contact.
   push!(__eqs, connect(revolute_right.axis, damper_right.spline_a))
 
   # Return completely constructed System
-  return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
+  return System(__eqs, ModelingToolkit.t_nounits, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
 export DyadBot3D

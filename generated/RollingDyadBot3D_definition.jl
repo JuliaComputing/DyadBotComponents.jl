@@ -4,10 +4,8 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
-   RollingDyadBot3D(; name, M, m, R, L, Ib, Iw, d, phi0, track)
+   RollingDyadBot3D(; name, M, m, R, L, Ib, Iw, d, phi0, track, __overrides)
 
 Three-dimensional model of a two-wheeled balancing robot with ideal rolling
 contact and individually driven wheels.
@@ -65,7 +63,7 @@ the top level of the enclosing model.
  * `yaw` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
  * `yaw_dot` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
 """
-@component function RollingDyadBot3D(; name = nothing, M=0.1, m=0.05, R=0.04, L=0.08, Ib=0.00025, Iw=0.0001, d=0.0001, phi0=Float64(0.0), track=0.13, kwargs...)
+@component function RollingDyadBot3D(; name = nothing, var"M"=0.1, var"m"=0.05, var"R"=0.04, var"L"=0.08, var"Ib"=0.00025, var"Iw"=0.0001, var"d"=0.0001, var"phi0"=Float64(0.0), var"track"=0.13, __overrides = Dict{String, Any}())
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -73,7 +71,7 @@ the top level of the enclosing model.
     @named model = RollingDyadBot3D()
   """))
 
-  __overrides = __build_overrides(kwargs)
+  __overrides = Dict{String, Any}(__overrides)
   __params = Symbolics.SymbolicT[]
   __vars = Symbolics.SymbolicT[]
   __systems = System[]
@@ -82,6 +80,17 @@ the top level of the enclosing model.
   __initialization_eqs = Equation[]
   __eqs = Equation[]
   __bindings = Dict{Symbolics.SymbolicT, Symbolics.SymbolicT}()
+
+  ### Keyword argument overrides
+  haskey(__overrides, "M") && (M = pop!(__overrides, "M"))
+  haskey(__overrides, "m") && (m = pop!(__overrides, "m"))
+  haskey(__overrides, "R") && (R = pop!(__overrides, "R"))
+  haskey(__overrides, "L") && (L = pop!(__overrides, "L"))
+  haskey(__overrides, "Ib") && (Ib = pop!(__overrides, "Ib"))
+  haskey(__overrides, "Iw") && (Iw = pop!(__overrides, "Iw"))
+  haskey(__overrides, "d") && (d = pop!(__overrides, "d"))
+  haskey(__overrides, "phi0") && (phi0 = pop!(__overrides, "phi0"))
+  haskey(__overrides, "track") && (track = pop!(__overrides, "track"))
 
   ### Structural Parameters (functions)
 
@@ -98,31 +107,31 @@ the top level of the enclosing model.
   ### Symbolic Parameters
   __local__M = M
   append!(__params, @parameters (M::Real), [description = "Body mass", bounds = (0, Inf)])
-  __initial_conditions[M] = __local__M
+  __dyad_seed_parameter!(__initial_conditions, __bindings, M, __local__M)
   __local__m = m
   append!(__params, @parameters (m::Real), [description = "Total wheel mass (split between the two wheels)", bounds = (0, Inf)])
-  __initial_conditions[m] = __local__m
+  __dyad_seed_parameter!(__initial_conditions, __bindings, m, __local__m)
   __local__R = R
   append!(__params, @parameters (R::Real), [description = "Wheel radius"])
-  __initial_conditions[R] = __local__R
+  __dyad_seed_parameter!(__initial_conditions, __bindings, R, __local__R)
   __local__L = L
   append!(__params, @parameters (L::Real), [description = "Distance from wheel axis to body center of mass"])
-  __initial_conditions[L] = __local__L
+  __dyad_seed_parameter!(__initial_conditions, __bindings, L, __local__L)
   __local__Ib = Ib
   append!(__params, @parameters (Ib::Real), [description = "Body moment of inertia about the axle axis"])
-  __initial_conditions[Ib] = __local__Ib
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Ib, __local__Ib)
   __local__Iw = Iw
   append!(__params, @parameters (Iw::Real), [description = "Total wheel + motor moment of inertia about the spin axis (split between the two wheels)"])
-  __initial_conditions[Iw] = __local__Iw
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Iw, __local__Iw)
   __local__d = d
   append!(__params, @parameters (d::Real), [description = "Motor viscous friction (split between the two wheels)"])
-  __initial_conditions[d] = __local__d
+  __dyad_seed_parameter!(__initial_conditions, __bindings, d, __local__d)
   __local__phi0 = phi0
   append!(__params, @parameters (phi0::Real), [description = "Initial tilt angle of the body"])
-  __initial_conditions[phi0] = __local__phi0
+  __dyad_seed_parameter!(__initial_conditions, __bindings, phi0, __local__phi0)
   __local__track = track
   append!(__params, @parameters (track::Real), [description = "Distance between the wheels"])
-  __initial_conditions[track] = __local__track
+  __dyad_seed_parameter!(__initial_conditions, __bindings, track, __local__track)
 
   ### Final Parameters (assignments)
 
@@ -146,58 +155,58 @@ the top level of the enclosing model.
   ### Components
   # Subcomponent wheels of type MultibodyComponents.RollingWheelSet
   wheels_overrides = __pop_subcomponent_overrides!(__overrides, "wheels")
-  push!(__systems, @named wheels = MultibodyComponents.RollingWheelSet(; radius=R, m_wheel=m / 2, I_axis=Iw / 2, I_long=Iw / 4, track=track, wheels_overrides...))
+  push!(__systems, @named wheels = MultibodyComponents.RollingWheelSet(; radius=R, m_wheel=m / 2, I_axis=Iw / 2, I_long=Iw / 4, track=track, __overrides = wheels_overrides))
   # Subcomponent pitch of type MultibodyComponents.Revolute
   pitch_overrides = __pop_subcomponent_overrides!(__overrides, "pitch")
-  push!(__systems, @named pitch = MultibodyComponents.Revolute(; n=[Float64(0), Float64(0), Float64(1)], pitch_overrides...))
+  push!(__systems, @named pitch = MultibodyComponents.Revolute(; n=[Float64(0), Float64(0), Float64(1)], __overrides = pitch_overrides))
   # Subcomponent body of type MultibodyComponents.BodyShape
   body_overrides = __pop_subcomponent_overrides!(__overrides, "body")
-  push!(__systems, @named body = MultibodyComponents.BodyShape(; color=[0.2, 0.2, 0.2, 0.9], m=M, r=[Float64(0), 2 * L, Float64(0)], r_cm=[Float64(0), L, Float64(0)], I_11=Ib, I_22=Ib / 10, I_33=Ib, radius=0.03, body_overrides...))
+  push!(__systems, @named body = MultibodyComponents.BodyShape(; color=[0.2, 0.2, 0.2, 0.9], m=M, r=[Float64(0), 2 * L, Float64(0)], r_cm=[Float64(0), L, Float64(0)], I_11=Ib, I_22=Ib / 10, I_33=Ib, radius=0.03, __overrides = body_overrides))
   # Subcomponent torquesource1 of type RotationalComponents.Sources.TorqueSource
   torquesource1_overrides = __pop_subcomponent_overrides!(__overrides, "torquesource1")
-  push!(__systems, @named torquesource1 = RotationalComponents.Sources.TorqueSource(; torquesource1_overrides...))
+  push!(__systems, @named torquesource1 = RotationalComponents.Sources.TorqueSource(; __overrides = torquesource1_overrides))
   # Subcomponent torquesource2 of type RotationalComponents.Sources.TorqueSource
   torquesource2_overrides = __pop_subcomponent_overrides!(__overrides, "torquesource2")
-  push!(__systems, @named torquesource2 = RotationalComponents.Sources.TorqueSource(; torquesource2_overrides...))
+  push!(__systems, @named torquesource2 = RotationalComponents.Sources.TorqueSource(; __overrides = torquesource2_overrides))
   # Subcomponent damper1 of type RotationalComponents.Components.Damper
   damper1_overrides = __pop_subcomponent_overrides!(__overrides, "damper1")
-  push!(__systems, @named damper1 = RotationalComponents.Components.Damper(; d=d / 2, damper1_overrides...))
+  push!(__systems, @named damper1 = RotationalComponents.Components.Damper(; d=d / 2, __overrides = damper1_overrides))
   # Subcomponent damper2 of type RotationalComponents.Components.Damper
   damper2_overrides = __pop_subcomponent_overrides!(__overrides, "damper2")
-  push!(__systems, @named damper2 = RotationalComponents.Components.Damper(; d=d / 2, damper2_overrides...))
+  push!(__systems, @named damper2 = RotationalComponents.Components.Damper(; d=d / 2, __overrides = damper2_overrides))
   # Subcomponent encoder1 of type RotationalComponents.Sensors.AngleSensor
   encoder1_overrides = __pop_subcomponent_overrides!(__overrides, "encoder1")
-  push!(__systems, @named encoder1 = RotationalComponents.Sensors.AngleSensor(; encoder1_overrides...))
+  push!(__systems, @named encoder1 = RotationalComponents.Sensors.AngleSensor(; __overrides = encoder1_overrides))
   # Subcomponent encoder2 of type RotationalComponents.Sensors.AngleSensor
   encoder2_overrides = __pop_subcomponent_overrides!(__overrides, "encoder2")
-  push!(__systems, @named encoder2 = RotationalComponents.Sensors.AngleSensor(; encoder2_overrides...))
+  push!(__systems, @named encoder2 = RotationalComponents.Sensors.AngleSensor(; __overrides = encoder2_overrides))
   # Subcomponent speedsensor1 of type RotationalComponents.Sensors.VelocitySensor
   speedsensor1_overrides = __pop_subcomponent_overrides!(__overrides, "speedsensor1")
-  push!(__systems, @named speedsensor1 = RotationalComponents.Sensors.VelocitySensor(; speedsensor1_overrides...))
+  push!(__systems, @named speedsensor1 = RotationalComponents.Sensors.VelocitySensor(; __overrides = speedsensor1_overrides))
   # Subcomponent speedsensor2 of type RotationalComponents.Sensors.VelocitySensor
   speedsensor2_overrides = __pop_subcomponent_overrides!(__overrides, "speedsensor2")
-  push!(__systems, @named speedsensor2 = RotationalComponents.Sensors.VelocitySensor(; speedsensor2_overrides...))
+  push!(__systems, @named speedsensor2 = RotationalComponents.Sensors.VelocitySensor(; __overrides = speedsensor2_overrides))
   # Subcomponent tilt_sensor of type RotationalComponents.Sensors.AngleSensor
   tilt_sensor_overrides = __pop_subcomponent_overrides!(__overrides, "tilt_sensor")
-  push!(__systems, @named tilt_sensor = RotationalComponents.Sensors.AngleSensor(; tilt_sensor_overrides...))
+  push!(__systems, @named tilt_sensor = RotationalComponents.Sensors.AngleSensor(; __overrides = tilt_sensor_overrides))
   # Subcomponent tilt_rate_sensor of type RotationalComponents.Sensors.VelocitySensor
   tilt_rate_sensor_overrides = __pop_subcomponent_overrides!(__overrides, "tilt_rate_sensor")
-  push!(__systems, @named tilt_rate_sensor = RotationalComponents.Sensors.VelocitySensor(; tilt_rate_sensor_overrides...))
+  push!(__systems, @named tilt_rate_sensor = RotationalComponents.Sensors.VelocitySensor(; __overrides = tilt_rate_sensor_overrides))
   # Subcomponent odometry_pos of type BlockComponents.Math.Add
   odometry_pos_overrides = __pop_subcomponent_overrides!(__overrides, "odometry_pos")
-  push!(__systems, @named odometry_pos = BlockComponents.Math.Add(; k1=-R / 2, k2=-R / 2, odometry_pos_overrides...))
+  push!(__systems, @named odometry_pos = BlockComponents.Math.Add(; k1=-R / 2, k2=-R / 2, __overrides = odometry_pos_overrides))
   # Subcomponent odometry_vel of type BlockComponents.Math.Add
   odometry_vel_overrides = __pop_subcomponent_overrides!(__overrides, "odometry_vel")
-  push!(__systems, @named odometry_vel = BlockComponents.Math.Add(; k1=-R / 2, k2=-R / 2, odometry_vel_overrides...))
+  push!(__systems, @named odometry_vel = BlockComponents.Math.Add(; k1=-R / 2, k2=-R / 2, __overrides = odometry_vel_overrides))
   # Subcomponent odometry_yaw of type BlockComponents.Math.Add
   odometry_yaw_overrides = __pop_subcomponent_overrides!(__overrides, "odometry_yaw")
-  push!(__systems, @named odometry_yaw = BlockComponents.Math.Add(; k1=-R / track, k2=R / track, odometry_yaw_overrides...))
+  push!(__systems, @named odometry_yaw = BlockComponents.Math.Add(; k1=-R / track, k2=R / track, __overrides = odometry_yaw_overrides))
   # Subcomponent odometry_yaw_rate of type BlockComponents.Math.Add
   odometry_yaw_rate_overrides = __pop_subcomponent_overrides!(__overrides, "odometry_yaw_rate")
-  push!(__systems, @named odometry_yaw_rate = BlockComponents.Math.Add(; k1=-R / track, k2=R / track, odometry_yaw_rate_overrides...))
+  push!(__systems, @named odometry_yaw_rate = BlockComponents.Math.Add(; k1=-R / track, k2=R / track, __overrides = odometry_yaw_rate_overrides))
 
   ### Check there are no unmatched overrides
-  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
+  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded. Override keys are dotted paths as written in Dyad source (e.g. inner.rate)."))
 
   ### Guesses
 
@@ -229,6 +238,6 @@ the top level of the enclosing model.
   push!(__eqs, connect(odometry_yaw_rate.y, yaw_dot))
 
   # Return completely constructed System
-  return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
+  return System(__eqs, ModelingToolkit.t_nounits, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
 export RollingDyadBot3D

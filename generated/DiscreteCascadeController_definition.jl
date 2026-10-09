@@ -4,10 +4,8 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
-   DiscreteCascadeController(; name, Ts, k_angle, Ti_angle, Td_angle, k_pos, Ti_pos, Td_pos)
+   DiscreteCascadeController(; name, Ts, k_angle, Ti_angle, Td_angle, k_pos, Ti_pos, Td_pos, __overrides)
 
 Discrete-time version of `CascadeController`. Drop-in replacement with the same
 continuous interface: both the inner angle loop and the outer position loop are
@@ -35,7 +33,7 @@ torque.
  * `pos_reference` - This connector represents a real signal as an input to a component ([`RealInput`](@ref))
  * `torque` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
 """
-@component function DiscreteCascadeController(; name = nothing, Ts=0.005, k_angle=0.487401, Ti_angle=0.0587352, Td_angle=0.0420526, k_pos=0.0666576, Ti_pos=5.25024, Td_pos=4.81393, kwargs...)
+@component function DiscreteCascadeController(; name = nothing, var"Ts"=0.005, var"k_angle"=0.487401, var"Ti_angle"=0.0587352, var"Td_angle"=0.0420526, var"k_pos"=0.0666576, var"Ti_pos"=5.25024, var"Td_pos"=4.81393, __overrides = Dict{String, Any}())
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -43,7 +41,7 @@ torque.
     @named model = DiscreteCascadeController()
   """))
 
-  __overrides = __build_overrides(kwargs)
+  __overrides = Dict{String, Any}(__overrides)
   __params = Symbolics.SymbolicT[]
   __vars = Symbolics.SymbolicT[]
   __systems = System[]
@@ -52,6 +50,15 @@ torque.
   __initialization_eqs = Equation[]
   __eqs = Equation[]
   __bindings = Dict{Symbolics.SymbolicT, Symbolics.SymbolicT}()
+
+  ### Keyword argument overrides
+  haskey(__overrides, "Ts") && (Ts = pop!(__overrides, "Ts"))
+  haskey(__overrides, "k_angle") && (k_angle = pop!(__overrides, "k_angle"))
+  haskey(__overrides, "Ti_angle") && (Ti_angle = pop!(__overrides, "Ti_angle"))
+  haskey(__overrides, "Td_angle") && (Td_angle = pop!(__overrides, "Td_angle"))
+  haskey(__overrides, "k_pos") && (k_pos = pop!(__overrides, "k_pos"))
+  haskey(__overrides, "Ti_pos") && (Ti_pos = pop!(__overrides, "Ti_pos"))
+  haskey(__overrides, "Td_pos") && (Td_pos = pop!(__overrides, "Td_pos"))
 
   ### Structural Parameters (functions)
 
@@ -68,22 +75,22 @@ torque.
   ### Symbolic Parameters
   __local__k_angle = k_angle
   append!(__params, @parameters (k_angle::Real), [description = "Proportional gain of the angle controller"])
-  __initial_conditions[k_angle] = __local__k_angle
+  __dyad_seed_parameter!(__initial_conditions, __bindings, k_angle, __local__k_angle)
   __local__Ti_angle = Ti_angle
   append!(__params, @parameters (Ti_angle::Real), [description = "Integrator time constant of the angle controller"])
-  __initial_conditions[Ti_angle] = __local__Ti_angle
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Ti_angle, __local__Ti_angle)
   __local__Td_angle = Td_angle
   append!(__params, @parameters (Td_angle::Real), [description = "Derivative time constant of the angle controller"])
-  __initial_conditions[Td_angle] = __local__Td_angle
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Td_angle, __local__Td_angle)
   __local__k_pos = k_pos
   append!(__params, @parameters (k_pos::Real), [description = "Proportional gain of the outer position controller"])
-  __initial_conditions[k_pos] = __local__k_pos
+  __dyad_seed_parameter!(__initial_conditions, __bindings, k_pos, __local__k_pos)
   __local__Ti_pos = Ti_pos
   append!(__params, @parameters (Ti_pos::Real), [description = "Integrator time constant of the outer position controller"])
-  __initial_conditions[Ti_pos] = __local__Ti_pos
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Ti_pos, __local__Ti_pos)
   __local__Td_pos = Td_pos
   append!(__params, @parameters (Td_pos::Real), [description = "Derivative time constant of the outer position controller"])
-  __initial_conditions[Td_pos] = __local__Td_pos
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Td_pos, __local__Td_pos)
 
   ### Final Parameters (assignments)
 
@@ -103,58 +110,40 @@ torque.
   ### Components
   # Subcomponent angle_controller of type DiscreteComponents.DiscretePIDStandard
   angle_controller_overrides = __pop_subcomponent_overrides!(__overrides, "angle_controller")
-  push!(__systems, @named angle_controller = DiscreteComponents.DiscretePIDStandard(; Nd=119.368, y_max=0.1, angle_controller_overrides...))
-  __bindings[angle_controller.K] = k_angle
-  __bindings[angle_controller.Ti] = Ti_angle
-  __bindings[angle_controller.Td] = Td_angle
-  # Now remove initial conditions in angle_controller that correspond to the bindings just added
-  __angle_controller_ics = ModelingToolkit.get_initial_conditions(angle_controller)
-  __no_namespace_angle_controller = ModelingToolkit.toggle_namespacing(angle_controller, false)
-  __angle_controller_K = Symbolics.unwrap(__no_namespace_angle_controller.K)::Symbolics.SymbolicT
-  delete!(__angle_controller_ics, __angle_controller_K)
-  __angle_controller_Ti = Symbolics.unwrap(__no_namespace_angle_controller.Ti)::Symbolics.SymbolicT
-  delete!(__angle_controller_ics, __angle_controller_Ti)
-  __angle_controller_Td = Symbolics.unwrap(__no_namespace_angle_controller.Td)::Symbolics.SymbolicT
-  delete!(__angle_controller_ics, __angle_controller_Td)
+  push!(__systems, @named angle_controller = DiscreteComponents.DiscretePIDStandard(; K=k_angle, Ti=Ti_angle, Td=Td_angle, Nd=119.368, y_max=0.1, __overrides = angle_controller_overrides))
+  __dyad_bind_final!(__bindings, angle_controller, Symbol[], :K, k_angle)
+  __dyad_bind_final!(__bindings, angle_controller, Symbol[], :Ti, Ti_angle)
+  __dyad_bind_final!(__bindings, angle_controller, Symbol[], :Td, Td_angle)
   # Subcomponent pos_controller of type DiscreteComponents.DiscretePIDStandard
   pos_controller_overrides = __pop_subcomponent_overrides!(__overrides, "pos_controller")
-  push!(__systems, @named pos_controller = DiscreteComponents.DiscretePIDStandard(; Nd=4.76616, wd=Float64(1), wp=Float64(1), y_max=deg2rad(25.0), pos_controller_overrides...))
-  __bindings[pos_controller.K] = k_pos
-  __bindings[pos_controller.Ti] = Ti_pos
-  __bindings[pos_controller.Td] = Td_pos
-  # Now remove initial conditions in pos_controller that correspond to the bindings just added
-  __pos_controller_ics = ModelingToolkit.get_initial_conditions(pos_controller)
-  __no_namespace_pos_controller = ModelingToolkit.toggle_namespacing(pos_controller, false)
-  __pos_controller_K = Symbolics.unwrap(__no_namespace_pos_controller.K)::Symbolics.SymbolicT
-  delete!(__pos_controller_ics, __pos_controller_K)
-  __pos_controller_Ti = Symbolics.unwrap(__no_namespace_pos_controller.Ti)::Symbolics.SymbolicT
-  delete!(__pos_controller_ics, __pos_controller_Ti)
-  __pos_controller_Td = Symbolics.unwrap(__no_namespace_pos_controller.Td)::Symbolics.SymbolicT
-  delete!(__pos_controller_ics, __pos_controller_Td)
+  push!(__systems, @named pos_controller = DiscreteComponents.DiscretePIDStandard(; K=k_pos, Ti=Ti_pos, Td=Td_pos, Nd=4.76616, wd=Float64(1), wp=Float64(1), y_max=deg2rad(25.0), __overrides = pos_controller_overrides))
+  __dyad_bind_final!(__bindings, pos_controller, Symbol[], :K, k_pos)
+  __dyad_bind_final!(__bindings, pos_controller, Symbol[], :Ti, Ti_pos)
+  __dyad_bind_final!(__bindings, pos_controller, Symbol[], :Td, Td_pos)
   # Subcomponent gain of type BlockComponents.Math.Gain
   gain_overrides = __pop_subcomponent_overrides!(__overrides, "gain")
-  push!(__systems, @named gain = BlockComponents.Math.Gain(; k=Float64(-1), gain_overrides...))
+  push!(__systems, @named gain = BlockComponents.Math.Gain(; k=Float64(-1), __overrides = gain_overrides))
   # Subcomponent gain1 of type BlockComponents.Math.Gain
   gain1_overrides = __pop_subcomponent_overrides!(__overrides, "gain1")
-  push!(__systems, @named gain1 = BlockComponents.Math.Gain(; k=Float64(-1), gain1_overrides...))
+  push!(__systems, @named gain1 = BlockComponents.Math.Gain(; k=Float64(-1), __overrides = gain1_overrides))
   # Subcomponent sampler_theta of type DiscreteComponents.Sampler
   sampler_theta_overrides = __pop_subcomponent_overrides!(__overrides, "sampler_theta")
-  push!(__systems, @named sampler_theta = DiscreteComponents.Sampler(; sampler_theta_overrides...))
+  push!(__systems, @named sampler_theta = DiscreteComponents.Sampler(; __overrides = sampler_theta_overrides))
   # Subcomponent sampler_x of type DiscreteComponents.Sampler
   sampler_x_overrides = __pop_subcomponent_overrides!(__overrides, "sampler_x")
-  push!(__systems, @named sampler_x = DiscreteComponents.Sampler(; sampler_x_overrides...))
+  push!(__systems, @named sampler_x = DiscreteComponents.Sampler(; __overrides = sampler_x_overrides))
   # Subcomponent sampler_ref of type DiscreteComponents.Sampler
   sampler_ref_overrides = __pop_subcomponent_overrides!(__overrides, "sampler_ref")
-  push!(__systems, @named sampler_ref = DiscreteComponents.Sampler(; sampler_ref_overrides...))
+  push!(__systems, @named sampler_ref = DiscreteComponents.Sampler(; __overrides = sampler_ref_overrides))
   # Subcomponent zoh of type DiscreteComponents.ZeroOrderHold
   zoh_overrides = __pop_subcomponent_overrides!(__overrides, "zoh")
-  push!(__systems, @named zoh = DiscreteComponents.ZeroOrderHold(; zoh_overrides...))
+  push!(__systems, @named zoh = DiscreteComponents.ZeroOrderHold(; __overrides = zoh_overrides))
   # Subcomponent clock of type DiscreteComponents.PeriodicClock
   clock_overrides = __pop_subcomponent_overrides!(__overrides, "clock")
-  push!(__systems, @named clock = DiscreteComponents.PeriodicClock(; dt=Ts, clock_overrides...))
+  push!(__systems, @named clock = DiscreteComponents.PeriodicClock(; dt=Ts, __symbol_overrides(clock_overrides)...))
 
   ### Check there are no unmatched overrides
-  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
+  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded. Override keys are dotted paths as written in Dyad source (e.g. inner.rate)."))
 
   ### Guesses
 
@@ -177,6 +166,6 @@ torque.
   push!(__eqs, connect(pos_reference, sampler_ref.u))
 
   # Return completely constructed System
-  return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
+  return System(__eqs, ModelingToolkit.t_nounits, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
 export DiscreteCascadeController
