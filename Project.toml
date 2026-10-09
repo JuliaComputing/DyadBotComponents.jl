@@ -1,7 +1,7 @@
 name = "DyadBotComponents"
 uuid = "6baa8624-4e17-4d27-96ac-5a32f577bc5c"
 authors = ["Fredrik Bagge Carlson"]
-version = "0.2.0"
+version = "0.3.0"
 
 [deps]
 BlockComponents = "1ef5d832-be8e-447f-9f2c-8b5d17d15fd3"
@@ -20,17 +20,17 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 
 [compat]
-BlockComponents = "4"
+BlockComponents = "5"
 DelimitedFiles = "1"
-DiscreteComponents = "0.2"
+DiscreteComponents = "0.6"
 DyadInterface = "6, 7"
 Markdown = "1"
 ModelingToolkit = "11"
 Moshi = "0.3"
-MultibodyComponents = "0.2"
+MultibodyComponents = "0.3"
 OrdinaryDiffEqDefault = "1.12.0, 2"
 PrecompileTools = "1"
-RotationalComponents = "2"
+RotationalComponents = "3"
 RuntimeGeneratedFunctions = "0.5.17"
 StaticArrays = "1.9.15"
 Symbolics = "7"
