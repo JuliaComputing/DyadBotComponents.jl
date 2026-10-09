@@ -4,10 +4,8 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
-   CascadeFFController(; name, k_angle, Ti_angle, Td_angle, k_pos, Ti_pos, Td_pos)
+   CascadeFFController(; name, k_angle, Ti_angle, Td_angle, k_pos, Ti_pos, Td_pos, __overrides)
 
 Continuous-time cascade control system with feed-forward for the balancing
 robot. Extends the plain cascade control system with three feed-forward signals
@@ -39,7 +37,7 @@ The control system has a purely continuous interface so it can be swapped for
  * `torque_ff` - This connector represents a real signal as an input to a component ([`RealInput`](@ref))
  * `torque` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
 """
-@component function CascadeFFController(; name = nothing, k_angle=0.487401, Ti_angle=0.0587352, Td_angle=0.0420526, k_pos=0.0666576, Ti_pos=5.25024, Td_pos=4.81393, kwargs...)
+@component function CascadeFFController(; name = nothing, var"k_angle"=0.487401, var"Ti_angle"=0.0587352, var"Td_angle"=0.0420526, var"k_pos"=0.0666576, var"Ti_pos"=5.25024, var"Td_pos"=4.81393, __overrides = Dict{String, Any}())
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -47,7 +45,7 @@ The control system has a purely continuous interface so it can be swapped for
     @named model = CascadeFFController()
   """))
 
-  __overrides = __build_overrides(kwargs)
+  __overrides = Dict{String, Any}(__overrides)
   __params = Symbolics.SymbolicT[]
   __vars = Symbolics.SymbolicT[]
   __systems = System[]
@@ -56,6 +54,14 @@ The control system has a purely continuous interface so it can be swapped for
   __initialization_eqs = Equation[]
   __eqs = Equation[]
   __bindings = Dict{Symbolics.SymbolicT, Symbolics.SymbolicT}()
+
+  ### Keyword argument overrides
+  haskey(__overrides, "k_angle") && (k_angle = pop!(__overrides, "k_angle"))
+  haskey(__overrides, "Ti_angle") && (Ti_angle = pop!(__overrides, "Ti_angle"))
+  haskey(__overrides, "Td_angle") && (Td_angle = pop!(__overrides, "Td_angle"))
+  haskey(__overrides, "k_pos") && (k_pos = pop!(__overrides, "k_pos"))
+  haskey(__overrides, "Ti_pos") && (Ti_pos = pop!(__overrides, "Ti_pos"))
+  haskey(__overrides, "Td_pos") && (Td_pos = pop!(__overrides, "Td_pos"))
 
   ### Structural Parameters (functions)
 
@@ -72,22 +78,22 @@ The control system has a purely continuous interface so it can be swapped for
   ### Symbolic Parameters
   __local__k_angle = k_angle
   append!(__params, @parameters (k_angle::Real), [description = "Proportional gain of the angle controller"])
-  __initial_conditions[k_angle] = __local__k_angle
+  __dyad_seed_parameter!(__initial_conditions, __bindings, k_angle, __local__k_angle)
   __local__Ti_angle = Ti_angle
   append!(__params, @parameters (Ti_angle::Real), [description = "Integrator time constant of the angle controller"])
-  __initial_conditions[Ti_angle] = __local__Ti_angle
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Ti_angle, __local__Ti_angle)
   __local__Td_angle = Td_angle
   append!(__params, @parameters (Td_angle::Real), [description = "Derivative time constant of the angle controller"])
-  __initial_conditions[Td_angle] = __local__Td_angle
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Td_angle, __local__Td_angle)
   __local__k_pos = k_pos
   append!(__params, @parameters (k_pos::Real), [description = "Proportional gain of the outer position controller"])
-  __initial_conditions[k_pos] = __local__k_pos
+  __dyad_seed_parameter!(__initial_conditions, __bindings, k_pos, __local__k_pos)
   __local__Ti_pos = Ti_pos
   append!(__params, @parameters (Ti_pos::Real), [description = "Integrator time constant of the outer position controller"])
-  __initial_conditions[Ti_pos] = __local__Ti_pos
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Ti_pos, __local__Ti_pos)
   __local__Td_pos = Td_pos
   append!(__params, @parameters (Td_pos::Real), [description = "Derivative time constant of the outer position controller"])
-  __initial_conditions[Td_pos] = __local__Td_pos
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Td_pos, __local__Td_pos)
 
   ### Final Parameters (assignments)
 
@@ -109,22 +115,22 @@ The control system has a purely continuous interface so it can be swapped for
   ### Components
   # Subcomponent angle_controller of type BlockComponents.Continuous.LimPID
   angle_controller_overrides = __pop_subcomponent_overrides!(__overrides, "angle_controller")
-  push!(__systems, @named angle_controller = BlockComponents.Continuous.LimPID(; k=k_angle, Ti=Ti_angle, Td=Td_angle, Nd=119.368, y_max=0.1, angle_controller_overrides...))
+  push!(__systems, @named angle_controller = BlockComponents.Continuous.LimPID(; k=k_angle, Ti=Ti_angle, Td=Td_angle, Nd=119.368, y_max=0.1, __overrides = angle_controller_overrides))
   # Subcomponent pos_controller of type BlockComponents.Continuous.LimPID
   pos_controller_overrides = __pop_subcomponent_overrides!(__overrides, "pos_controller")
-  push!(__systems, @named pos_controller = BlockComponents.Continuous.LimPID(; k=k_pos, Ti=Ti_pos, Td=Td_pos, Nd=4.76616, wd=Float64(1), wp=Float64(1), y_max=deg2rad(25.0), pos_controller_overrides...))
+  push!(__systems, @named pos_controller = BlockComponents.Continuous.LimPID(; k=k_pos, Ti=Ti_pos, Td=Td_pos, Nd=4.76616, wd=Float64(1), wp=Float64(1), y_max=deg2rad(25.0), __overrides = pos_controller_overrides))
   # Subcomponent gain of type BlockComponents.Math.Gain
   gain_overrides = __pop_subcomponent_overrides!(__overrides, "gain")
-  push!(__systems, @named gain = BlockComponents.Math.Gain(; k=Float64(-1), gain_overrides...))
+  push!(__systems, @named gain = BlockComponents.Math.Gain(; k=Float64(-1), __overrides = gain_overrides))
   # Subcomponent gain1 of type BlockComponents.Math.Gain
   gain1_overrides = __pop_subcomponent_overrides!(__overrides, "gain1")
-  push!(__systems, @named gain1 = BlockComponents.Math.Gain(; k=Float64(-1), gain1_overrides...))
+  push!(__systems, @named gain1 = BlockComponents.Math.Gain(; k=Float64(-1), __overrides = gain1_overrides))
   # Subcomponent gain2 of type BlockComponents.Math.Gain
   gain2_overrides = __pop_subcomponent_overrides!(__overrides, "gain2")
-  push!(__systems, @named gain2 = BlockComponents.Math.Gain(; k=Float64(-1), gain2_overrides...))
+  push!(__systems, @named gain2 = BlockComponents.Math.Gain(; k=Float64(-1), __overrides = gain2_overrides))
 
   ### Check there are no unmatched overrides
-  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
+  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded. Override keys are dotted paths as written in Dyad source (e.g. inner.rate)."))
 
   ### Guesses
 
@@ -150,6 +156,6 @@ The control system has a purely continuous interface so it can be swapped for
   push!(__eqs, connect(gain2.y, pos_controller.u_ff))
 
   # Return completely constructed System
-  return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
+  return System(__eqs, ModelingToolkit.t_nounits, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
 export CascadeFFController

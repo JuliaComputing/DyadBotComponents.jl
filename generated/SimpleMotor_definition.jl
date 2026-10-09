@@ -4,10 +4,8 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
-   SimpleMotor(; name, d)
+   SimpleMotor(; name, d, __overrides)
 
 A simple motor model consisting of an ideal torque source acting on a revolute joint, with viscous friction acting between the rotor and the stator.
 
@@ -25,7 +23,7 @@ All variables are resolved in the planar world frame. ([`Frame2D`](@ref))
 All variables are resolved in the planar world frame. ([`Frame2D`](@ref))
  * `torqueinput` - This connector represents a real signal as an input to a component ([`RealInput`](@ref))
 """
-@component function SimpleMotor(; name = nothing, d=Float64(0.0), kwargs...)
+@component function SimpleMotor(; name = nothing, var"d"=Float64(0.0), __overrides = Dict{String, Any}())
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -33,7 +31,7 @@ All variables are resolved in the planar world frame. ([`Frame2D`](@ref))
     @named model = SimpleMotor()
   """))
 
-  __overrides = __build_overrides(kwargs)
+  __overrides = Dict{String, Any}(__overrides)
   __params = Symbolics.SymbolicT[]
   __vars = Symbolics.SymbolicT[]
   __systems = System[]
@@ -42,6 +40,9 @@ All variables are resolved in the planar world frame. ([`Frame2D`](@ref))
   __initialization_eqs = Equation[]
   __eqs = Equation[]
   __bindings = Dict{Symbolics.SymbolicT, Symbolics.SymbolicT}()
+
+  ### Keyword argument overrides
+  haskey(__overrides, "d") && (d = pop!(__overrides, "d"))
 
   ### Structural Parameters (functions)
 
@@ -58,7 +59,7 @@ All variables are resolved in the planar world frame. ([`Frame2D`](@ref))
   ### Symbolic Parameters
   __local__d = d
   append!(__params, @parameters (d::Real), [description = "Viscous friction coefficient"])
-  __initial_conditions[d] = __local__d
+  __dyad_seed_parameter!(__initial_conditions, __bindings, d, __local__d)
 
   ### Final Parameters (assignments)
 
@@ -77,19 +78,19 @@ All variables are resolved in the planar world frame. ([`Frame2D`](@ref))
   push!(__systems, @named frame_b = __Dyad__Frame2D())
   # Subcomponent torquesource of type RotationalComponents.Sources.TorqueSource
   torquesource_overrides = __pop_subcomponent_overrides!(__overrides, "torquesource")
-  push!(__systems, @named torquesource = RotationalComponents.Sources.TorqueSource(; torquesource_overrides...))
+  push!(__systems, @named torquesource = RotationalComponents.Sources.TorqueSource(; __overrides = torquesource_overrides))
   # Subcomponent motor_rotation of type MultibodyComponents.PlanarMechanics.Revolute
   motor_rotation_overrides = __pop_subcomponent_overrides!(__overrides, "motor_rotation")
-  push!(__systems, @named motor_rotation = MultibodyComponents.PlanarMechanics.Revolute(; render=false, motor_rotation_overrides...))
+  push!(__systems, @named motor_rotation = MultibodyComponents.PlanarMechanics.Revolute(; render=false, __overrides = motor_rotation_overrides))
   # Subcomponent damper of type RotationalComponents.Components.Damper
   damper_overrides = __pop_subcomponent_overrides!(__overrides, "damper")
-  push!(__systems, @named damper = RotationalComponents.Components.Damper(; d=d, damper_overrides...))
+  push!(__systems, @named damper = RotationalComponents.Components.Damper(; d=d, __overrides = damper_overrides))
   # Subcomponent fixed of type RotationalComponents.Components.Fixed
   fixed_overrides = __pop_subcomponent_overrides!(__overrides, "fixed")
-  push!(__systems, @named fixed = RotationalComponents.Components.Fixed(; fixed_overrides...))
+  push!(__systems, @named fixed = RotationalComponents.Components.Fixed(; __overrides = fixed_overrides))
 
   ### Check there are no unmatched overrides
-  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
+  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded. Override keys are dotted paths as written in Dyad source (e.g. inner.rate)."))
 
   ### Guesses
 
@@ -106,6 +107,6 @@ All variables are resolved in the planar world frame. ([`Frame2D`](@ref))
   push!(__eqs, connect(torqueinput, torquesource.tau))
 
   # Return completely constructed System
-  return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
+  return System(__eqs, ModelingToolkit.t_nounits, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
 export SimpleMotor

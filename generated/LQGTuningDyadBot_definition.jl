@@ -4,10 +4,8 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
-   LQGTuningDyadBot(; name)
+   LQGTuningDyadBot(; name, __overrides)
 
 Analysis model for LQG controller design for the balancing robot.
 
@@ -17,7 +15,7 @@ all four measured outputs (`y_x`, `y_xd`, `y_theta`, `y_thetad`) and on the
 control input (`u`). The LQG design script `scripts/tune_lqg.jl` opens the
 loop at `u` and synthesizes an LQG controller from the linearized plant.
 """
-@component function LQGTuningDyadBot(; name = nothing, kwargs...)
+@component function LQGTuningDyadBot(; name = nothing, __overrides = Dict{String, Any}())
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -25,7 +23,7 @@ loop at `u` and synthesizes an LQG controller from the linearized plant.
     @named model = LQGTuningDyadBot()
   """))
 
-  __overrides = __build_overrides(kwargs)
+  __overrides = Dict{String, Any}(__overrides)
   __params = Symbolics.SymbolicT[]
   __vars = Symbolics.SymbolicT[]
   __systems = System[]
@@ -63,31 +61,31 @@ loop at `u` and synthesizes an LQG controller from the linearized plant.
   ### Components
   # Subcomponent world of type MultibodyComponents.PlanarMechanics.World
   world_overrides = __pop_subcomponent_overrides!(__overrides, "world")
-  push!(__systems, @named world = MultibodyComponents.PlanarMechanics.World(; g=9.82, nominal_length=0.1, world_overrides...))
+  push!(__systems, @named world = MultibodyComponents.PlanarMechanics.World(; g=9.82, nominal_length=0.1, __symbol_overrides(world_overrides)...))
   # Subcomponent plant of type DyadBotComponents.PlanarDyadBot
   plant_overrides = __pop_subcomponent_overrides!(__overrides, "plant")
-  push!(__systems, @named plant = DyadBotComponents.PlanarDyadBot(; plant_overrides...))
+  push!(__systems, @named plant = DyadBotComponents.PlanarDyadBot(; __overrides = plant_overrides))
   # Subcomponent g_x of type BlockComponents.Math.Gain
   g_x_overrides = __pop_subcomponent_overrides!(__overrides, "g_x")
-  push!(__systems, @named g_x = BlockComponents.Math.Gain(; k=1e-10, g_x_overrides...))
+  push!(__systems, @named g_x = BlockComponents.Math.Gain(; k=1e-10, __overrides = g_x_overrides))
   # Subcomponent g_xd of type BlockComponents.Math.Gain
   g_xd_overrides = __pop_subcomponent_overrides!(__overrides, "g_xd")
-  push!(__systems, @named g_xd = BlockComponents.Math.Gain(; k=1e-10, g_xd_overrides...))
+  push!(__systems, @named g_xd = BlockComponents.Math.Gain(; k=1e-10, __overrides = g_xd_overrides))
   # Subcomponent g_theta of type BlockComponents.Math.Gain
   g_theta_overrides = __pop_subcomponent_overrides!(__overrides, "g_theta")
-  push!(__systems, @named g_theta = BlockComponents.Math.Gain(; k=1e-10, g_theta_overrides...))
+  push!(__systems, @named g_theta = BlockComponents.Math.Gain(; k=1e-10, __overrides = g_theta_overrides))
   # Subcomponent g_thetad of type BlockComponents.Math.Gain
   g_thetad_overrides = __pop_subcomponent_overrides!(__overrides, "g_thetad")
-  push!(__systems, @named g_thetad = BlockComponents.Math.Gain(; k=1e-10, g_thetad_overrides...))
+  push!(__systems, @named g_thetad = BlockComponents.Math.Gain(; k=1e-10, __overrides = g_thetad_overrides))
   # Subcomponent add3 of type BlockComponents.Math.Add3
   add3_overrides = __pop_subcomponent_overrides!(__overrides, "add3")
-  push!(__systems, @named add3 = BlockComponents.Math.Add3(; add3_overrides...))
+  push!(__systems, @named add3 = BlockComponents.Math.Add3(; __overrides = add3_overrides))
   # Subcomponent add of type BlockComponents.Math.Add
   add_overrides = __pop_subcomponent_overrides!(__overrides, "add")
-  push!(__systems, @named add = BlockComponents.Math.Add(; add_overrides...))
+  push!(__systems, @named add = BlockComponents.Math.Add(; __overrides = add_overrides))
 
   ### Check there are no unmatched overrides
-  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
+  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded. Override keys are dotted paths as written in Dyad source (e.g. inner.rate)."))
 
   ### Guesses
 
@@ -114,6 +112,6 @@ loop at `u` and synthesizes an LQG controller from the linearized plant.
   push!(__eqs, connect(g_x.y, add3.u1))
 
   # Return completely constructed System
-  return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
+  return System(__eqs, ModelingToolkit.t_nounits, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
 export LQGTuningDyadBot

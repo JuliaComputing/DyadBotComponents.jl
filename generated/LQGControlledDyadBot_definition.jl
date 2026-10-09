@@ -4,10 +4,8 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
-   LQGControlledDyadBot(; name, step_height, step_time, phi0)
+   LQGControlledDyadBot(; name, step_height, step_time, phi0, __overrides)
 
 Balancing robot stabilized by an LQG controller with reference feedforward.
 
@@ -25,7 +23,7 @@ The position reference steps from zero to `step_height` at `step_time`.
 | `step_time`         | Time at which the position reference steps                         | s  |   5 |
 | `phi0`         | Initial tilt angle of the body                         | rad  |   0.1 |
 """
-@component function LQGControlledDyadBot(; name = nothing, step_height=0.15, step_time=Float64(5), phi0=0.1, kwargs...)
+@component function LQGControlledDyadBot(; name = nothing, var"step_height"=0.15, var"step_time"=Float64(5), var"phi0"=0.1, __overrides = Dict{String, Any}())
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -33,7 +31,7 @@ The position reference steps from zero to `step_height` at `step_time`.
     @named model = LQGControlledDyadBot()
   """))
 
-  __overrides = __build_overrides(kwargs)
+  __overrides = Dict{String, Any}(__overrides)
   __params = Symbolics.SymbolicT[]
   __vars = Symbolics.SymbolicT[]
   __systems = System[]
@@ -42,6 +40,11 @@ The position reference steps from zero to `step_height` at `step_time`.
   __initialization_eqs = Equation[]
   __eqs = Equation[]
   __bindings = Dict{Symbolics.SymbolicT, Symbolics.SymbolicT}()
+
+  ### Keyword argument overrides
+  haskey(__overrides, "step_height") && (step_height = pop!(__overrides, "step_height"))
+  haskey(__overrides, "step_time") && (step_time = pop!(__overrides, "step_time"))
+  haskey(__overrides, "phi0") && (phi0 = pop!(__overrides, "phi0"))
 
   ### Structural Parameters (functions)
 
@@ -58,13 +61,13 @@ The position reference steps from zero to `step_height` at `step_time`.
   ### Symbolic Parameters
   __local__step_height = step_height
   append!(__params, @parameters (step_height::Real), [description = "Height of the position reference step"])
-  __initial_conditions[step_height] = __local__step_height
+  __dyad_seed_parameter!(__initial_conditions, __bindings, step_height, __local__step_height)
   __local__step_time = step_time
   append!(__params, @parameters (step_time::Real), [description = "Time at which the position reference steps"])
-  __initial_conditions[step_time] = __local__step_time
+  __dyad_seed_parameter!(__initial_conditions, __bindings, step_time, __local__step_time)
   __local__phi0 = phi0
   append!(__params, @parameters (phi0::Real), [description = "Initial tilt angle of the body"])
-  __initial_conditions[phi0] = __local__phi0
+  __dyad_seed_parameter!(__initial_conditions, __bindings, phi0, __local__phi0)
 
   ### Final Parameters (assignments)
 
@@ -80,43 +83,36 @@ The position reference steps from zero to `step_height` at `step_time`.
   ### Components
   # Subcomponent world of type MultibodyComponents.PlanarMechanics.World
   world_overrides = __pop_subcomponent_overrides!(__overrides, "world")
-  push!(__systems, @named world = MultibodyComponents.PlanarMechanics.World(; g=9.82, nominal_length=0.1, world_overrides...))
+  push!(__systems, @named world = MultibodyComponents.PlanarMechanics.World(; g=9.82, nominal_length=0.1, __symbol_overrides(world_overrides)...))
   # Subcomponent plant of type DyadBotComponents.PlanarDyadBot
   plant_overrides = __pop_subcomponent_overrides!(__overrides, "plant")
-  push!(__systems, @named plant = DyadBotComponents.PlanarDyadBot(; phi0=phi0, plant_overrides...))
+  push!(__systems, @named plant = DyadBotComponents.PlanarDyadBot(; phi0=phi0, __overrides = plant_overrides))
   # Subcomponent controller of type BlockComponents.Continuous.StateSpace
   controller_overrides = __pop_subcomponent_overrides!(__overrides, "controller")
-  push!(__systems, @named controller = BlockComponents.Continuous.StateSpace(; nx=lqg_nx(), nu=6, ny=1, A=lqg_A(), B=lqg_B(), C=lqg_C(), D=lqg_D(), controller_overrides...))
+  push!(__systems, @named controller = BlockComponents.Continuous.StateSpace(; nx=lqg_nx(), nu=6, ny=1, A=lqg_A(), B=lqg_B(), C=lqg_C(), D=lqg_D(), __overrides = controller_overrides))
   # Subcomponent step of type BlockComponents.Sources.Step
   step_overrides = __pop_subcomponent_overrides!(__overrides, "step")
-  push!(__systems, @named step = BlockComponents.Sources.Step(; step_overrides...))
-  __bindings[step.height] = step_height
-  __bindings[step.start_time] = step_time
-  # Now remove initial conditions in step that correspond to the bindings just added
-  __step_ics = ModelingToolkit.get_initial_conditions(step)
-  __no_namespace_step = ModelingToolkit.toggle_namespacing(step, false)
-  __step_height = Symbolics.unwrap(__no_namespace_step.height)::Symbolics.SymbolicT
-  delete!(__step_ics, __step_height)
-  __step_start_time = Symbolics.unwrap(__no_namespace_step.start_time)::Symbolics.SymbolicT
-  delete!(__step_ics, __step_start_time)
+  push!(__systems, @named step = BlockComponents.Sources.Step(; height=step_height, start_time=step_time, __overrides = step_overrides))
+  __dyad_bind_final!(__bindings, step, Symbol[], :height, step_height)
+  __dyad_bind_final!(__bindings, step, Symbol[], :start_time, step_time)
   # Subcomponent zero_xd of type BlockComponents.Sources.Constant
   zero_xd_overrides = __pop_subcomponent_overrides!(__overrides, "zero_xd")
-  push!(__systems, @named zero_xd = BlockComponents.Sources.Constant(; k=Float64(0), zero_xd_overrides...))
+  push!(__systems, @named zero_xd = BlockComponents.Sources.Constant(; k=Float64(0), __overrides = zero_xd_overrides))
   # Subcomponent zero_theta of type BlockComponents.Sources.Constant
   zero_theta_overrides = __pop_subcomponent_overrides!(__overrides, "zero_theta")
-  push!(__systems, @named zero_theta = BlockComponents.Sources.Constant(; k=Float64(0), zero_theta_overrides...))
+  push!(__systems, @named zero_theta = BlockComponents.Sources.Constant(; k=Float64(0), __overrides = zero_theta_overrides))
   # Subcomponent zero_thetad of type BlockComponents.Sources.Constant
   zero_thetad_overrides = __pop_subcomponent_overrides!(__overrides, "zero_thetad")
-  push!(__systems, @named zero_thetad = BlockComponents.Sources.Constant(; k=Float64(0), zero_thetad_overrides...))
+  push!(__systems, @named zero_thetad = BlockComponents.Sources.Constant(; k=Float64(0), __overrides = zero_thetad_overrides))
   # Subcomponent mux of type DyadBotComponents.Mux6
   mux_overrides = __pop_subcomponent_overrides!(__overrides, "mux")
-  push!(__systems, @named mux = DyadBotComponents.Mux6(; mux_overrides...))
+  push!(__systems, @named mux = DyadBotComponents.Mux6(; __overrides = mux_overrides))
   # Subcomponent torque_out of type MultibodyComponents.Selector
   torque_out_overrides = __pop_subcomponent_overrides!(__overrides, "torque_out")
-  push!(__systems, @named torque_out = MultibodyComponents.Selector(; nu=1, torque_out_overrides...))
+  push!(__systems, @named torque_out = MultibodyComponents.Selector(; nu=1, __overrides = torque_out_overrides))
 
   ### Check there are no unmatched overrides
-  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
+  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded. Override keys are dotted paths as written in Dyad source (e.g. inner.rate)."))
 
   ### Guesses
 
@@ -138,6 +134,6 @@ The position reference steps from zero to `step_height` at `step_time`.
   push!(__eqs, connect(torque_out.y, plant.torque))
 
   # Return completely constructed System
-  return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
+  return System(__eqs, ModelingToolkit.t_nounits, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
 export LQGControlledDyadBot

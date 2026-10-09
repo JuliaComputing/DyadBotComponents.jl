@@ -4,10 +4,8 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
-   DiscreteCascadeFFDyadBot(; name, Ts, phi0)
+   DiscreteCascadeFFDyadBot(; name, Ts, phi0, __overrides)
 
 Discrete-time version of `CascadeFFDyadBot`. Identical to the continuous model
 except that the control system is a sampled-data `DiscreteCascadeFFController`.
@@ -22,7 +20,7 @@ structural parameter `Ts`.
 | `Ts`         | Controller sample interval                         | --  |   0.005 |
 | `phi0`         | Initial tilt angle of the body                         | rad  |   0.1 |
 """
-@component function DiscreteCascadeFFDyadBot(; name = nothing, Ts=0.005, phi0=0.1, kwargs...)
+@component function DiscreteCascadeFFDyadBot(; name = nothing, var"Ts"=0.005, var"phi0"=0.1, __overrides = Dict{String, Any}())
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -30,7 +28,7 @@ structural parameter `Ts`.
     @named model = DiscreteCascadeFFDyadBot()
   """))
 
-  __overrides = __build_overrides(kwargs)
+  __overrides = Dict{String, Any}(__overrides)
   __params = Symbolics.SymbolicT[]
   __vars = Symbolics.SymbolicT[]
   __systems = System[]
@@ -39,6 +37,10 @@ structural parameter `Ts`.
   __initialization_eqs = Equation[]
   __eqs = Equation[]
   __bindings = Dict{Symbolics.SymbolicT, Symbolics.SymbolicT}()
+
+  ### Keyword argument overrides
+  haskey(__overrides, "Ts") && (Ts = pop!(__overrides, "Ts"))
+  haskey(__overrides, "phi0") && (phi0 = pop!(__overrides, "phi0"))
 
   ### Structural Parameters (functions)
 
@@ -55,7 +57,7 @@ structural parameter `Ts`.
   ### Symbolic Parameters
   __local__phi0 = phi0
   append!(__params, @parameters (phi0::Real), [description = "Initial tilt angle of the body"])
-  __initial_conditions[phi0] = __local__phi0
+  __dyad_seed_parameter!(__initial_conditions, __bindings, phi0, __local__phi0)
 
   ### Final Parameters (assignments)
 
@@ -71,34 +73,34 @@ structural parameter `Ts`.
   ### Components
   # Subcomponent world of type MultibodyComponents.PlanarMechanics.World
   world_overrides = __pop_subcomponent_overrides!(__overrides, "world")
-  push!(__systems, @named world = MultibodyComponents.PlanarMechanics.World(; g=9.82, nominal_length=0.1, world_overrides...))
+  push!(__systems, @named world = MultibodyComponents.PlanarMechanics.World(; g=9.82, nominal_length=0.1, __symbol_overrides(world_overrides)...))
   # Subcomponent plant of type DyadBotComponents.PlanarDyadBot
   plant_overrides = __pop_subcomponent_overrides!(__overrides, "plant")
-  push!(__systems, @named plant = DyadBotComponents.PlanarDyadBot(; phi0=phi0, plant_overrides...))
+  push!(__systems, @named plant = DyadBotComponents.PlanarDyadBot(; phi0=phi0, __overrides = plant_overrides))
   # Subcomponent square of type BlockComponents.Sources.Square
   square_overrides = __pop_subcomponent_overrides!(__overrides, "square")
-  push!(__systems, @named square = BlockComponents.Sources.Square(; amplitude=0.05, frequency=Float64(1 / 10), square_overrides...))
+  push!(__systems, @named square = BlockComponents.Sources.Square(; amplitude=0.05, frequency=Float64(1 / 10), __overrides = square_overrides))
   # Subcomponent refgen of type BlockComponents.Continuous.StateSpace
   refgen_overrides = __pop_subcomponent_overrides!(__overrides, "refgen")
-  push!(__systems, @named refgen = BlockComponents.Continuous.StateSpace(; nx=ff_nx(), nu=1, ny=3, A=ff_A(), B=ff_B(), C=ff_C(), D=ff_D(), refgen_overrides...))
+  push!(__systems, @named refgen = BlockComponents.Continuous.StateSpace(; nx=ff_nx(), nu=1, ny=3, A=ff_A(), B=ff_B(), C=ff_C(), D=ff_D(), __overrides = refgen_overrides))
   # Subcomponent angle_ff of type MultibodyComponents.Selector
   angle_ff_overrides = __pop_subcomponent_overrides!(__overrides, "angle_ff")
-  push!(__systems, @named angle_ff = MultibodyComponents.Selector(; nu=3, angle_ff_overrides...))
+  push!(__systems, @named angle_ff = MultibodyComponents.Selector(; nu=3, __overrides = angle_ff_overrides))
   # Subcomponent pos_ref of type MultibodyComponents.Selector
   pos_ref_overrides = __pop_subcomponent_overrides!(__overrides, "pos_ref")
-  push!(__systems, @named pos_ref = MultibodyComponents.Selector(; nu=3, index=2, pos_ref_overrides...))
+  push!(__systems, @named pos_ref = MultibodyComponents.Selector(; nu=3, index=2, __overrides = pos_ref_overrides))
   # Subcomponent torque_ff of type MultibodyComponents.Selector
   torque_ff_overrides = __pop_subcomponent_overrides!(__overrides, "torque_ff")
-  push!(__systems, @named torque_ff = MultibodyComponents.Selector(; nu=3, index=3, torque_ff_overrides...))
+  push!(__systems, @named torque_ff = MultibodyComponents.Selector(; nu=3, index=3, __overrides = torque_ff_overrides))
   # Subcomponent mux1 of type DyadBotComponents.Mux1
   mux1_overrides = __pop_subcomponent_overrides!(__overrides, "mux1")
-  push!(__systems, @named mux1 = DyadBotComponents.Mux1(; mux1_overrides...))
+  push!(__systems, @named mux1 = DyadBotComponents.Mux1(; __overrides = mux1_overrides))
   # Subcomponent controller of type DyadBotComponents.DiscreteCascadeFFController
   controller_overrides = __pop_subcomponent_overrides!(__overrides, "controller")
-  push!(__systems, @named controller = DyadBotComponents.DiscreteCascadeFFController(; Ts=Ts, controller_overrides...))
+  push!(__systems, @named controller = DyadBotComponents.DiscreteCascadeFFController(; Ts=Ts, __overrides = controller_overrides))
 
   ### Check there are no unmatched overrides
-  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
+  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded. Override keys are dotted paths as written in Dyad source (e.g. inner.rate)."))
 
   ### Guesses
 
@@ -119,6 +121,6 @@ structural parameter `Ts`.
   push!(__eqs, connect(mux1.y, refgen.u))
 
   # Return completely constructed System
-  return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
+  return System(__eqs, ModelingToolkit.t_nounits, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
 export DiscreteCascadeFFDyadBot

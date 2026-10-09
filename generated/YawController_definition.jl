@@ -4,10 +4,8 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
-   YawController(; name, k_yaw, Ti_yaw, Td_yaw, tau_max)
+   YawController(; name, k_yaw, Ti_yaw, Td_yaw, tau_max, __overrides)
 
 Continuous-time yaw control system for the differentially driven balancing
 robot: a single PID controller (`BlockComponents.Continuous.LimPID`) tracking
@@ -34,7 +32,7 @@ exposed for loop-shaping and PID autotuning.
  * `measurement` - This connector represents a real signal as an input to a component ([`RealInput`](@ref))
  * `torque` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
 """
-@component function YawController(; name = nothing, k_yaw=0.005, Ti_yaw=Float64(10.0), Td_yaw=0.5, tau_max=0.05, kwargs...)
+@component function YawController(; name = nothing, var"k_yaw"=0.005, var"Ti_yaw"=Float64(10.0), var"Td_yaw"=0.5, var"tau_max"=0.05, __overrides = Dict{String, Any}())
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -42,7 +40,7 @@ exposed for loop-shaping and PID autotuning.
     @named model = YawController()
   """))
 
-  __overrides = __build_overrides(kwargs)
+  __overrides = Dict{String, Any}(__overrides)
   __params = Symbolics.SymbolicT[]
   __vars = Symbolics.SymbolicT[]
   __systems = System[]
@@ -51,6 +49,12 @@ exposed for loop-shaping and PID autotuning.
   __initialization_eqs = Equation[]
   __eqs = Equation[]
   __bindings = Dict{Symbolics.SymbolicT, Symbolics.SymbolicT}()
+
+  ### Keyword argument overrides
+  haskey(__overrides, "k_yaw") && (k_yaw = pop!(__overrides, "k_yaw"))
+  haskey(__overrides, "Ti_yaw") && (Ti_yaw = pop!(__overrides, "Ti_yaw"))
+  haskey(__overrides, "Td_yaw") && (Td_yaw = pop!(__overrides, "Td_yaw"))
+  haskey(__overrides, "tau_max") && (tau_max = pop!(__overrides, "tau_max"))
 
   ### Structural Parameters (functions)
 
@@ -67,16 +71,16 @@ exposed for loop-shaping and PID autotuning.
   ### Symbolic Parameters
   __local__k_yaw = k_yaw
   append!(__params, @parameters (k_yaw::Real), [description = "Proportional gain of the yaw controller"])
-  __initial_conditions[k_yaw] = __local__k_yaw
+  __dyad_seed_parameter!(__initial_conditions, __bindings, k_yaw, __local__k_yaw)
   __local__Ti_yaw = Ti_yaw
   append!(__params, @parameters (Ti_yaw::Real), [description = "Integrator time constant of the yaw controller"])
-  __initial_conditions[Ti_yaw] = __local__Ti_yaw
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Ti_yaw, __local__Ti_yaw)
   __local__Td_yaw = Td_yaw
   append!(__params, @parameters (Td_yaw::Real), [description = "Derivative time constant of the yaw controller"])
-  __initial_conditions[Td_yaw] = __local__Td_yaw
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Td_yaw, __local__Td_yaw)
   __local__tau_max = tau_max
   append!(__params, @parameters (tau_max::Real), [description = "Differential torque limit"])
-  __initial_conditions[tau_max] = __local__tau_max
+  __dyad_seed_parameter!(__initial_conditions, __bindings, tau_max, __local__tau_max)
 
   ### Final Parameters (assignments)
 
@@ -95,28 +99,19 @@ exposed for loop-shaping and PID autotuning.
   ### Components
   # Subcomponent yaw_controller of type BlockComponents.Continuous.LimPID
   yaw_controller_overrides = __pop_subcomponent_overrides!(__overrides, "yaw_controller")
-  push!(__systems, @named yaw_controller = BlockComponents.Continuous.LimPID(; Nd=Float64(10), y_max=tau_max, yaw_controller_overrides...))
-  __bindings[yaw_controller.k] = k_yaw
-  __bindings[yaw_controller.Ti] = Ti_yaw
-  __bindings[yaw_controller.Td] = Td_yaw
-  # Now remove initial conditions in yaw_controller that correspond to the bindings just added
-  __yaw_controller_ics = ModelingToolkit.get_initial_conditions(yaw_controller)
-  __no_namespace_yaw_controller = ModelingToolkit.toggle_namespacing(yaw_controller, false)
-  __yaw_controller_k = Symbolics.unwrap(__no_namespace_yaw_controller.k)::Symbolics.SymbolicT
-  delete!(__yaw_controller_ics, __yaw_controller_k)
-  __yaw_controller_Ti = Symbolics.unwrap(__no_namespace_yaw_controller.Ti)::Symbolics.SymbolicT
-  delete!(__yaw_controller_ics, __yaw_controller_Ti)
-  __yaw_controller_Td = Symbolics.unwrap(__no_namespace_yaw_controller.Td)::Symbolics.SymbolicT
-  delete!(__yaw_controller_ics, __yaw_controller_Td)
+  push!(__systems, @named yaw_controller = BlockComponents.Continuous.LimPID(; k=k_yaw, Ti=Ti_yaw, Td=Td_yaw, Nd=Float64(10), y_max=tau_max, __overrides = yaw_controller_overrides))
+  __dyad_bind_final!(__bindings, yaw_controller, Symbol[], :k, k_yaw)
+  __dyad_bind_final!(__bindings, yaw_controller, Symbol[], :Ti, Ti_yaw)
+  __dyad_bind_final!(__bindings, yaw_controller, Symbol[], :Td, Td_yaw)
   # Subcomponent gain of type BlockComponents.Math.Gain
   gain_overrides = __pop_subcomponent_overrides!(__overrides, "gain")
-  push!(__systems, @named gain = BlockComponents.Math.Gain(; k=Float64(1), gain_overrides...))
+  push!(__systems, @named gain = BlockComponents.Math.Gain(; k=Float64(1), __overrides = gain_overrides))
   # Subcomponent constant_ff of type BlockComponents.Sources.Constant
   constant_ff_overrides = __pop_subcomponent_overrides!(__overrides, "constant_ff")
-  push!(__systems, @named constant_ff = BlockComponents.Sources.Constant(; k=Float64(0), constant_ff_overrides...))
+  push!(__systems, @named constant_ff = BlockComponents.Sources.Constant(; k=Float64(0), __overrides = constant_ff_overrides))
 
   ### Check there are no unmatched overrides
-  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
+  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded. Override keys are dotted paths as written in Dyad source (e.g. inner.rate)."))
 
   ### Guesses
 
@@ -136,6 +131,6 @@ exposed for loop-shaping and PID autotuning.
   push!(__eqs, connect(constant_ff.y, yaw_controller.u_ff))
 
   # Return completely constructed System
-  return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
+  return System(__eqs, ModelingToolkit.t_nounits, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
 export YawController

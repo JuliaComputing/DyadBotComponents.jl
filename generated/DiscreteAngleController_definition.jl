@@ -4,10 +4,8 @@
 ### Instead, update the Dyad source code and regenerate this file
 
 
-import Moshi as __Ext__Moshi
-
 @doc Markdown.doc"""
-   DiscreteAngleController(; name, Ts, k_angle, Ti_angle, Td_angle)
+   DiscreteAngleController(; name, Ts, k_angle, Ti_angle, Td_angle, __overrides)
 
 Discrete-time angle control system for the balancing robot. Drop-in replacement
 for `AngleController`: same continuous interface (tilt-angle `measurement` in,
@@ -30,7 +28,7 @@ controller runs once per clock tick on a `PeriodicClock` with period `Ts`, and a
  * `measurement` - This connector represents a real signal as an input to a component ([`RealInput`](@ref))
  * `torque` - This connector represents a real signal as an output from a component ([`RealOutput`](@ref))
 """
-@component function DiscreteAngleController(; name = nothing, Ts=0.005, k_angle=0.487401, Ti_angle=0.0587352, Td_angle=0.0420526, kwargs...)
+@component function DiscreteAngleController(; name = nothing, var"Ts"=0.005, var"k_angle"=0.487401, var"Ti_angle"=0.0587352, var"Td_angle"=0.0420526, __overrides = Dict{String, Any}())
   isnothing(name) && throw(ArgumentError("""
     The `name` keyword must be provided. Please consider using the `@named` macro,
     like so:
@@ -38,7 +36,7 @@ controller runs once per clock tick on a `PeriodicClock` with period `Ts`, and a
     @named model = DiscreteAngleController()
   """))
 
-  __overrides = __build_overrides(kwargs)
+  __overrides = Dict{String, Any}(__overrides)
   __params = Symbolics.SymbolicT[]
   __vars = Symbolics.SymbolicT[]
   __systems = System[]
@@ -47,6 +45,12 @@ controller runs once per clock tick on a `PeriodicClock` with period `Ts`, and a
   __initialization_eqs = Equation[]
   __eqs = Equation[]
   __bindings = Dict{Symbolics.SymbolicT, Symbolics.SymbolicT}()
+
+  ### Keyword argument overrides
+  haskey(__overrides, "Ts") && (Ts = pop!(__overrides, "Ts"))
+  haskey(__overrides, "k_angle") && (k_angle = pop!(__overrides, "k_angle"))
+  haskey(__overrides, "Ti_angle") && (Ti_angle = pop!(__overrides, "Ti_angle"))
+  haskey(__overrides, "Td_angle") && (Td_angle = pop!(__overrides, "Td_angle"))
 
   ### Structural Parameters (functions)
 
@@ -63,13 +67,13 @@ controller runs once per clock tick on a `PeriodicClock` with period `Ts`, and a
   ### Symbolic Parameters
   __local__k_angle = k_angle
   append!(__params, @parameters (k_angle::Real), [description = "Proportional gain of the angle controller"])
-  __initial_conditions[k_angle] = __local__k_angle
+  __dyad_seed_parameter!(__initial_conditions, __bindings, k_angle, __local__k_angle)
   __local__Ti_angle = Ti_angle
   append!(__params, @parameters (Ti_angle::Real), [description = "Integrator time constant of the angle controller"])
-  __initial_conditions[Ti_angle] = __local__Ti_angle
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Ti_angle, __local__Ti_angle)
   __local__Td_angle = Td_angle
   append!(__params, @parameters (Td_angle::Real), [description = "Derivative time constant of the angle controller"])
-  __initial_conditions[Td_angle] = __local__Td_angle
+  __dyad_seed_parameter!(__initial_conditions, __bindings, Td_angle, __local__Td_angle)
 
   ### Final Parameters (assignments)
 
@@ -87,37 +91,28 @@ controller runs once per clock tick on a `PeriodicClock` with period `Ts`, and a
   ### Components
   # Subcomponent angle_controller of type DiscreteComponents.DiscretePIDStandard
   angle_controller_overrides = __pop_subcomponent_overrides!(__overrides, "angle_controller")
-  push!(__systems, @named angle_controller = DiscreteComponents.DiscretePIDStandard(; Nd=119.368, y_max=0.1, angle_controller_overrides...))
-  __bindings[angle_controller.K] = k_angle
-  __bindings[angle_controller.Ti] = Ti_angle
-  __bindings[angle_controller.Td] = Td_angle
-  # Now remove initial conditions in angle_controller that correspond to the bindings just added
-  __angle_controller_ics = ModelingToolkit.get_initial_conditions(angle_controller)
-  __no_namespace_angle_controller = ModelingToolkit.toggle_namespacing(angle_controller, false)
-  __angle_controller_K = Symbolics.unwrap(__no_namespace_angle_controller.K)::Symbolics.SymbolicT
-  delete!(__angle_controller_ics, __angle_controller_K)
-  __angle_controller_Ti = Symbolics.unwrap(__no_namespace_angle_controller.Ti)::Symbolics.SymbolicT
-  delete!(__angle_controller_ics, __angle_controller_Ti)
-  __angle_controller_Td = Symbolics.unwrap(__no_namespace_angle_controller.Td)::Symbolics.SymbolicT
-  delete!(__angle_controller_ics, __angle_controller_Td)
+  push!(__systems, @named angle_controller = DiscreteComponents.DiscretePIDStandard(; K=k_angle, Ti=Ti_angle, Td=Td_angle, Nd=119.368, y_max=0.1, __overrides = angle_controller_overrides))
+  __dyad_bind_final!(__bindings, angle_controller, Symbol[], :K, k_angle)
+  __dyad_bind_final!(__bindings, angle_controller, Symbol[], :Ti, Ti_angle)
+  __dyad_bind_final!(__bindings, angle_controller, Symbol[], :Td, Td_angle)
   # Subcomponent ref of type BlockComponents.Sources.Constant
   ref_overrides = __pop_subcomponent_overrides!(__overrides, "ref")
-  push!(__systems, @named ref = BlockComponents.Sources.Constant(; k=Float64(0), ref_overrides...))
+  push!(__systems, @named ref = BlockComponents.Sources.Constant(; k=Float64(0), __overrides = ref_overrides))
   # Subcomponent gain of type BlockComponents.Math.Gain
   gain_overrides = __pop_subcomponent_overrides!(__overrides, "gain")
-  push!(__systems, @named gain = BlockComponents.Math.Gain(; k=Float64(-1), gain_overrides...))
+  push!(__systems, @named gain = BlockComponents.Math.Gain(; k=Float64(-1), __overrides = gain_overrides))
   # Subcomponent sampler of type DiscreteComponents.Sampler
   sampler_overrides = __pop_subcomponent_overrides!(__overrides, "sampler")
-  push!(__systems, @named sampler = DiscreteComponents.Sampler(; sampler_overrides...))
+  push!(__systems, @named sampler = DiscreteComponents.Sampler(; __overrides = sampler_overrides))
   # Subcomponent zoh of type DiscreteComponents.ZeroOrderHold
   zoh_overrides = __pop_subcomponent_overrides!(__overrides, "zoh")
-  push!(__systems, @named zoh = DiscreteComponents.ZeroOrderHold(; zoh_overrides...))
+  push!(__systems, @named zoh = DiscreteComponents.ZeroOrderHold(; __overrides = zoh_overrides))
   # Subcomponent clock of type DiscreteComponents.PeriodicClock
   clock_overrides = __pop_subcomponent_overrides!(__overrides, "clock")
-  push!(__systems, @named clock = DiscreteComponents.PeriodicClock(; dt=Ts, clock_overrides...))
+  push!(__systems, @named clock = DiscreteComponents.PeriodicClock(; dt=Ts, __symbol_overrides(clock_overrides)...))
 
   ### Check there are no unmatched overrides
-  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded."))
+  isempty(__overrides) || throw(ArgumentError("overrides: [$(join(keys(__overrides), ", "))] don't match names found in model. These names may exist in the model but could have been conditionally excluded. Override keys are dotted paths as written in Dyad source (e.g. inner.rate)."))
 
   ### Guesses
 
@@ -135,6 +130,6 @@ controller runs once per clock tick on a `PeriodicClock` with period `Ts`, and a
   push!(__eqs, connect(zoh.y, gain.u))
 
   # Return completely constructed System
-  return System(__eqs, t, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
+  return System(__eqs, ModelingToolkit.t_nounits, __vars, __params; systems=__systems, initial_conditions=__initial_conditions, guesses=__guesses, name, initialization_eqs=__initialization_eqs, bindings=__bindings, assertions=__assertions)
 end
 export DiscreteAngleController
